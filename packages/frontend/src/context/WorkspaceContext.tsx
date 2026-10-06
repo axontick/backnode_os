@@ -23,6 +23,7 @@ import {
   StatusDefinition,
   ListSettings,
   TeamMember,
+  UserSpace,
 } from '../types';
 import {
   tasksApi,
@@ -146,6 +147,26 @@ interface WorkspaceContextType {
   handleCreateFolder: (folder: SpaceFolder) => void;
   handleCreatePipeline: (pipeline: CrmPipeline) => void;
   handleCreateContact: (contact: DirectoryContact) => void;
+
+  // Top-left User Space Dropdown & Creation
+  userSpaces: UserSpace[];
+  activeUserSpaceId: string;
+  activeUserSpace: UserSpace;
+  handleSelectUserSpace: (spaceId: string) => void;
+  handleCreateUserSpace: (space: { name: string; color?: string; icon?: string }) => void;
+
+  // Member & Access Control
+  handleInviteMember: (data: {
+    name: string;
+    email: string;
+    role?: string;
+    accessLevel?: string;
+    department?: string;
+    capacityStatus?: string;
+  }) => Promise<TeamMember>;
+  handleUpdateMemberAccess: (id: string, updates: Partial<TeamMember>) => Promise<void>;
+  handleRemoveMember: (id: string) => Promise<void>;
+
   refreshData: () => Promise<void>;
 }
 
@@ -203,6 +224,211 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [crmFilterStage, setCrmFilterStage] = useState<string | null>(null);
   const [crmFilterOwner, setCrmFilterOwner] = useState<string | null>(null);
 
+  // Filter helper to purge any mock or dummy workspaces
+  const filterRealWorkspaces = (spaces: UserSpace[]): UserSpace[] => {
+    if (!Array.isArray(spaces)) return [];
+    return spaces.filter(
+      (s) =>
+        s &&
+        s.name &&
+        s.name !== 'Cloud Infrastructure & SRE' &&
+        s.name !== 'Product Growth & CRM Labs' &&
+        s.id !== 'space-infra' &&
+        s.id !== 'space-growth'
+    );
+  };
+
+  // User Spaces state (top-left workspace selector) - Only actual workspaces that exist
+  const getInitialSpace = (): UserSpace => ({
+    id: user?.account?.id || 'space-main',
+    name: user?.account?.name || 'Workspace',
+    slug: user?.account?.slug || 'workspace',
+    role: (user?.role as string) || 'Owner',
+    color: '#9900c2',
+    icon: 'deployed_code',
+    memberCount: members.length || 1,
+  });
+
+  const [userSpaces, setUserSpaces] = useState<UserSpace[]>(() => {
+    const saved = localStorage.getItem('backnode_user_spaces');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const cleaned = filterRealWorkspaces(parsed);
+          if (cleaned.length > 0) {
+            localStorage.setItem('backnode_user_spaces', JSON.stringify(cleaned));
+            return cleaned;
+          }
+        }
+      } catch {}
+    }
+    return [getInitialSpace()];
+  });
+
+  const [activeUserSpaceId, setActiveUserSpaceId] = useState<string>(() => {
+    return localStorage.getItem('backnode_active_user_space_id') || user?.account?.id || 'space-main';
+  });
+
+  // Sync actual account workspace when user changes
+  useEffect(() => {
+    if (user?.account?.name) {
+      setUserSpaces((prev) => {
+        const cleaned = filterRealWorkspaces(prev);
+        const matchIndex = cleaned.findIndex(
+          (s) => s.id === user.account!.id || s.name.toLowerCase() === user.account!.name.toLowerCase()
+        );
+
+        let updated: UserSpace[];
+        if (matchIndex >= 0) {
+          updated = cleaned.map((s, idx) =>
+            idx === matchIndex
+              ? {
+                  ...s,
+                  id: user.account!.id,
+                  name: user.account!.name,
+                  slug: user.account!.slug,
+                  role: (user.role as string) || 'Owner',
+                  memberCount: members.length || s.memberCount || 1,
+                }
+              : s
+          );
+        } else {
+          updated = [
+            {
+              id: user.account!.id,
+              name: user.account!.name,
+              slug: user.account!.slug,
+              role: (user.role as string) || 'Owner',
+              color: '#9900c2',
+              icon: 'deployed_code',
+              memberCount: members.length || 1,
+            },
+            ...cleaned,
+          ];
+        }
+        localStorage.setItem('backnode_user_spaces', JSON.stringify(updated));
+        return updated;
+      });
+
+      setActiveUserSpaceId((curr) => {
+        const targetId = user.account!.id;
+        localStorage.setItem('backnode_active_user_space_id', targetId);
+        return targetId;
+      });
+    }
+  }, [user?.account?.id, user?.account?.name, members.length]);
+
+  const activeUserSpace =
+    userSpaces.find((s) => s.id === activeUserSpaceId) || userSpaces[0] || getInitialSpace();
+
+  const handleSelectUserSpace = (spaceId: string) => {
+    const found = userSpaces.find((s) => s.id === spaceId);
+    if (found) {
+      setActiveUserSpaceId(spaceId);
+      localStorage.setItem('backnode_active_user_space_id', spaceId);
+      showToast(`Switched to workspace: ${found.name}`);
+      setTimeout(() => {
+        loadData();
+      }, 0);
+    }
+  };
+
+  const handleCreateUserSpace = async (space: { name: string; color?: string; icon?: string }) => {
+    try {
+      const createdSpace = await workspaceApi.createWorkspace({
+        name: space.name.trim(),
+        color: space.color || '#9900c2',
+      });
+      const updated = [...filterRealWorkspaces(userSpaces), createdSpace];
+      setUserSpaces(updated);
+      setActiveUserSpaceId(createdSpace.id);
+      localStorage.setItem('backnode_user_spaces', JSON.stringify(updated));
+      localStorage.setItem('backnode_active_user_space_id', createdSpace.id);
+      showToast(`Workspace "${createdSpace.name}" created and activated!`);
+      setTimeout(() => {
+        loadData();
+      }, 0);
+    } catch (err) {
+      console.warn('Backend workspace creation error, falling back locally:', err);
+      const createdSpace: UserSpace = {
+        id: `space-${Date.now()}`,
+        name: space.name.trim(),
+        slug: space.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'),
+        role: 'Owner',
+        color: space.color || '#9900c2',
+        icon: space.icon || 'workspaces',
+        memberCount: 1,
+      };
+      const updated = [...filterRealWorkspaces(userSpaces), createdSpace];
+      setUserSpaces(updated);
+      setActiveUserSpaceId(createdSpace.id);
+      localStorage.setItem('backnode_user_spaces', JSON.stringify(updated));
+      localStorage.setItem('backnode_active_user_space_id', createdSpace.id);
+      showToast(`Workspace "${createdSpace.name}" created!`);
+    }
+  };
+
+  const handleInviteMember = async (data: {
+    name: string;
+    email: string;
+    role?: string;
+    accessLevel?: string;
+    department?: string;
+    capacityStatus?: string;
+  }) => {
+    const newMemberData: Partial<TeamMember> = {
+      id: `mem-${Date.now()}`,
+      name: data.name.trim(),
+      email: data.email.trim(),
+      initials: data.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2),
+      role: data.role || (data.accessLevel === 'ADMIN' ? 'Workspace Admin' : 'Product Operator'),
+      accessLevel: data.accessLevel || 'MEMBER',
+      status: 'Invited',
+      department: (data.department as any) || 'Engineering',
+      activeTasks: 0,
+      capacityStatus: (data.capacityStatus as any) || 'Available',
+      avatarBg: '#9900c2',
+      avatarColor: '#ffffff',
+      invitedAt: new Date().toISOString(),
+    };
+
+    try {
+      const created = await membersApi.create(newMemberData);
+      setMembers((prev) => [...prev, created]);
+      showToast(`Invitation dispatched to ${data.email}`);
+      return created;
+    } catch (err) {
+      console.warn('Backend unavailable, saving locally:', err);
+      const fallbackMember = newMemberData as TeamMember;
+      setMembers((prev) => [...prev, fallbackMember]);
+      showToast(`Invitation dispatched to ${data.email}`);
+      return fallbackMember;
+    }
+  };
+
+  const handleUpdateMemberAccess = async (id: string, updates: Partial<TeamMember>) => {
+    try {
+      await membersApi.update(id, updates);
+    } catch (err) {
+      console.warn('Backend unavailable for member update, applying locally:', err);
+    }
+    setMembers((prev) =>
+      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+    );
+    showToast('Member access level updated');
+  };
+
+  const handleRemoveMember = async (id: string) => {
+    try {
+      await membersApi.delete(id);
+    } catch (err) {
+      console.warn('Backend unavailable for member delete, removing locally:', err);
+    }
+    setMembers((prev) => prev.filter((m) => m.id !== id));
+    showToast('Member access revoked');
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => {
@@ -250,6 +476,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         fetchedFolders,
         fetchedStatuses,
         fetchedListSettings,
+        fetchedWorkspaces,
       ] = await Promise.all([
         tasksApi.getAll(),
         dealsApi.getAll(),
@@ -261,7 +488,24 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         workspaceApi.getFolders(),
         workspaceApi.getStatuses(),
         workspaceApi.getListSettings(),
+        workspaceApi.getWorkspaces().catch(() => null),
       ]);
+
+      if (fetchedWorkspaces && fetchedWorkspaces.length > 0) {
+        const cleaned = filterRealWorkspaces(fetchedWorkspaces);
+        if (cleaned.length > 0) {
+          setUserSpaces(cleaned);
+          localStorage.setItem('backnode_user_spaces', JSON.stringify(cleaned));
+          setActiveUserSpaceId((curr) => {
+            if (!curr || !cleaned.some((s) => s.id === curr)) {
+              const nextId = cleaned[0].id;
+              localStorage.setItem('backnode_active_user_space_id', nextId);
+              return nextId;
+            }
+            return curr;
+          });
+        }
+      }
 
       setTasks(fetchedTasks || []);
       setDeals(fetchedDeals || []);
@@ -276,7 +520,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
       if (fetchedStages && fetchedStages.length > 0) setCrmStages(fetchedStages);
       if (fetchedCrmSettings) setCrmSettings(fetchedCrmSettings);
-      setMembers(fetchedMembers || []);
+      setMembers(fetchedMembers && fetchedMembers.length > 0 ? fetchedMembers : initialTeamMembers);
       setDirectoryContacts(fetchedContacts || []);
       setFolders(fetchedFolders || []);
       if (fetchedFolders && fetchedFolders.length > 0) {
@@ -293,6 +537,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       setSyncStatus('connected');
     } catch (err) {
       console.warn('Backend not reachable or error fetching data, using initial cache:', err);
+      setMembers((prev) => (prev && prev.length > 0 ? prev : initialTeamMembers));
       setSyncStatus('offline');
     }
   };
@@ -670,6 +915,14 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleCreateFolder,
         handleCreatePipeline,
         handleCreateContact,
+        userSpaces,
+        activeUserSpaceId,
+        activeUserSpace,
+        handleSelectUserSpace,
+        handleCreateUserSpace,
+        handleInviteMember,
+        handleUpdateMemberAccess,
+        handleRemoveMember,
         refreshData: loadData,
       }}
     >

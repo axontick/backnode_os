@@ -36,6 +36,18 @@ export class TeamMember {
   @Column('varchar', { name: 'avatar_color', nullable: true })
   avatarColor?: string;
 
+  @Column('varchar', { nullable: true })
+  email?: string;
+
+  @Column('varchar', { name: 'access_level', default: 'MEMBER' })
+  accessLevel?: string;
+
+  @Column('varchar', { default: 'Active' })
+  status?: string;
+
+  @Column('varchar', { name: 'invited_at', nullable: true })
+  invitedAt?: string;
+
   @Index()
   @Column('varchar', { name: 'account_id', nullable: true })
   accountId?: string;

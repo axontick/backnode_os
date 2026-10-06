@@ -49,17 +49,31 @@ export interface ResetPasswordDto {
   newPassword: string;
 }
 
+export interface UserSpace {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+  color?: string;
+  icon?: string;
+  memberCount?: number;
+}
+
 export interface TeamMember {
   id: string;
   name: string;
   initials: string;
   role: string;
-  department: 'Engineering' | 'Product' | 'Design';
+  department: 'Engineering' | 'Product' | 'Design' | 'Operations' | 'Sales' | string;
   activeTasks: number;
-  capacityStatus: 'Optimal' | 'Available' | 'Near capacity' | 'Overloaded';
+  capacityStatus: 'Optimal' | 'Available' | 'Near capacity' | 'Overloaded' | string;
   avatarBg?: string;
   avatarColor?: string;
   accountId?: string;
+  email?: string;
+  accessLevel?: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER' | string;
+  status?: 'Active' | 'Invited' | 'Suspended' | string;
+  invitedAt?: string;
 }
 
 export interface SubtaskItem {

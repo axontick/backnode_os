@@ -3,6 +3,7 @@ import {
   Get,
   Post,
   Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -45,5 +46,13 @@ export class MembersController {
     @Body() data: any,
   ) {
     return this.membersService.update(user.accountId, id, data);
+  }
+
+  @Delete(':id')
+  async delete(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.membersService.delete(user.accountId, id);
   }
 }

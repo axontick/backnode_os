@@ -189,6 +189,18 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             </span>
           </div>
         );
+      case 'team':
+        return (
+          <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
+            <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
+              {workspaceName}
+            </span>
+            <span className="text-[#d4c0d5] font-mono">/</span>
+            <span className="text-[#1a1b22] font-semibold bg-[#f4f2fd] px-2 py-0.5 rounded border border-[#d4c0d5]/40 truncate">
+              Team &amp; Access Control
+            </span>
+          </div>
+        );
       case 'task-spaces':
       default:
         return (

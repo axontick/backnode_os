@@ -1,11 +1,19 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SpaceFolder, StatusDefinition, ListSettings } from '../entities';
+import { SpaceFolder, StatusDefinition, ListSettings, Account, TeamMember } from '../entities';
 import { WorkspaceService } from './workspace.service';
 import { WorkspaceController } from './workspace.controller';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SpaceFolder, StatusDefinition, ListSettings])],
+  imports: [
+    TypeOrmModule.forFeature([
+      SpaceFolder,
+      StatusDefinition,
+      ListSettings,
+      Account,
+      TeamMember,
+    ]),
+  ],
   controllers: [WorkspaceController],
   providers: [WorkspaceService],
   exports: [WorkspaceService],

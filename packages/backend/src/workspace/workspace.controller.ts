@@ -19,6 +19,20 @@ import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator'
 export class WorkspaceController {
   constructor(@Inject(WorkspaceService) private readonly workspaceService: WorkspaceService) {}
 
+  // Workspaces
+  @Get('workspaces')
+  async getWorkspaces(@CurrentUser() user: CurrentUserPayload) {
+    return this.workspaceService.getWorkspaces(user);
+  }
+
+  @Post('workspaces')
+  async createWorkspace(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() data: { name: string; color?: string },
+  ) {
+    return this.workspaceService.createWorkspace(user, data);
+  }
+
   // Space Folders
   @Get('folders')
   async getFolders(@CurrentUser() user: CurrentUserPayload) {

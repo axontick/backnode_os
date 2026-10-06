@@ -14,6 +14,7 @@ import {
   SignupDto,
   AuthResponse,
   User,
+  UserSpace,
 } from '../types';
 
 export const API_BASE_URL =
@@ -27,11 +28,15 @@ export const apiClient = axios.create({
   withCredentials: true,
 });
 
-// Automatically inject JWT Bearer token into outgoing requests
+// Automatically inject JWT Bearer token and active workspace into outgoing requests
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('backnode_token');
   if (token && config.headers) {
     config.headers.Authorization = `Bearer ${token}`;
+  }
+  const activeSpaceId = localStorage.getItem('backnode_active_user_space_id');
+  if (activeSpaceId && config.headers) {
+    config.headers['x-account-id'] = activeSpaceId;
   }
   return config;
 });
@@ -138,6 +143,14 @@ export const membersApi = {
     const res = await apiClient.post<TeamMember>('/members', member);
     return res.data;
   },
+  update: async (id: string, member: Partial<TeamMember>): Promise<TeamMember> => {
+    const res = await apiClient.patch<TeamMember>(`/members/${id}`, member);
+    return res.data;
+  },
+  delete: async (id: string): Promise<{ id: string; success: boolean }> => {
+    const res = await apiClient.delete<{ id: string; success: boolean }>(`/members/${id}`);
+    return res.data;
+  },
 };
 
 export const contactsApi = {
@@ -160,6 +173,14 @@ export const contactsApi = {
 };
 
 export const workspaceApi = {
+  getWorkspaces: async (): Promise<UserSpace[]> => {
+    const res = await apiClient.get<UserSpace[]>('/workspaces');
+    return res.data;
+  },
+  createWorkspace: async (data: { name: string; color?: string }): Promise<UserSpace> => {
+    const res = await apiClient.post<UserSpace>('/workspaces', data);
+    return res.data;
+  },
   getFolders: async (): Promise<SpaceFolder[]> => {
     const res = await apiClient.get<SpaceFolder[]>('/folders');
     return res.data;

@@ -37,13 +37,17 @@ export class MembersService {
     const member = this.memberRepo.create({
       id,
       name: data.name,
+      email: data.email || `${data.name.toLowerCase().replace(/\s+/g, '.')}@backnode.io`,
       initials: data.initials || data.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-      role: data.role,
+      role: data.role || 'Member',
+      accessLevel: data.accessLevel || 'MEMBER',
+      status: data.status || 'Active',
       department: data.department || 'Engineering',
       activeTasks: data.activeTasks || 0,
       capacityStatus: data.capacityStatus || 'Available',
-      avatarBg: data.avatarBg || '#e4e1e6',
-      avatarColor: data.avatarColor || '#1b1b1e',
+      avatarBg: data.avatarBg || '#9900c2',
+      avatarColor: data.avatarColor || '#ffffff',
+      invitedAt: data.invitedAt || new Date().toISOString(),
       accountId,
     });
 
@@ -54,5 +58,11 @@ export class MembersService {
     const member = await this.findOne(accountId, id);
     Object.assign(member, data);
     return this.memberRepo.save(member);
+  }
+
+  async delete(accountId: string, id: string) {
+    const member = await this.findOne(accountId, id);
+    await this.memberRepo.remove(member);
+    return { id, success: true };
   }
 }

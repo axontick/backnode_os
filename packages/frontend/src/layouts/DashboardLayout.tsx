@@ -6,6 +6,7 @@ import { OverviewPage } from '../pages/OverviewPage';
 import { TaskSpacesPage } from '../pages/TaskSpacesPage';
 import { CrmPage } from '../pages/CrmPage';
 import { ContactsPage } from '../pages/ContactsPage';
+import { TeamAccessPage } from '../pages/TeamAccessPage';
 import { ReplicationPage } from '../pages/ReplicationPage';
 import { UniversalAddEditModal } from '../components/UniversalAddEditModal';
 import { NewFolderModal } from '../components/NewFolderModal';
@@ -208,6 +209,7 @@ export const DashboardLayout: React.FC = () => {
           {currentHub === 'task-spaces' && <TaskSpacesPage />}
           {currentHub === 'crm' && <CrmPage />}
           {currentHub === 'contacts' && <ContactsPage />}
+          {currentHub === 'team' && <TeamAccessPage />}
           {currentHub === 'replication' && <ReplicationPage />}
         </div>
       </div>

@@ -13,6 +13,14 @@ export const CurrentUser = createParamDecorator(
     const request = ctx.switchToHttp().getRequest();
     const user = request.user as CurrentUserPayload | undefined;
     if (!user) return null;
-    return data ? user[data] : user;
+    const headerAccountId = request.headers['x-account-id'];
+    const effectiveUser: CurrentUserPayload = {
+      ...user,
+      accountId:
+        typeof headerAccountId === 'string' && headerAccountId.trim() !== ''
+          ? headerAccountId.trim()
+          : user.accountId,
+    };
+    return data ? effectiveUser[data] : effectiveUser;
   },
 );

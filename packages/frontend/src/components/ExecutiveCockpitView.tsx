@@ -475,56 +475,6 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
             )}
           </div>
 
-          {/* Panel 4: System Audit & Real-Time Local Activity Feed */}
-          <div className="bg-white rounded-xl border border-[#d4c0d5]/30 p-5 shadow-xs flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold text-xs text-[#1a1b22] tracking-tight">
-                  System Audit &amp; Database State
-                </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
-              </div>
-              <div className="flex items-center gap-1 font-mono text-[11px] text-[#837284]">
-                <span>Status:</span>
-                <span className="text-emerald-600 font-semibold">PostgreSQL Synchronized</span>
-              </div>
-            </div>
-
-            <div className="relative pl-4 border-l border-[#d4c0d5]/40 flex flex-col gap-3 py-1 text-xs">
-              <div className="relative flex flex-col gap-0.5">
-                <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-[#9900c2] ring-4 ring-white"></span>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[#1a1b22]">PostgreSQL Ledger Connected</span>
-                  <span className="font-mono text-[10px] text-[#837284]">Active</span>
-                </div>
-                <p className="text-[#504252] text-[11px]">
-                  Loaded {tasks.length} tasks, {deals.length} deals for current tenant account.
-                </p>
-              </div>
-
-              <div className="relative flex flex-col gap-0.5">
-                <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-4 ring-white"></span>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[#1a1b22]">Multi-Tenant Partition Active</span>
-                  <span className="font-mono text-[10px] text-[#837284]">Secure</span>
-                </div>
-                <p className="text-[#504252] text-[11px]">
-                  Tenant isolation verified across all queries via accountId index.
-                </p>
-              </div>
-
-              <div className="relative flex flex-col gap-0.5">
-                <span className="absolute -left-[21px] top-1 w-2.5 h-2.5 rounded-full bg-sky-500 ring-4 ring-white"></span>
-                <div className="flex items-center justify-between">
-                  <span className="font-semibold text-[#1a1b22]">Pipeline Forecast Cache</span>
-                  <span className="font-mono text-[10px] text-[#837284]">Synced</span>
-                </div>
-                <p className="text-[#504252] text-[11px]">
-                  Aggregated pipeline valuation: {formattedPipeline} across {activeDealsCount} opportunities.
-                </p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
