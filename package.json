@@ -1,0 +1,23 @@
+{
+  "name": "backnode-os-monorepo",
+  "private": true,
+  "version": "1.0.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"web,api\" -c \"cyan,magenta\" \"yarn workspace @backnode/frontend dev\" \"yarn workspace @backnode/backend start:dev\"",
+    "dev:frontend": "yarn workspace @backnode/frontend dev",
+    "dev:backend": "yarn workspace @backnode/backend start:dev",
+    "build": "yarn workspace @backnode/frontend build && yarn workspace @backnode/backend build",
+    "build:frontend": "yarn workspace @backnode/frontend build",
+    "build:backend": "yarn workspace @backnode/backend build",
+    "lint": "yarn workspace @backnode/frontend lint",
+    "db:push": "yarn workspace @backnode/backend prisma:push",
+    "db:seed": "yarn workspace @backnode/backend prisma:seed",
+    "db:generate": "yarn workspace @backnode/backend prisma:generate"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}

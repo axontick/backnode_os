@@ -1,0 +1,6 @@
+{
+  "name": "Backnode OS",
+  "description": "Enterprise cloud platform and high-performance local-first SQLite task management workspace with kinetic kanban triage, workflow pipelines, and replication telemetry.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

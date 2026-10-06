@@ -1,0 +1,203 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model TeamMember {
+  id             String     @id
+  name           String
+  initials       String
+  role           String
+  department     String
+  activeTasks    Int        @default(0)
+  capacityStatus String     @default("Available")
+  avatarBg       String?
+  avatarColor    String?
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  tasks          TaskItem[]
+
+  @@map("team_members")
+}
+
+model StatusDefinition {
+  id              String   @id
+  order           Int
+  name            String
+  description     String   @default("")
+  color           String
+  stageMapping    String   @default("")
+  activeVolume    Int      @default(0)
+  isDefault       Boolean  @default(false)
+  isClosed        Boolean  @default(false)
+  wipLimit        Int?
+  requirePrReview Boolean? @default(false)
+
+  @@map("status_definitions")
+}
+
+model ListSettings {
+  id                      String  @id @default("default-list-settings")
+  name                    String
+  listId                  String  @unique
+  description             String  @default("")
+  color                   String  @default("#9900c2")
+  icon                    String  @default("folder")
+  defaultView             String  @default("Board")
+  defaultPriority         String  @default("P2 - Medium (Normal)")
+  estimationUnit          String  @default("Story Points")
+  distributedWriteLogging Boolean @default(false)
+  autoArchiveDays         String  @default("14")
+  strictForwardProgress   Boolean @default(false)
+  autoArchiveDone         Boolean @default(false)
+
+  @@map("list_settings")
+}
+
+model SpaceFolder {
+  id          String   @id
+  name        String
+  icon        String   @default("folder")
+  color       String   @default("#64748B")
+  description String?
+  items       Json     @default("[]")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("space_folders")
+}
+
+model TaskItem {
+  id              String      @id
+  title           String
+  description     String      @default("")
+  specMarkdown    String      @default("")
+  status          String      @default("Backlog")
+  priority        String      @default("Medium")
+  assigneeId      String?
+  assignee        TeamMember? @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  tags            String[]
+  subtasks        Json        @default("[]")
+  estimation      Json?
+  targetCycle     String?
+  dueDate         String?
+  gitBranch       String?
+  replicationHash String?
+  timeInStage     String?
+  linkedCrmDeal   Json?
+  activity        Json        @default("[]")
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@map("task_items")
+}
+
+model CrmPipeline {
+  id          String    @id
+  name        String
+  description String    @default("")
+  icon        String?
+  color       String?
+  dealCount   Int       @default(0)
+  totalValue  Float     @default(0)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deals       CrmDeal[]
+
+  @@map("crm_pipelines")
+}
+
+model CrmStageDefinition {
+  id               String   @id
+  order            Int
+  name             String
+  description      String   @default("")
+  color            String
+  winProbability   Int      @default(0)
+  daysLimit        Int      @default(30)
+  activeDealsCount Int      @default(0)
+  pipelineArr      Float    @default(0)
+  isTerminal       Boolean? @default(false)
+  isHighlighted    Boolean? @default(false)
+  requiredGates    Json     @default("[]")
+  webhookEnabled   Boolean  @default(false)
+  webhookThreshold Float    @default(0)
+
+  @@map("crm_stage_definitions")
+}
+
+model CrmPipelineSettings {
+  id                      String  @id @default("default-crm-settings")
+  code                    String  @unique @default("PIPE-ENT")
+  name                    String
+  description             String  @default("")
+  accentColor             String  @default("#9900c2")
+  icon                    String  @default("building")
+  currency                String  @default("USD")
+  formatNotation          String  @default("Compact")
+  defaultCloseCycleDays   Int     @default(60)
+  winProbabilityAlgorithm String  @default("Standard Stage Weighting")
+  targetQuarterlyRevenue  Float   @default(500000)
+  minDealValueGate        Float   @default(10000)
+  defaultView             String  @default("Kanban Board")
+  cardProps               Json
+  governance              Json
+
+  @@map("crm_pipeline_settings")
+}
+
+model CrmDeal {
+  id              String       @id
+  title           String
+  company         String
+  value           Float
+  formattedValue  String
+  stage           String
+  probability     Int          @default(0)
+  targetCloseDate String
+  contact         Json
+  owner           String
+  ownerInitials   String
+  tags            String[]
+  nextStep        String?
+  linkedTasks     Json         @default("[]")
+  history         Json         @default("[]")
+  pipelineId      String?
+  pipeline        CrmPipeline? @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@map("crm_deals")
+}
+
+model DirectoryContact {
+  id                 String   @id
+  name               String
+  initials           String
+  role               String
+  tag                String
+  tagColor           String
+  company            String
+  companyColor       String
+  arr                String
+  email              String
+  phone              String
+  dealName           String
+  deliverablesCount  Int      @default(0)
+  lastActivity       String
+  lastActivityTime   String
+  healthScore        Int      @default(100)
+  healthCategory     String   @default("Healthy")
+  accountDescription String   @default("")
+  renewalDate        String
+  storageKey         String
+  replicationHash    String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("directory_contacts")
+}
