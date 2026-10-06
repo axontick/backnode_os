@@ -46,8 +46,8 @@ export const authApi = {
     return res.data;
   },
   getMe: async (): Promise<User> => {
-    const res = await apiClient.get<User>('/auth/me');
-    return res.data;
+    const res = await apiClient.get<any>('/auth/me');
+    return res.data?.user || res.data;
   },
   logout: async (): Promise<void> => {
     await apiClient.post('/auth/logout');

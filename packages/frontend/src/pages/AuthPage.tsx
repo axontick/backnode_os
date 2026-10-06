@@ -19,22 +19,6 @@ export const AuthPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleQuickDemoLogin = async () => {
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      await login({
-        email: 'alex@backnode.io',
-        password: 'Password123!',
-      });
-    } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Quick demo login failed';
-      setError(Array.isArray(msg) ? msg.join(', ') : msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) {
@@ -49,7 +33,7 @@ export const AuthPage: React.FC = () => {
         password: loginPassword,
       });
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Authentication failed';
+      const msg = err.response?.data?.message || err.message || 'Authentication failed. Please verify your credentials.';
       setError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setIsSubmitting(false);
@@ -121,25 +105,6 @@ export const AuthPage: React.FC = () => {
           </div>
         </div>
 
-        {/* 1-Click Quick Demo Login */}
-        <div className="px-7 pt-5">
-          <button
-            type="button"
-            onClick={handleQuickDemoLogin}
-            disabled={isSubmitting}
-            className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-[#9900c2]/20 via-[#4e2270]/40 to-[#9900c2]/20 border border-[#9900c2]/50 hover:border-[#b731e0] text-[#f4effa] text-xs font-medium flex items-center justify-between transition-all hover:bg-[#9900c2]/30 active:scale-[0.99] group shadow-inner"
-          >
-            <div className="flex items-center gap-2.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-              <span className="font-semibold text-white">Instant Demo Login</span>
-              <span className="text-[#a59aaf] text-[11px]">(Alex Wong • Backnode Core)</span>
-            </div>
-            <span className="text-xs font-mono text-[#e5b3ff] group-hover:translate-x-1 transition-transform">
-              Launch →
-            </span>
-          </button>
-        </div>
-
         {/* Tab Selection */}
         <div className="flex px-7 pt-5 border-b border-[#24212e]">
           <button
@@ -194,19 +159,16 @@ export const AuthPage: React.FC = () => {
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="alex@backnode.io"
+                  placeholder="operator@company.com"
                   className="w-full px-3.5 py-2.5 rounded-xl bg-[#191a22] border border-[#342f3f] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors font-mono"
                   required
                 />
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-[11px] font-mono text-[#9f94a8] uppercase tracking-wider">
-                    Password
-                  </label>
-                  <span className="text-[11px] text-[#7d7288]">Demo: Password123!</span>
-                </div>
+                <label className="block text-[11px] font-mono text-[#9f94a8] uppercase tracking-wider mb-1.5">
+                  Password
+                </label>
                 <input
                   type="password"
                   value={loginPassword}

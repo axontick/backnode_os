@@ -24,7 +24,7 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
   );
 
   const closedWonDeals = deals.filter((d) => d.stage === 'Closed Won');
-  const winRate = deals.length > 0 ? Math.round((closedWonDeals.length / deals.length) * 100) : 68;
+  const winRate = deals.length > 0 ? Math.round((closedWonDeals.length / deals.length) * 100) : 0;
 
   const stages: {
     name: CrmDeal['stage'];
@@ -283,48 +283,56 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
           </button>
         </div>
 
-        <div className="space-y-2">
-          {deals.slice(0, 5).map((deal) => (
-            <div
-              key={deal.id}
-              onClick={() => onSelectDeal(deal)}
-              className="flex items-center justify-between p-3 rounded-xl border border-[#d4c0d5]/30 hover:border-[#9900c2]/50 hover:bg-[#f4f2fd]/40 transition-all group cursor-pointer"
-            >
-              <div className="flex items-center gap-3 truncate">
-                <div className="w-8 h-8 rounded-lg bg-[#9900c2]/10 text-[#9900c2] flex items-center justify-center font-bold text-xs font-mono shrink-0">
-                  {deal.company.slice(0, 2).toUpperCase()}
-                </div>
-                <div className="truncate">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-xs text-[#1a1b22] group-hover:text-[#9900c2] transition-colors truncate">
-                      {deal.title}
-                    </span>
-                    <span className="font-mono text-[10px] text-[#837284]">({deal.id})</span>
+        {deals.length === 0 ? (
+          <div className="p-8 text-center border border-dashed border-[#d4c0d5]/60 rounded-xl bg-[#fafafc] flex flex-col items-center justify-center">
+            <span className="material-symbols-outlined text-[32px] text-[#837284]/60">payments</span>
+            <p className="text-xs font-semibold text-[#1a1b22] mt-2">No deals in pipeline</p>
+            <p className="text-[11px] text-[#837284] mt-0.5">Click + New Deal above to begin tracking sales opportunities.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {deals.slice(0, 5).map((deal) => (
+              <div
+                key={deal.id}
+                onClick={() => onSelectDeal(deal)}
+                className="flex items-center justify-between p-3 rounded-xl border border-[#d4c0d5]/30 hover:border-[#9900c2]/50 hover:bg-[#f4f2fd]/40 transition-all group cursor-pointer"
+              >
+                <div className="flex items-center gap-3 truncate">
+                  <div className="w-8 h-8 rounded-lg bg-[#9900c2]/10 text-[#9900c2] flex items-center justify-center font-bold text-xs font-mono shrink-0">
+                    {deal.company?.slice(0, 2).toUpperCase() || 'DL'}
                   </div>
-                  <div className="flex items-center gap-2 text-[11px] text-[#504252] mt-0.5">
-                    <span>{deal.company}</span>
-                    <span>•</span>
-                    <span className="text-zinc-600">Stakeholder: {deal.contact.name}</span>
+                  <div className="truncate">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-xs text-[#1a1b22] group-hover:text-[#9900c2] transition-colors truncate">
+                        {deal.title}
+                      </span>
+                      <span className="font-mono text-[10px] text-[#837284]">({deal.id})</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[11px] text-[#504252] mt-0.5">
+                      <span>{deal.company}</span>
+                      <span>•</span>
+                      <span className="text-zinc-600">Stakeholder: {deal.contact?.name || deal.owner || 'Contact'}</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div className="flex items-center gap-4 shrink-0 font-mono text-xs">
-                <span className="font-bold text-[#1a1b22] text-sm">${(deal.value / 1000).toFixed(0)}k ARR</span>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-[#9900c2] border border-purple-200">
-                  {deal.stage}
-                </span>
-                <div className="flex items-center gap-1">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  <span className="text-[11px] text-emerald-700 font-semibold">{deal.probability}%</span>
+                <div className="flex items-center gap-4 shrink-0 font-mono text-xs">
+                  <span className="font-bold text-[#1a1b22] text-sm">${(deal.value / 1000).toFixed(0)}k ARR</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-purple-50 text-[#9900c2] border border-purple-200">
+                    {deal.stage}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                    <span className="text-[11px] text-emerald-700 font-semibold">{deal.probability}%</span>
+                  </div>
+                  <span className="material-symbols-outlined text-[16px] text-[#837284] group-hover:text-[#9900c2] transition-colors">
+                    chevron_right
+                  </span>
                 </div>
-                <span className="material-symbols-outlined text-[16px] text-[#837284] group-hover:text-[#9900c2] transition-colors">
-                  chevron_right
-                </span>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

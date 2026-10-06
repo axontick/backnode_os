@@ -16,6 +16,7 @@ export const OverviewPage: React.FC = () => {
     setNewItemDefaultStatus,
     setNewItemType,
     setIsNewItemModalOpen,
+    handleUpdateTask,
   } = useWorkspace();
 
   if (overviewMode === 'cockpit') {
@@ -43,6 +44,7 @@ export const OverviewPage: React.FC = () => {
           setNewItemType('task');
           setIsNewItemModalOpen(true);
         }}
+        onUpdateTask={handleUpdateTask}
       />
     );
   }

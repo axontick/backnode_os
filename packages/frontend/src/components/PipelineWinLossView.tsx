@@ -20,7 +20,7 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
 
   // Closed Won Deals
   const wonDeals = deals.filter((d) => d.stage === 'Closed Won');
-  const wonArr = wonDeals.reduce((sum, d) => sum + d.value, 0) || 125000;
+  const wonArr = wonDeals.reduce((sum, d) => sum + d.value, 0);
   
   // Simulated Closed Lost deals for rich retrospective matrix
   const lostDeals = [

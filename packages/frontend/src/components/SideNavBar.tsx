@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SpaceFolder, CrmPipeline } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface SideNavBarProps {
   currentHub: string;
@@ -45,6 +46,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   onOpenAddPipeline,
   onSelectPipelineView,
 }) => {
+  const { user } = useAuth();
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
     'fld-engineering': true,
     'fld-client-deliverables': true,
@@ -57,6 +59,11 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
       [folderId]: !prev[folderId],
     }));
   };
+
+  const accountName = user?.account?.name || 'Backnode OS';
+  const initialLetter = accountName.charAt(0).toUpperCase() || 'B';
+  const operatorName = user?.name || 'Operator';
+
   return (
     <aside className="fixed top-0 left-0 h-screen w-[280px] shrink-0 border-r border-[#d4c0d5]/30 bg-white flex flex-col justify-between p-4 z-30 select-none">
       <div className="flex flex-col gap-4 overflow-y-auto custom-scrollbar">
@@ -64,14 +71,14 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
         <div className="flex items-center justify-between p-1 rounded-lg hover:bg-[#f4f2fd] transition-colors cursor-pointer group">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full bg-[#9900c2] flex items-center justify-center text-white font-semibold text-sm shadow-sm shadow-[#9900c2]/20">
-              B
+              {initialLetter}
             </div>
-            <div className="flex flex-col">
-              <span className="font-semibold text-sm text-[#1a1b22] tracking-tight leading-tight">
-                Backnode OS
+            <div className="flex flex-col min-w-0">
+              <span className="font-semibold text-sm text-[#1a1b22] tracking-tight leading-tight truncate">
+                {accountName}
               </span>
-              <span className="text-[11px] font-mono text-[#5f5e61]">
-                Workspaces • Core
+              <span className="text-[11px] font-mono text-[#5f5e61] truncate">
+                {operatorName} • Workspace
               </span>
             </div>
           </div>

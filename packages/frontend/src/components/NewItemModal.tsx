@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TaskItem, TaskStatus, PriorityLevel, TeamMember, CrmDeal } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface NewItemModalProps {
   isOpen: boolean;
@@ -22,6 +23,17 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
   initialType = 'task',
   defaultDealStage = 'Proposal Submitted',
 }) => {
+  const { user } = useAuth();
+  const currentUserName = user?.name || 'Operator';
+  const currentUserInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'OP';
+
   const [itemType, setItemType] = useState<'task' | 'deal'>(initialType);
 
   // Task form state
@@ -75,8 +87,8 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
         {
           id: `act-${Date.now()}`,
           type: 'status',
-          author: 'Alex Wong',
-          initials: 'AW',
+          author: currentUserName,
+          initials: currentUserInitials,
           time: 'Just now',
           text: `dispatched new task ${newId}`
         }
@@ -110,11 +122,11 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
         role: contactRole,
         initials: (contactName.trim() || 'EC').split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase(),
       },
-      owner: 'Alex Wong',
-      ownerInitials: 'AW',
+      owner: currentUserName,
+      ownerInitials: currentUserInitials,
       tags: ['Custom SLA'],
       linkedTasks: [
-        { id: `dt-${Date.now()}`, title: 'Initial contract scoping and security SLA draft', done: false, priority: 'High', dueDate: 'Nov 12, 2026', tag: 'Legal', assignee: 'AW' }
+        { id: `dt-${Date.now()}`, title: 'Initial contract scoping and security SLA draft', done: false, priority: 'High', dueDate: 'Nov 12, 2026', tag: 'Legal', assignee: currentUserInitials }
       ],
       history: [
         { id: `dh-${Date.now()}`, type: 'note', title: 'Deal created in pipeline queue', date: 'Just now' }

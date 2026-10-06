@@ -21,22 +21,6 @@ export const AuthModal: React.FC = () => {
 
   if (!isAuthModalOpen) return null;
 
-  const handleQuickDemoLogin = async () => {
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      await login({
-        email: 'alex@backnode.io',
-        password: 'Password123!',
-      });
-    } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Quick demo login failed';
-      setError(Array.isArray(msg) ? msg.join(', ') : msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!loginEmail || !loginPassword) {
@@ -51,7 +35,7 @@ export const AuthModal: React.FC = () => {
         password: loginPassword,
       });
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Login failed';
+      const msg = err.response?.data?.message || err.message || 'Login failed. Please check your credentials.';
       setError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setIsSubmitting(false);
@@ -114,25 +98,6 @@ export const AuthModal: React.FC = () => {
           </button>
         </div>
 
-        {/* Quick Demo Login Pill */}
-        <div className="px-6 pt-4">
-          <button
-            type="button"
-            onClick={handleQuickDemoLogin}
-            disabled={isSubmitting}
-            className="w-full py-2.5 px-3.5 rounded-xl bg-gradient-to-r from-[#9900c2]/20 via-[#401f5c]/40 to-[#9900c2]/20 border border-[#9900c2]/50 hover:border-[#b731e0] text-[#f4effa] text-xs font-medium flex items-center justify-between transition-all hover:bg-[#9900c2]/30 active:scale-[0.99] group shadow-inner"
-          >
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              <span className="font-semibold text-white">Quick Demo Login</span>
-              <span className="text-[#a59aaf] text-[11px]">(Alex Wong • OWNER)</span>
-            </div>
-            <span className="text-[11px] font-mono text-[#e5b3ff] group-hover:translate-x-0.5 transition-transform">
-              1-Click Sign In →
-            </span>
-          </button>
-        </div>
-
         {/* Tabs: Sign In / Create Workspace */}
         <div className="flex px-6 pt-4 border-b border-[#2d2938]">
           <button
@@ -185,7 +150,7 @@ export const AuthModal: React.FC = () => {
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
-                  placeholder="alex@backnode.io"
+                  placeholder="operator@company.com"
                   className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors font-mono"
                   required
                 />
@@ -227,7 +192,7 @@ export const AuthModal: React.FC = () => {
                   type="text"
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
-                  placeholder="Alex Wong"
+                  placeholder="Sarah Connor"
                   className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors"
                   required
                 />
@@ -255,7 +220,7 @@ export const AuthModal: React.FC = () => {
                   type="email"
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
-                  placeholder="alex@acme.corp"
+                  placeholder="sarah@acme.corp"
                   className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors font-mono"
                   required
                 />
@@ -292,7 +257,7 @@ export const AuthModal: React.FC = () => {
 
         {/* Footer info */}
         <div className="px-6 py-3 bg-[#111217] border-t border-[#2d2938] flex items-center justify-between text-[10px] text-[#71677c] font-mono">
-          <span>JWT-256 • TypeORM Schema Sync</span>
+          <span>JWT-256 • PostgreSQL Multi-Tenant</span>
           <span>v1.0.0</span>
         </div>
       </div>

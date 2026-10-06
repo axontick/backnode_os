@@ -152,21 +152,21 @@ interface WorkspaceContextType {
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
 export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { token } = useAuth();
+  const { token, user } = useAuth();
 
-  const [tasks, setTasks] = useState<TaskItem[]>(initialTasks);
+  const [tasks, setTasks] = useState<TaskItem[]>([]);
   const [statuses, setStatuses] = useState(initialStatuses);
   const [listSettings, setListSettings] = useState(initialListSettings);
-  const [members, setMembers] = useState(initialTeamMembers);
-  const [directoryContacts, setDirectoryContacts] = useState<DirectoryContact[]>(initialDirectoryContacts);
-  const [folders, setFolders] = useState<SpaceFolder[]>(initialFolders);
+  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [directoryContacts, setDirectoryContacts] = useState<DirectoryContact[]>([]);
+  const [folders, setFolders] = useState<SpaceFolder[]>([]);
   const [syncStatus, setSyncStatus] = useState<'connected' | 'syncing' | 'offline'>('syncing');
 
   // CRM state
-  const [pipelines, setPipelines] = useState<CrmPipeline[]>(initialCrmPipelines);
-  const [activePipelineId, setActivePipelineId] = useState<string>('pipe-enterprise');
+  const [pipelines, setPipelines] = useState<CrmPipeline[]>([]);
+  const [activePipelineId, setActivePipelineId] = useState<string>('');
   const [isNewPipelineModalOpen, setIsNewPipelineModalOpen] = useState(false);
-  const [deals, setDeals] = useState<CrmDeal[]>(initialCrmDeals);
+  const [deals, setDeals] = useState<CrmDeal[]>([]);
   const [crmStages, setCrmStages] = useState<CrmStageDefinition[]>(initialCrmStages);
   const [crmSettings, setCrmSettings] = useState<CrmPipelineSettingsType>(initialCrmPipelineSettings);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
@@ -263,14 +263,31 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         workspaceApi.getListSettings(),
       ]);
 
-      if (fetchedTasks && fetchedTasks.length > 0) setTasks(fetchedTasks);
-      if (fetchedDeals && fetchedDeals.length > 0) setDeals(fetchedDeals);
-      if (fetchedPipelines && fetchedPipelines.length > 0) setPipelines(fetchedPipelines);
+      setTasks(fetchedTasks || []);
+      setDeals(fetchedDeals || []);
+      setPipelines(fetchedPipelines || []);
+      if (fetchedPipelines && fetchedPipelines.length > 0) {
+        setActivePipelineId((curr) => {
+          if (!curr || !fetchedPipelines.some((p) => p.id === curr)) {
+            return fetchedPipelines[0].id;
+          }
+          return curr;
+        });
+      }
       if (fetchedStages && fetchedStages.length > 0) setCrmStages(fetchedStages);
       if (fetchedCrmSettings) setCrmSettings(fetchedCrmSettings);
-      if (fetchedMembers && fetchedMembers.length > 0) setMembers(fetchedMembers);
-      if (fetchedContacts && fetchedContacts.length > 0) setDirectoryContacts(fetchedContacts);
-      if (fetchedFolders && fetchedFolders.length > 0) setFolders(fetchedFolders);
+      setMembers(fetchedMembers || []);
+      setDirectoryContacts(fetchedContacts || []);
+      setFolders(fetchedFolders || []);
+      if (fetchedFolders && fetchedFolders.length > 0) {
+        setActiveSpace((curr) => {
+          const allItems = fetchedFolders.flatMap((f) => f.items || []);
+          if (!curr || !allItems.some((i) => i.id === curr)) {
+            return allItems[0]?.id || fetchedFolders[0].id;
+          }
+          return curr;
+        });
+      }
       if (fetchedStatuses && fetchedStatuses.length > 0) setStatuses(fetchedStatuses);
       if (fetchedListSettings) setListSettings(fetchedListSettings);
       setSyncStatus('connected');
@@ -281,6 +298,15 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   useEffect(() => {
+    if (!token) {
+      setTasks([]);
+      setDeals([]);
+      setPipelines([]);
+      setDirectoryContacts([]);
+      setFolders([]);
+      setMembers([]);
+      return;
+    }
     loadData();
   }, [token]);
 
@@ -290,16 +316,16 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       searchQuery.trim() === '' ||
       t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.assignee.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      t.description.toLowerCase().includes(searchQuery.toLowerCase());
+      (t.assignee?.name && t.assignee.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesPriority = filterPriority === null || t.priority === filterPriority;
     const matchesStatus = filterStatus === null || t.status === filterStatus;
-    const matchesAssignee = filterAssignee === null || t.assignee.name === filterAssignee;
+    const matchesAssignee = filterAssignee === null || (t.assignee?.name && t.assignee.name === filterAssignee);
 
     let matchesQuick = true;
     if (quickFilter === 'my-tasks') {
-      matchesQuick = t.assignee.name === 'Alex Wong';
+      matchesQuick = Boolean(user && t.assignee?.name?.toLowerCase() === user.name?.toLowerCase());
     } else if (quickFilter === 'due-soon') {
       matchesQuick = Boolean(t.dueDate && (t.dueDate.includes('Oct') || t.dueDate.includes('Today')));
     } else if (quickFilter === 'urgent') {
@@ -349,10 +375,33 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleCreateTask = (newTask: Partial<TaskItem>) => {
+    const defaultAssignee: TeamMember = members[0] || {
+      id: `tm-${user?.id || 'owner'}`,
+      name: user?.name || 'Operator',
+      initials: user?.name?.slice(0, 2).toUpperCase() || 'OP',
+      role: 'Workspace Owner',
+      department: 'Engineering',
+      activeTasks: 1,
+      capacityStatus: 'Available',
+      avatarBg: '#9900c2',
+      avatarColor: '#ffffff',
+    };
     const created: TaskItem = {
-      ...initialTasks[0],
+      title: 'Untitled Deliverable',
+      description: '',
+      specMarkdown: '',
+      status: 'Backlog',
+      priority: 'Normal',
+      assignee: defaultAssignee,
+      tags: ['Deliverable'],
+      subtasks: [],
+      estimation: '3 pts',
+      targetCycle: 'Sprint 01',
+      dueDate: '',
+      gitBranch: '',
+      replicationHash: '0x' + Math.random().toString(16).substring(2, 8),
       ...newTask,
-      id: newTask.id || `BN-${Date.now().toString().slice(-3)}`,
+      id: newTask.id || `BK-${Date.now().toString().slice(-4)}`,
       createdAt: 'Just now',
     } as TaskItem;
     setTasks((prev) => [created, ...prev]);
@@ -389,11 +438,40 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleCreateDeal = (newDeal: Partial<CrmDeal>) => {
+    const ownerName = user?.name || members[0]?.name || 'Operator';
+    const ownerInitials = ownerName.slice(0, 2).toUpperCase();
     const created: CrmDeal = {
-      ...initialCrmDeals[0],
+      title: 'New Commercial Opportunity',
+      company: 'Enterprise Partner',
+      value: 50000,
+      formattedValue: '$50,000',
+      stage: 'Proposal Submitted',
+      probability: 50,
+      targetCloseDate: 'Q4 2026',
+      contact: {
+        name: ownerName,
+        title: 'Decision Maker',
+        email: user?.email || 'lead@example.com',
+        phone: '+1 (555) 000-0000',
+        location: 'Remote',
+        role: 'Buyer',
+        initials: ownerInitials,
+      },
+      owner: ownerName,
+      ownerInitials,
+      tags: ['Enterprise'],
+      linkedTasks: [],
+      history: [
+        {
+          id: `hist-${Date.now()}`,
+          type: 'note',
+          title: 'Opportunity initialized',
+          date: 'Just now',
+        },
+      ],
       ...newDeal,
       id: newDeal.id || `deal-${Date.now().toString().slice(-4)}`,
-      pipelineId: activePipelineId,
+      pipelineId: newDeal.pipelineId || activePipelineId,
     } as CrmDeal;
     setDeals((prev) => [created, ...prev]);
     dealsApi.create(created).catch((err) => {

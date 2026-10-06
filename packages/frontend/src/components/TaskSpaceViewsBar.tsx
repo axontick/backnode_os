@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface TaskSpaceViewsBarProps {
   currentView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs';
@@ -33,6 +34,15 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   onClearFilters,
   onOpenCreateTask,
 }) => {
+  const { user } = useAuth();
+  const userInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'Me';
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const [isColumnsOpen, setIsColumnsOpen] = useState(false);
@@ -393,7 +403,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
           }`}
         >
           <span className="material-symbols-outlined text-[13px]">person</span>
-          <span>My Tasks (AW)</span>
+          <span>My Tasks ({userInitials})</span>
         </button>
 
         {/* In Progress */}

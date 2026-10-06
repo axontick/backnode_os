@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TaskItem, TaskStatus, PriorityLevel, TeamMember, CrmDeal } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface UniversalAddEditModalProps {
   isOpen: boolean;
@@ -45,12 +46,18 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
   const [newSubtaskInput, setNewSubtaskInput] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
 
+  const { user } = useAuth();
+
   // Deal form state
-  const [dealTitle, setDealTitle] = useState('GlobalBank Sync Node Enterprise License');
-  const [dealCompany, setDealCompany] = useState('GlobalBank Corporation');
+  const [dealTitle, setDealTitle] = useState(
+    user?.account?.name ? `${user.account.name} Deployment License` : 'Enterprise Deployment License'
+  );
+  const [dealCompany, setDealCompany] = useState(
+    user?.account?.name ? `${user.account.name} Client` : 'Enterprise Client'
+  );
   const [dealValue, setDealValue] = useState('$180,000');
   const [dealStage, setDealStage] = useState<CrmDeal['stage']>(defaultDealStage);
-  const [dealOwner, setDealOwner] = useState(members[0]?.name || 'Alex Wong');
+  const [dealOwner, setDealOwner] = useState(members[0]?.name || user?.name || 'Operator');
 
   const completedSubtasksCount = subtasks.filter((s) => s.done).length;
   const subtasksPercent = subtasks.length > 0 ? Math.round((completedSubtasksCount / subtasks.length) * 100) : 0;

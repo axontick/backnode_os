@@ -14,6 +14,9 @@ import {
   CrmStageDefinition,
   CrmPipelineSettings,
   TeamMember,
+  TaskItem,
+  CrmDeal,
+  DirectoryContact,
 } from '../entities';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
@@ -34,6 +37,9 @@ import { JwtAuthGuard, StrictJwtAuthGuard } from './jwt-auth.guard';
       CrmStageDefinition,
       CrmPipelineSettings,
       TeamMember,
+      TaskItem,
+      CrmDeal,
+      DirectoryContact,
     ]),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     JwtModule.register({

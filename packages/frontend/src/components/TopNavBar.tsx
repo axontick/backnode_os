@@ -125,13 +125,31 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         ).slice(0, 3)
       : [];
 
+  const workspaceName = user?.account?.name || 'Backnode';
+
+  const availableOwners = Array.from(
+    new Set([
+      ...deals.map((d) => d.owner).filter(Boolean),
+      ...(user?.name ? [user.name] : []),
+    ])
+  );
+  const ownersList = availableOwners.length > 0 ? availableOwners : [user?.name || 'Operator'];
+
+  const availableAssignees = Array.from(
+    new Set([
+      ...tasks.map((t) => t.assignee?.name).filter(Boolean),
+      ...(user?.name ? [user.name] : []),
+    ])
+  );
+  const assigneesList = availableAssignees.length > 0 ? availableAssignees : [user?.name || 'Operator'];
+
   const renderBreadcrumbs = () => {
     switch (currentHub) {
       case 'crm':
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
             <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
-              Backnode
+              {workspaceName}
             </span>
             <span className="text-[#d4c0d5] font-mono">/</span>
             <span className="hover:text-[#1a1b22] cursor-pointer">CRM</span>
@@ -161,7 +179,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
             <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
-              Backnode
+              {workspaceName}
             </span>
             <span className="text-[#d4c0d5] font-mono">/</span>
             <span className="hover:text-[#1a1b22] cursor-pointer">Directory</span>
@@ -176,7 +194,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
             <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
-              Backnode
+              {workspaceName}
             </span>
             <span className="text-[#d4c0d5] font-mono">/</span>
             <span className="hover:text-[#1a1b22] cursor-pointer">Task Spaces</span>
@@ -403,7 +421,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                         By Owner
                       </span>
                       <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
-                        {['Alex Wong', 'Sarah Jenkins', 'Ken Ray', 'Elena Rostova'].map((owner) => {
+                        {ownersList.map((owner) => {
                           const isSelected = filterCrmOwner === owner;
                           return (
                             <button
@@ -499,7 +517,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                         By Assignee
                       </span>
                       <div className="flex flex-col gap-1 text-[11px]">
-                        {['Alex Wong', 'Sarah Jenkins', 'Ken Ray', 'Elena Rostova', 'Marcus Chen'].map((op) => {
+                        {assigneesList.map((op) => {
                           const isSelected = filterAssignee === op;
                           return (
                             <button
@@ -678,21 +696,21 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                         .join('')
                         .toUpperCase()
                         .slice(0, 2)
-                    : 'AW'}
+                    : 'OP'}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <div className="font-semibold text-sm text-[#1a1b22] truncate">
-                    {user?.name || 'Alex Wong (Demo)'}
+                    {user?.name || (isAuthenticated ? 'Operator' : 'Guest Operator')}
                   </div>
                   <div className="text-[11px] text-[#71677c] truncate font-mono">
-                    {user?.email || 'alex@backnode.io'}
+                    {user?.email || (isAuthenticated ? 'operator@backnode.io' : 'guest@backnode.io')}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#f4f2fd] text-[#9900c2] border border-[#d4c0d5]/40">
-                      {user?.role || 'OWNER'}
+                      {user?.role || (isAuthenticated ? 'MEMBER' : 'GUEST')}
                     </span>
                     <span className="text-[10px] text-[#71677c] truncate">
-                      {user?.account?.name || 'Backnode Core'}
+                      {user?.account?.name || (isAuthenticated ? 'My Workspace' : 'Local Workspace')}
                     </span>
                   </div>
                 </div>

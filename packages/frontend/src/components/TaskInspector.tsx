@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { TaskItem, TeamMember, TaskStatus } from '../types';
 import { AssigneePopover } from './AssigneePopover';
 import { StatusTransitionPopover } from './StatusTransitionPopover';
+import { useAuth } from '../context/AuthContext';
 
 interface TaskInspectorProps {
   task: TaskItem;
@@ -18,6 +19,18 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   onUpdateTask,
   onRequestDelete,
 }) => {
+  const { user } = useAuth();
+  const authorName = user?.name || 'Operator';
+  const authorInitials = user?.name
+    ? user.name
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .slice(0, 2)
+        .toUpperCase()
+    : 'OP';
+  const authorRole = user?.role || 'Operator';
+
   const [isAssigneePopoverOpen, setIsAssigneePopoverOpen] = useState(false);
   const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
   const [titleText, setTitleText] = useState(task.title);
@@ -47,8 +60,8 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
         {
           id: `act-${Date.now()}`,
           type: 'assignee' as const,
-          author: 'Alex Wong',
-          initials: 'AW',
+          author: authorName,
+          initials: authorInitials,
           time: 'Just now',
           text: `reassigned task to ${member.name}`,
         },
@@ -66,8 +79,8 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
         {
           id: `act-${Date.now()}`,
           type: 'status' as const,
-          author: 'Alex Wong',
-          initials: 'AW',
+          author: authorName,
+          initials: authorInitials,
           time: 'Just now',
           text: `transitioned status to ${status}`,
         },
@@ -90,7 +103,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
       id: `sub-${Date.now()}`,
       text: newSubtaskText.trim(),
       done: false,
-      author: 'AW',
+      author: authorInitials,
       time: 'Just now',
     };
     onUpdateTask({ ...task, subtasks: [...task.subtasks, newSt] });
@@ -103,9 +116,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
     const newComment = {
       id: `act-${Date.now()}`,
       type: 'comment' as const,
-      author: 'Alex Wong',
-      initials: 'AW',
-      role: 'Lead Designer',
+      author: authorName,
+      initials: authorInitials,
+      role: authorRole,
       time: 'Just now',
       text: commentText.trim(),
     };
