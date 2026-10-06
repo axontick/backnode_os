@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { SideNavBar } from '../components/SideNavBar';
 import { TopNavBar } from '../components/TopNavBar';
-import { FloatingOmniDock } from '../components/FloatingOmniDock';
 import { OverviewPage } from '../pages/OverviewPage';
 import { TaskSpacesPage } from '../pages/TaskSpacesPage';
 import { CrmPage } from '../pages/CrmPage';
@@ -213,13 +212,6 @@ export const DashboardLayout: React.FC = () => {
         </div>
       </div>
 
-      {/* Floating System Dock */}
-      <FloatingOmniDock
-        isEngineActive={syncStatus === 'connected'}
-        onToggleEngine={() => {}}
-        latencyMs={0.12}
-        onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-      />
 
       {/* Global Universal Add/Edit Modal */}
       <UniversalAddEditModal

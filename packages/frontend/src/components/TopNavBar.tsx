@@ -547,28 +547,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           )}
         </div>
 
-        {/* Database Sync Status Badge */}
-        <div
-          className="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-mono border border-[#d4c0d5]/40 bg-white/80 shadow-xs"
-          title={`Backend status: ${syncStatus}`}
-        >
-          <span
-            className={`w-2 h-2 rounded-full ${
-              syncStatus === 'connected'
-                ? 'bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.7)]'
-                : syncStatus === 'syncing'
-                ? 'bg-[#9900c2] animate-pulse'
-                : 'bg-amber-500'
-            }`}
-          />
-          <span className="text-[#504252] font-medium hidden sm:inline">
-            {syncStatus === 'connected'
-              ? 'Postgres Connected'
-              : syncStatus === 'syncing'
-              ? 'Syncing...'
-              : 'Local Mode'}
-          </span>
-        </div>
 
         <button
           onClick={onOpenCreateTask}

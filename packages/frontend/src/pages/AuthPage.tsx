@@ -297,7 +297,7 @@ export const AuthPage: React.FC = () => {
             <span className="material-symbols-outlined text-[14px] text-emerald-500">lock</span>
             <span>JWT-256 Auth</span>
           </div>
-          <span>PostgreSQL Isolation • Multi-Tenant</span>
+          <span>Multi-Tenant</span>
         </div>
       </div>
     </div>

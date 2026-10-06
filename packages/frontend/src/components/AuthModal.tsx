@@ -257,7 +257,7 @@ export const AuthModal: React.FC = () => {
 
         {/* Footer info */}
         <div className="px-6 py-3 bg-[#111217] border-t border-[#2d2938] flex items-center justify-between text-[10px] text-[#71677c] font-mono">
-          <span>JWT-256 • PostgreSQL Multi-Tenant</span>
+          <span>JWT-256 • Multi-Tenant</span>
           <span>v1.0.0</span>
         </div>
       </div>
