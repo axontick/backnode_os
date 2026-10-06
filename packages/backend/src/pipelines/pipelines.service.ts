@@ -1,146 +1,137 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { CrmPipeline, CrmStageDefinition, CrmPipelineSettings } from '../entities';
 
 @Injectable()
 export class PipelinesService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(CrmPipeline)
+    private readonly pipelineRepo: Repository<CrmPipeline>,
+    @InjectRepository(CrmStageDefinition)
+    private readonly stageRepo: Repository<CrmStageDefinition>,
+    @InjectRepository(CrmPipelineSettings)
+    private readonly pipelineSettingsRepo: Repository<CrmPipelineSettings>,
+  ) {}
 
-  async findAll() {
-    return this.prisma.crmPipeline.findMany({
-      orderBy: { createdAt: 'asc' },
+  async findAll(accountId: string) {
+    return this.pipelineRepo.find({
+      where: { accountId },
+      order: { createdAt: 'ASC' },
     });
   }
 
-  async findOne(id: string) {
-    const pipeline = await this.prisma.crmPipeline.findUnique({
-      where: { id },
-      include: { deals: true },
+  async findOne(accountId: string, id: string) {
+    const pipeline = await this.pipelineRepo.findOne({
+      where: { id, accountId },
+      relations: { deals: true },
     });
     if (!pipeline) {
-      throw new NotFoundException(`Pipeline ${id} not found`);
+      throw new NotFoundException(`Pipeline ${id} not found in this account`);
     }
     return pipeline;
   }
 
-  async create(data: any) {
+  async create(accountId: string, data: any) {
     let id = data.id;
     if (!id) {
       id = `pipe-${data.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`;
     }
-    return this.prisma.crmPipeline.create({
-      data: {
-        id,
-        name: data.name,
-        description: data.description || '',
-        icon: data.icon || 'building',
-        color: data.color || '#9900c2',
-        dealCount: data.dealCount || 0,
-        totalValue: data.totalValue || 0,
-      },
+    const pipeline = this.pipelineRepo.create({
+      id,
+      name: data.name,
+      description: data.description || '',
+      icon: data.icon || 'building',
+      color: data.color || '#9900c2',
+      dealCount: data.dealCount || 0,
+      totalValue: data.totalValue || 0,
+      accountId,
+    });
+    return this.pipelineRepo.save(pipeline);
+  }
+
+  async getStages(accountId: string) {
+    return this.stageRepo.find({
+      where: { accountId },
+      order: { order: 'ASC' },
     });
   }
 
-  async getStages() {
-    return this.prisma.crmStageDefinition.findMany({
-      orderBy: { order: 'asc' },
-    });
-  }
-
-  async updateStages(stages: any[]) {
-    // Upsert or replace stages
+  async updateStages(accountId: string, stages: any[]) {
     for (const stage of stages) {
-      await this.prisma.crmStageDefinition.upsert({
-        where: { id: stage.id },
-        create: {
-          id: stage.id,
-          order: stage.order,
-          name: stage.name,
-          description: stage.description || '',
-          color: stage.color,
-          winProbability: stage.winProbability,
-          daysLimit: stage.daysLimit,
-          activeDealsCount: stage.activeDealsCount || 0,
-          pipelineArr: stage.pipelineArr || 0,
-          isTerminal: stage.isTerminal || false,
-          isHighlighted: stage.isHighlighted || false,
-          requiredGates: stage.requiredGates || [],
-          webhookEnabled: stage.webhookEnabled || false,
-          webhookThreshold: stage.webhookThreshold || 0,
-        },
-        update: {
-          order: stage.order,
-          name: stage.name,
-          description: stage.description,
-          color: stage.color,
-          winProbability: stage.winProbability,
-          daysLimit: stage.daysLimit,
-          activeDealsCount: stage.activeDealsCount,
-          pipelineArr: stage.pipelineArr,
-          isTerminal: stage.isTerminal,
-          isHighlighted: stage.isHighlighted,
-          requiredGates: stage.requiredGates,
-          webhookEnabled: stage.webhookEnabled,
-          webhookThreshold: stage.webhookThreshold,
-        },
+      await this.stageRepo.save({
+        id: stage.id,
+        order: stage.order,
+        name: stage.name,
+        description: stage.description || '',
+        color: stage.color,
+        winProbability: stage.winProbability,
+        daysLimit: stage.daysLimit,
+        activeDealsCount: stage.activeDealsCount || 0,
+        pipelineArr: stage.pipelineArr || 0,
+        isTerminal: stage.isTerminal || false,
+        isHighlighted: stage.isHighlighted || false,
+        requiredGates: stage.requiredGates || [],
+        webhookEnabled: stage.webhookEnabled || false,
+        webhookThreshold: stage.webhookThreshold || 0,
+        accountId,
       });
     }
-    return this.getStages();
+    return this.getStages(accountId);
   }
 
-  async getSettings() {
-    let settings = await this.prisma.crmPipelineSettings.findFirst();
+  async getSettings(accountId: string) {
+    let settings = await this.pipelineSettingsRepo.findOne({ where: { accountId } });
     if (!settings) {
-      settings = await this.prisma.crmPipelineSettings.create({
-        data: {
-          id: 'default-crm-settings',
-          code: 'PIPE-ENT',
-          name: 'Enterprise Land & Expand Pipeline',
-          description: 'High-touch strategic expansion motion for Tier-1 engineering organizations.',
-          accentColor: '#9900c2',
-          icon: 'building',
-          currency: 'USD',
-          formatNotation: 'Compact',
-          defaultCloseCycleDays: 60,
-          winProbabilityAlgorithm: 'Standard Stage Weighting',
-          targetQuarterlyRevenue: 500000,
-          minDealValueGate: 10000,
-          defaultView: 'Kanban Board',
-          cardProps: {
-            displayDealAge: true,
-            primaryContactAvatar: true,
-            nextMilestonePill: true,
-          },
-          governance: {
-            strictForwardMotion: false,
-            stalledDealAlert: true,
-            autoLinkDeliverables: true,
-          },
+      settings = this.pipelineSettingsRepo.create({
+        id: `crm-settings-${accountId.slice(0, 8)}`,
+        code: `PIPE-${accountId.slice(0, 4).toUpperCase()}`,
+        name: 'Enterprise Land & Expand Pipeline',
+        description: 'High-touch strategic expansion motion for Tier-1 engineering organizations.',
+        accentColor: '#9900c2',
+        icon: 'building',
+        currency: 'USD',
+        formatNotation: 'Compact',
+        defaultCloseCycleDays: 60,
+        winProbabilityAlgorithm: 'Standard Stage Weighting',
+        targetQuarterlyRevenue: 500000,
+        minDealValueGate: 10000,
+        defaultView: 'Kanban Board',
+        cardProps: {
+          displayDealAge: true,
+          primaryContactAvatar: true,
+          nextMilestonePill: true,
         },
+        governance: {
+          strictForwardMotion: false,
+          stalledDealAlert: true,
+          autoLinkDeliverables: true,
+        },
+        accountId,
       });
+      await this.pipelineSettingsRepo.save(settings);
     }
     return settings;
   }
 
-  async updateSettings(data: any) {
-    const settings = await this.getSettings();
-    return this.prisma.crmPipelineSettings.update({
-      where: { id: settings.id },
-      data: {
-        code: data.code !== undefined ? data.code : settings.code,
-        name: data.name !== undefined ? data.name : settings.name,
-        description: data.description !== undefined ? data.description : settings.description,
-        accentColor: data.accentColor !== undefined ? data.accentColor : settings.accentColor,
-        icon: data.icon !== undefined ? data.icon : settings.icon,
-        currency: data.currency !== undefined ? data.currency : settings.currency,
-        formatNotation: data.formatNotation !== undefined ? data.formatNotation : settings.formatNotation,
-        defaultCloseCycleDays: data.defaultCloseCycleDays !== undefined ? data.defaultCloseCycleDays : settings.defaultCloseCycleDays,
-        winProbabilityAlgorithm: data.winProbabilityAlgorithm !== undefined ? data.winProbabilityAlgorithm : settings.winProbabilityAlgorithm,
-        targetQuarterlyRevenue: data.targetQuarterlyRevenue !== undefined ? data.targetQuarterlyRevenue : settings.targetQuarterlyRevenue,
-        minDealValueGate: data.minDealValueGate !== undefined ? data.minDealValueGate : settings.minDealValueGate,
-        defaultView: data.defaultView !== undefined ? data.defaultView : settings.defaultView,
-        cardProps: data.cardProps !== undefined ? data.cardProps : settings.cardProps,
-        governance: data.governance !== undefined ? data.governance : settings.governance,
-      },
-    });
+  async updateSettings(accountId: string, data: any) {
+    const settings = await this.getSettings(accountId);
+
+    if (data.code !== undefined) settings.code = data.code;
+    if (data.name !== undefined) settings.name = data.name;
+    if (data.description !== undefined) settings.description = data.description;
+    if (data.accentColor !== undefined) settings.accentColor = data.accentColor;
+    if (data.icon !== undefined) settings.icon = data.icon;
+    if (data.currency !== undefined) settings.currency = data.currency;
+    if (data.formatNotation !== undefined) settings.formatNotation = data.formatNotation;
+    if (data.defaultCloseCycleDays !== undefined) settings.defaultCloseCycleDays = data.defaultCloseCycleDays;
+    if (data.winProbabilityAlgorithm !== undefined) settings.winProbabilityAlgorithm = data.winProbabilityAlgorithm;
+    if (data.targetQuarterlyRevenue !== undefined) settings.targetQuarterlyRevenue = data.targetQuarterlyRevenue;
+    if (data.minDealValueGate !== undefined) settings.minDealValueGate = data.minDealValueGate;
+    if (data.defaultView !== undefined) settings.defaultView = data.defaultView;
+    if (data.cardProps !== undefined) settings.cardProps = data.cardProps;
+    if (data.governance !== undefined) settings.governance = data.governance;
+
+    return this.pipelineSettingsRepo.save(settings);
   }
 }

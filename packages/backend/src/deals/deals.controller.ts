@@ -7,35 +7,56 @@ import {
   Body,
   Param,
   Query,
+  UseGuards,
+  Inject,
 } from '@nestjs/common';
 import { DealsService } from './deals.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator';
 
 @Controller('deals')
+@UseGuards(JwtAuthGuard)
 export class DealsController {
-  constructor(private readonly dealsService: DealsService) {}
+  constructor(@Inject(DealsService) private readonly dealsService: DealsService) {}
 
   @Get()
-  async findAll(@Query('pipelineId') pipelineId?: string) {
-    return this.dealsService.findAll(pipelineId);
+  async findAll(
+    @CurrentUser() user: CurrentUserPayload,
+    @Query('pipelineId') pipelineId?: string,
+  ) {
+    return this.dealsService.findAll(user.accountId, pipelineId);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.dealsService.findOne(id);
+  async findOne(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.dealsService.findOne(user.accountId, id);
   }
 
   @Post()
-  async create(@Body() createDealDto: any) {
-    return this.dealsService.create(createDealDto);
+  async create(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() createDealDto: any,
+  ) {
+    return this.dealsService.create(user.accountId, createDealDto);
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateDealDto: any) {
-    return this.dealsService.update(id, updateDealDto);
+  async update(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() updateDealDto: any,
+  ) {
+    return this.dealsService.update(user.accountId, id, updateDealDto);
   }
 
   @Delete(':id')
-  async remove(@Param('id') id: string) {
-    return this.dealsService.remove(id);
+  async remove(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.dealsService.remove(user.accountId, id);
   }
 }

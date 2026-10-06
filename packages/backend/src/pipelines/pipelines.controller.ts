@@ -1,42 +1,66 @@
-import { Controller, Get, Post, Put, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Body,
+  Param,
+  UseGuards,
+  Inject,
+} from '@nestjs/common';
 import { PipelinesService } from './pipelines.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator';
 
 @Controller('pipelines')
+@UseGuards(JwtAuthGuard)
 export class PipelinesController {
-  constructor(private readonly pipelinesService: PipelinesService) {}
+  constructor(@Inject(PipelinesService) private readonly pipelinesService: PipelinesService) {}
 
   @Get()
-  async findAll() {
-    return this.pipelinesService.findAll();
+  async findAll(@CurrentUser() user: CurrentUserPayload) {
+    return this.pipelinesService.findAll(user.accountId);
   }
 
   @Get('settings')
-  async getSettings() {
-    return this.pipelinesService.getSettings();
+  async getSettings(@CurrentUser() user: CurrentUserPayload) {
+    return this.pipelinesService.getSettings(user.accountId);
   }
 
   @Put('settings')
-  async updateSettings(@Body() data: any) {
-    return this.pipelinesService.updateSettings(data);
+  async updateSettings(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() data: any,
+  ) {
+    return this.pipelinesService.updateSettings(user.accountId, data);
   }
 
   @Get('stages')
-  async getStages() {
-    return this.pipelinesService.getStages();
+  async getStages(@CurrentUser() user: CurrentUserPayload) {
+    return this.pipelinesService.getStages(user.accountId);
   }
 
   @Put('stages')
-  async updateStages(@Body() stages: any[]) {
-    return this.pipelinesService.updateStages(stages);
+  async updateStages(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() stages: any[],
+  ) {
+    return this.pipelinesService.updateStages(user.accountId, stages);
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string) {
-    return this.pipelinesService.findOne(id);
+  async findOne(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.pipelinesService.findOne(user.accountId, id);
   }
 
   @Post()
-  async create(@Body() data: any) {
-    return this.pipelinesService.create(data);
+  async create(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() data: any,
+  ) {
+    return this.pipelinesService.create(user.accountId, data);
   }
 }

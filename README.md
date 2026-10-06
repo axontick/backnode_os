@@ -41,7 +41,7 @@ The project is structured as a Yarn monorepo under `packages/`:
 
 3. **Run the Full Stack:**
    ```bash
-   # Starts both frontend (:3000) and backend (:3001) concurrently
+   # Starts both frontend (:3000) and backend (:3005) concurrently
    yarn dev
    ```
 
@@ -50,7 +50,7 @@ The project is structured as a Yarn monorepo under `packages/`:
    # Frontend only (Vite on http://localhost:3000)
    yarn dev:frontend
 
-   # Backend only (NestJS on http://localhost:3001)
+   # Backend only (NestJS on http://localhost:3005)
    yarn dev:backend
    ```
 

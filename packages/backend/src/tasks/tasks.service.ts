@@ -1,45 +1,45 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TaskItem } from '../entities';
 
 @Injectable()
 export class TasksService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(TaskItem)
+    private readonly taskRepo: Repository<TaskItem>,
+  ) {}
 
-  async findAll(query?: { status?: string; priority?: string; assigneeId?: string }) {
-    const where: any = {};
+  async findAll(accountId: string, query?: { status?: string; priority?: string; assigneeId?: string }) {
+    const where: any = { accountId };
     if (query?.status) where.status = query.status;
     if (query?.priority) where.priority = query.priority;
     if (query?.assigneeId) where.assigneeId = query.assigneeId;
 
-    return this.prisma.taskItem.findMany({
+    return this.taskRepo.find({
       where,
-      include: {
-        assignee: true,
-      },
-      orderBy: {
-        createdAt: 'asc',
+      relations: { assignee: true },
+      order: {
+        createdAt: 'ASC',
       },
     });
   }
 
-  async findOne(id: string) {
-    const task = await this.prisma.taskItem.findUnique({
-      where: { id },
-      include: {
-        assignee: true,
-      },
+  async findOne(accountId: string, id: string) {
+    const task = await this.taskRepo.findOne({
+      where: { id, accountId },
+      relations: { assignee: true },
     });
     if (!task) {
-      throw new NotFoundException(`Task with ID ${id} not found`);
+      throw new NotFoundException(`Task with ID ${id} not found in this account`);
     }
     return task;
   }
 
-  async create(data: any) {
-    // Generate an ID if not provided, e.g. BK-XXXX
+  async create(accountId: string, data: any) {
     let id = data.id;
     if (!id) {
-      const count = await this.prisma.taskItem.count();
+      const count = await this.taskRepo.count({ where: { accountId } });
       id = `BK-${1100 + count}`;
     }
 
@@ -65,67 +65,59 @@ export class TasksService {
 
     const resolvedAssigneeId = assigneeId || (assignee ? assignee.id : null);
 
-    return this.prisma.taskItem.create({
-      data: {
-        id,
-        title,
-        description,
-        specMarkdown,
-        status,
-        priority,
-        assigneeId: resolvedAssigneeId,
-        tags,
-        subtasks,
-        estimation,
-        targetCycle,
-        dueDate,
-        gitBranch,
-        replicationHash,
-        timeInStage,
-        linkedCrmDeal,
-        activity,
-      },
-      include: {
-        assignee: true,
-      },
+    const task = this.taskRepo.create({
+      id,
+      title,
+      description,
+      specMarkdown,
+      status,
+      priority,
+      assigneeId: resolvedAssigneeId,
+      tags,
+      subtasks,
+      estimation,
+      targetCycle,
+      dueDate,
+      gitBranch,
+      replicationHash,
+      timeInStage,
+      linkedCrmDeal,
+      activity,
+      accountId,
     });
+
+    await this.taskRepo.save(task);
+    return this.findOne(accountId, id);
   }
 
-  async update(id: string, data: any) {
-    await this.findOne(id);
+  async update(accountId: string, id: string, data: any) {
+    const task = await this.findOne(accountId, id);
 
-    const updateData: any = {};
-    if (data.title !== undefined) updateData.title = data.title;
-    if (data.description !== undefined) updateData.description = data.description;
-    if (data.specMarkdown !== undefined) updateData.specMarkdown = data.specMarkdown;
-    if (data.status !== undefined) updateData.status = data.status;
-    if (data.priority !== undefined) updateData.priority = data.priority;
-    if (data.assigneeId !== undefined) updateData.assigneeId = data.assigneeId;
-    if (data.assignee !== undefined) updateData.assigneeId = data.assignee?.id || null;
-    if (data.tags !== undefined) updateData.tags = data.tags;
-    if (data.subtasks !== undefined) updateData.subtasks = data.subtasks;
-    if (data.estimation !== undefined) updateData.estimation = data.estimation;
-    if (data.targetCycle !== undefined) updateData.targetCycle = data.targetCycle;
-    if (data.dueDate !== undefined) updateData.dueDate = data.dueDate;
-    if (data.gitBranch !== undefined) updateData.gitBranch = data.gitBranch;
-    if (data.replicationHash !== undefined) updateData.replicationHash = data.replicationHash;
-    if (data.timeInStage !== undefined) updateData.timeInStage = data.timeInStage;
-    if (data.linkedCrmDeal !== undefined) updateData.linkedCrmDeal = data.linkedCrmDeal;
-    if (data.activity !== undefined) updateData.activity = data.activity;
+    if (data.title !== undefined) task.title = data.title;
+    if (data.description !== undefined) task.description = data.description;
+    if (data.specMarkdown !== undefined) task.specMarkdown = data.specMarkdown;
+    if (data.status !== undefined) task.status = data.status;
+    if (data.priority !== undefined) task.priority = data.priority;
+    if (data.assigneeId !== undefined) task.assigneeId = data.assigneeId;
+    if (data.assignee !== undefined) task.assigneeId = data.assignee?.id || null;
+    if (data.tags !== undefined) task.tags = data.tags;
+    if (data.subtasks !== undefined) task.subtasks = data.subtasks;
+    if (data.estimation !== undefined) task.estimation = data.estimation;
+    if (data.targetCycle !== undefined) task.targetCycle = data.targetCycle;
+    if (data.dueDate !== undefined) task.dueDate = data.dueDate;
+    if (data.gitBranch !== undefined) task.gitBranch = data.gitBranch;
+    if (data.replicationHash !== undefined) task.replicationHash = data.replicationHash;
+    if (data.timeInStage !== undefined) task.timeInStage = data.timeInStage;
+    if (data.linkedCrmDeal !== undefined) task.linkedCrmDeal = data.linkedCrmDeal;
+    if (data.activity !== undefined) task.activity = data.activity;
 
-    return this.prisma.taskItem.update({
-      where: { id },
-      data: updateData,
-      include: {
-        assignee: true,
-      },
-    });
+    await this.taskRepo.save(task);
+    return this.findOne(accountId, id);
   }
 
-  async remove(id: string) {
-    await this.findOne(id);
-    return this.prisma.taskItem.delete({
-      where: { id },
-    });
+  async remove(accountId: string, id: string) {
+    const task = await this.findOne(accountId, id);
+    await this.taskRepo.remove(task);
+    return { id };
   }
 }

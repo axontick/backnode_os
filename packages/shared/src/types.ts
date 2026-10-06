@@ -2,6 +2,53 @@ export type PriorityLevel = 'Urgent' | 'High' | 'Medium' | 'Low';
 
 export type TaskStatus = 'Backlog' | 'In Progress' | 'In Review' | 'Blocked' | 'Done';
 
+export type UserRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+
+export interface Account {
+  id: string;
+  name: string;
+  slug: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole | string;
+  accountId: string;
+  account?: Account;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AuthResponse {
+  user: User;
+  accessToken: string;
+}
+
+export interface SignupDto {
+  email: string;
+  password: string;
+  name: string;
+  accountName: string;
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface ForgotPasswordDto {
+  email: string;
+}
+
+export interface ResetPasswordDto {
+  token: string;
+  newPassword: string;
+}
+
 export interface TeamMember {
   id: string;
   name: string;
@@ -12,6 +59,7 @@ export interface TeamMember {
   capacityStatus: 'Optimal' | 'Available' | 'Near capacity' | 'Overloaded';
   avatarBg?: string;
   avatarColor?: string;
+  accountId?: string;
 }
 
 export interface SubtaskItem {
@@ -58,6 +106,7 @@ export interface TaskItem {
     value: string;
   };
   activity: ActivityEvent[];
+  accountId?: string;
 }
 
 export interface StatusDefinition {
@@ -72,6 +121,7 @@ export interface StatusDefinition {
   isClosed?: boolean;
   wipLimit?: number;
   requirePrReview?: boolean;
+  accountId?: string;
 }
 
 export interface ListSettings {
@@ -87,6 +137,7 @@ export interface ListSettings {
   autoArchiveDays: string;
   strictForwardProgress: boolean;
   autoArchiveDone: boolean;
+  accountId?: string;
 }
 
 export interface FolderChildItem {
@@ -104,6 +155,7 @@ export interface SpaceFolder {
   color: string;
   description?: string;
   items: FolderChildItem[];
+  accountId?: string;
 }
 
 export interface CrmLinkedTask {
@@ -132,6 +184,7 @@ export interface CrmPipeline {
   color?: string;
   dealCount: number;
   totalValue: number;
+  accountId?: string;
 }
 
 export interface CrmDeal {
@@ -156,8 +209,10 @@ export interface CrmDeal {
   ownerInitials: string;
   tags: string[];
   nextStep?: string;
+  pipelineId?: string;
   linkedTasks: CrmLinkedTask[];
   history: CrmHistoryEvent[];
+  accountId?: string;
 }
 
 export interface CrmStageDefinition {
@@ -175,6 +230,7 @@ export interface CrmStageDefinition {
   requiredGates: { id: string; text: string; checked: boolean }[];
   webhookEnabled: boolean;
   webhookThreshold: number;
+  accountId?: string;
 }
 
 export interface CrmPipelineSettings {
@@ -200,6 +256,7 @@ export interface CrmPipelineSettings {
     stalledDealAlert: boolean;
     autoLinkDeliverables: boolean;
   };
+  accountId?: string;
 }
 
 export interface DirectoryContact {
@@ -224,6 +281,8 @@ export interface DirectoryContact {
   renewalDate: string;
   storageKey: string;
   replicationHash: string;
+  accountId?: string;
 }
+
 
 

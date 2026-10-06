@@ -1,54 +1,58 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '../prisma/prisma.service';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { TeamMember } from '../entities';
 
 @Injectable()
 export class MembersService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    @InjectRepository(TeamMember)
+    private readonly memberRepo: Repository<TeamMember>,
+  ) {}
 
-  async findAll() {
-    return this.prisma.teamMember.findMany({
-      orderBy: { name: 'asc' },
+  async findAll(accountId: string) {
+    return this.memberRepo.find({
+      where: { accountId },
+      order: { name: 'ASC' },
     });
   }
 
-  async findOne(id: string) {
-    const member = await this.prisma.teamMember.findUnique({
-      where: { id },
-      include: { tasks: true },
+  async findOne(accountId: string, id: string) {
+    const member = await this.memberRepo.findOne({
+      where: { id, accountId },
     });
     if (!member) {
-      throw new NotFoundException(`Member ${id} not found`);
+      throw new NotFoundException(`Member ${id} not found in this account`);
     }
     return member;
   }
 
-  async create(data: any) {
+  async create(accountId: string, data: any) {
     let id = data.id;
     if (!id) {
-      const count = await this.prisma.teamMember.count();
+      const count = await this.memberRepo.count({ where: { accountId } });
       id = `mem-${count + 1}`;
     }
 
-    return this.prisma.teamMember.create({
-      data: {
-        id,
-        name: data.name,
-        initials: data.initials || data.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
-        role: data.role,
-        department: data.department || 'Engineering',
-        activeTasks: data.activeTasks || 0,
-        capacityStatus: data.capacityStatus || 'Available',
-        avatarBg: data.avatarBg || '#e4e1e6',
-        avatarColor: data.avatarColor || '#1b1b1e',
-      },
+    const member = this.memberRepo.create({
+      id,
+      name: data.name,
+      initials: data.initials || data.name.split(' ').map((n: string) => n[0]).join('').toUpperCase(),
+      role: data.role,
+      department: data.department || 'Engineering',
+      activeTasks: data.activeTasks || 0,
+      capacityStatus: data.capacityStatus || 'Available',
+      avatarBg: data.avatarBg || '#e4e1e6',
+      avatarColor: data.avatarColor || '#1b1b1e',
+      accountId,
     });
+
+    return this.memberRepo.save(member);
   }
 
-  async update(id: string, data: any) {
-    await this.findOne(id);
-    return this.prisma.teamMember.update({
-      where: { id },
-      data,
-    });
+  async update(accountId: string, id: string, data: any) {
+    const member = await this.findOne(accountId, id);
+    Object.assign(member, data);
+    return this.memberRepo.save(member);
   }
 }

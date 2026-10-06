@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TaskItem, CrmDeal } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 interface TopNavBarProps {
   currentHub?: string;
@@ -56,14 +57,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onSelectDeal,
   syncStatus = 'connected',
 }) => {
+  const { user, isAuthenticated, logout, setIsAuthModalOpen } = useAuth();
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
+  const profileRef = useRef<HTMLDivElement>(null);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -79,6 +83,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       }
       if (helpRef.current && !helpRef.current.contains(e.target as Node)) {
         setIsHelpOpen(false);
+      }
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -628,12 +635,95 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           )}
         </div>
 
-        {/* User Operator Avatar */}
-        <div
-          className="w-8 h-8 rounded-full bg-[#e4e1e6] text-[#1b1b1e] border border-[#d4c0d5]/40 flex items-center justify-center text-xs font-bold font-mono ml-1 shadow-sm cursor-pointer hover:ring-2 hover:ring-[#9900c2]/30 transition-all"
-          title="Operator: Alex Wong (AW)"
-        >
-          AW
+        {/* User Operator Avatar & Profile Popover */}
+        <div ref={profileRef} className="relative ml-1">
+          <div className="flex items-center gap-2">
+            {!isAuthenticated && (
+              <button
+                onClick={() => setIsAuthModalOpen(true)}
+                className="px-2.5 py-1 rounded-full bg-[#f4f2fd] hover:bg-[#eae6f8] text-[#9900c2] border border-[#9900c2]/30 text-[11px] font-semibold transition-all shadow-xs"
+              >
+                Sign In
+              </button>
+            )}
+            <button
+              onClick={() => setIsProfileOpen(!isProfileOpen)}
+              className="w-8 h-8 rounded-full bg-[#1e1f28] text-white border border-[#9900c2]/40 flex items-center justify-center text-xs font-bold font-mono shadow-sm cursor-pointer hover:ring-2 hover:ring-[#9900c2]/40 transition-all relative"
+              title={user ? `Operator: ${user.name} (${user.role})` : 'Operator Profile'}
+            >
+              {user?.name
+                ? user.name
+                    .split(' ')
+                    .map((n) => n[0])
+                    .join('')
+                    .toUpperCase()
+                    .slice(0, 2)
+                : 'AW'}
+              <span
+                className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-white ${
+                  isAuthenticated ? 'bg-emerald-500' : 'bg-amber-400'
+                }`}
+              ></span>
+            </button>
+          </div>
+
+          {isProfileOpen && (
+            <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-[#d4c0d5]/60 rounded-2xl shadow-2xl z-50 p-4 flex flex-col gap-3 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#d4c0d5]/30">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#9900c2] to-[#670085] text-white flex items-center justify-center font-mono font-bold text-sm shadow-md">
+                  {user?.name
+                    ? user.name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2)
+                    : 'AW'}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <div className="font-semibold text-sm text-[#1a1b22] truncate">
+                    {user?.name || 'Alex Wong (Demo)'}
+                  </div>
+                  <div className="text-[11px] text-[#71677c] truncate font-mono">
+                    {user?.email || 'alex@backnode.io'}
+                  </div>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#f4f2fd] text-[#9900c2] border border-[#d4c0d5]/40">
+                      {user?.role || 'OWNER'}
+                    </span>
+                    <span className="text-[10px] text-[#71677c] truncate">
+                      {user?.account?.name || 'Backnode Core'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <button
+                  onClick={() => {
+                    setIsProfileOpen(false);
+                    setIsAuthModalOpen(true);
+                  }}
+                  className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#f4f2fd] text-[#1a1b22] font-medium transition-colors flex items-center justify-between"
+                >
+                  <span>{isAuthenticated ? 'Switch Account / Log In' : 'Sign In'}</span>
+                  <span className="text-xs text-[#9900c2]">→</span>
+                </button>
+                {isAuthenticated && (
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsProfileOpen(false);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-red-600 font-medium transition-colors flex items-center justify-between"
+                  >
+                    <span>Sign Out</span>
+                    <span className="material-symbols-outlined text-[14px]">logout</span>
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </header>

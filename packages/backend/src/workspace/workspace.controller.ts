@@ -1,50 +1,80 @@
-import { Controller, Get, Post, Put, Patch, Delete, Body, Param } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Put,
+  Patch,
+  Delete,
+  Body,
+  Param,
+  UseGuards,
+  Inject,
+} from '@nestjs/common';
 import { WorkspaceService } from './workspace.service';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator';
 
 @Controller()
+@UseGuards(JwtAuthGuard)
 export class WorkspaceController {
-  constructor(private readonly workspaceService: WorkspaceService) {}
+  constructor(@Inject(WorkspaceService) private readonly workspaceService: WorkspaceService) {}
 
   // Space Folders
   @Get('folders')
-  async getFolders() {
-    return this.workspaceService.getFolders();
+  async getFolders(@CurrentUser() user: CurrentUserPayload) {
+    return this.workspaceService.getFolders(user.accountId);
   }
 
   @Post('folders')
-  async createFolder(@Body() data: any) {
-    return this.workspaceService.createFolder(data);
+  async createFolder(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() data: any,
+  ) {
+    return this.workspaceService.createFolder(user.accountId, data);
   }
 
   @Patch('folders/:id')
-  async updateFolder(@Param('id') id: string, @Body() data: any) {
-    return this.workspaceService.updateFolder(id, data);
+  async updateFolder(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() data: any,
+  ) {
+    return this.workspaceService.updateFolder(user.accountId, id, data);
   }
 
   @Delete('folders/:id')
-  async deleteFolder(@Param('id') id: string) {
-    return this.workspaceService.deleteFolder(id);
+  async deleteFolder(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.workspaceService.deleteFolder(user.accountId, id);
   }
 
   // Status Definitions
   @Get('statuses')
-  async getStatuses() {
-    return this.workspaceService.getStatuses();
+  async getStatuses(@CurrentUser() user: CurrentUserPayload) {
+    return this.workspaceService.getStatuses(user.accountId);
   }
 
   @Put('statuses')
-  async updateStatuses(@Body() statuses: any[]) {
-    return this.workspaceService.updateStatuses(statuses);
+  async updateStatuses(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() statuses: any[],
+  ) {
+    return this.workspaceService.updateStatuses(user.accountId, statuses);
   }
 
   // List Settings
   @Get('settings/list')
-  async getListSettings() {
-    return this.workspaceService.getListSettings();
+  async getListSettings(@CurrentUser() user: CurrentUserPayload) {
+    return this.workspaceService.getListSettings(user.accountId);
   }
 
   @Put('settings/list')
-  async updateListSettings(@Body() data: any) {
-    return this.workspaceService.updateListSettings(data);
+  async updateListSettings(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() data: any,
+  ) {
+    return this.workspaceService.updateListSettings(user.accountId, data);
   }
 }

@@ -1,3 +1,4 @@
+import axios from 'axios';
 import {
   TaskItem,
   CrmDeal,
@@ -9,150 +10,186 @@ import {
   SpaceFolder,
   StatusDefinition,
   ListSettings,
+  LoginDto,
+  SignupDto,
+  AuthResponse,
+  User,
 } from '../types';
 
-const BASE_URL = '/api';
+export const API_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:3011/api';
 
-async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const url = `${BASE_URL}${endpoint}`;
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json',
-      ...options.headers,
-    },
-    ...options,
-  });
+export const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  withCredentials: true,
+});
 
-  if (!response.ok) {
-    const errorText = await response.text().catch(() => '');
-    throw new Error(`API error ${response.status} on ${endpoint}: ${errorText}`);
+// Automatically inject JWT Bearer token into outgoing requests
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('backnode_token');
+  if (token && config.headers) {
+    config.headers.Authorization = `Bearer ${token}`;
   }
+  return config;
+});
 
-  return response.json();
-}
+export const authApi = {
+  login: async (dto: LoginDto): Promise<AuthResponse> => {
+    const res = await apiClient.post<AuthResponse>('/auth/login', dto);
+    return res.data;
+  },
+  signup: async (dto: SignupDto): Promise<AuthResponse> => {
+    const res = await apiClient.post<AuthResponse>('/auth/signup', dto);
+    return res.data;
+  },
+  getMe: async (): Promise<User> => {
+    const res = await apiClient.get<User>('/auth/me');
+    return res.data;
+  },
+  logout: async (): Promise<void> => {
+    await apiClient.post('/auth/logout');
+  },
+};
 
 export const tasksApi = {
-  getAll: (params?: { status?: string; priority?: string; assigneeId?: string }): Promise<TaskItem[]> => {
-    const query = new URLSearchParams();
-    if (params?.status) query.set('status', params.status);
-    if (params?.priority) query.set('priority', params.priority);
-    if (params?.assigneeId) query.set('assigneeId', params.assigneeId);
-    const queryString = query.toString() ? `?${query.toString()}` : '';
-    return request<TaskItem[]>(`/tasks${queryString}`);
+  getAll: async (params?: { status?: string; priority?: string; assigneeId?: string }): Promise<TaskItem[]> => {
+    const res = await apiClient.get<TaskItem[]>('/tasks', { params });
+    return res.data;
   },
-  getById: (id: string): Promise<TaskItem> => request<TaskItem>(`/tasks/${id}`),
-  create: (task: Partial<TaskItem>): Promise<TaskItem> =>
-    request<TaskItem>('/tasks', {
-      method: 'POST',
-      body: JSON.stringify(task),
-    }),
-  update: (id: string, task: Partial<TaskItem>): Promise<TaskItem> =>
-    request<TaskItem>(`/tasks/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(task),
-    }),
-  delete: (id: string): Promise<{ id: string }> =>
-    request<{ id: string }>(`/tasks/${id}`, {
-      method: 'DELETE',
-    }),
+  getById: async (id: string): Promise<TaskItem> => {
+    const res = await apiClient.get<TaskItem>(`/tasks/${id}`);
+    return res.data;
+  },
+  create: async (task: Partial<TaskItem>): Promise<TaskItem> => {
+    const res = await apiClient.post<TaskItem>('/tasks', task);
+    return res.data;
+  },
+  update: async (id: string, task: Partial<TaskItem>): Promise<TaskItem> => {
+    const res = await apiClient.patch<TaskItem>(`/tasks/${id}`, task);
+    return res.data;
+  },
+  delete: async (id: string): Promise<{ id: string }> => {
+    const res = await apiClient.delete<{ id: string }>(`/tasks/${id}`);
+    return res.data;
+  },
 };
 
 export const dealsApi = {
-  getAll: (pipelineId?: string): Promise<CrmDeal[]> => {
-    const query = pipelineId ? `?pipelineId=${encodeURIComponent(pipelineId)}` : '';
-    return request<CrmDeal[]>(`/deals${query}`);
+  getAll: async (pipelineId?: string): Promise<CrmDeal[]> => {
+    const res = await apiClient.get<CrmDeal[]>('/deals', {
+      params: pipelineId ? { pipelineId } : undefined,
+    });
+    return res.data;
   },
-  getById: (id: string): Promise<CrmDeal> => request<CrmDeal>(`/deals/${id}`),
-  create: (deal: Partial<CrmDeal>): Promise<CrmDeal> =>
-    request<CrmDeal>('/deals', {
-      method: 'POST',
-      body: JSON.stringify(deal),
-    }),
-  update: (id: string, deal: Partial<CrmDeal>): Promise<CrmDeal> =>
-    request<CrmDeal>(`/deals/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(deal),
-    }),
-  delete: (id: string): Promise<{ id: string }> =>
-    request<{ id: string }>(`/deals/${id}`, {
-      method: 'DELETE',
-    }),
+  getById: async (id: string): Promise<CrmDeal> => {
+    const res = await apiClient.get<CrmDeal>(`/deals/${id}`);
+    return res.data;
+  },
+  create: async (deal: Partial<CrmDeal>): Promise<CrmDeal> => {
+    const res = await apiClient.post<CrmDeal>('/deals', deal);
+    return res.data;
+  },
+  update: async (id: string, deal: Partial<CrmDeal>): Promise<CrmDeal> => {
+    const res = await apiClient.patch<CrmDeal>(`/deals/${id}`, deal);
+    return res.data;
+  },
+  delete: async (id: string): Promise<{ id: string }> => {
+    const res = await apiClient.delete<{ id: string }>(`/deals/${id}`);
+    return res.data;
+  },
 };
 
 export const pipelinesApi = {
-  getAll: (): Promise<CrmPipeline[]> => request<CrmPipeline[]>('/pipelines'),
-  create: (pipeline: Partial<CrmPipeline>): Promise<CrmPipeline> =>
-    request<CrmPipeline>('/pipelines', {
-      method: 'POST',
-      body: JSON.stringify(pipeline),
-    }),
-  getStages: (): Promise<CrmStageDefinition[]> => request<CrmStageDefinition[]>('/pipelines/stages'),
-  updateStages: (stages: CrmStageDefinition[]): Promise<CrmStageDefinition[]> =>
-    request<CrmStageDefinition[]>('/pipelines/stages', {
-      method: 'PUT',
-      body: JSON.stringify(stages),
-    }),
-  getSettings: (): Promise<CrmPipelineSettings> => request<CrmPipelineSettings>('/pipelines/settings'),
-  updateSettings: (settings: Partial<CrmPipelineSettings>): Promise<CrmPipelineSettings> =>
-    request<CrmPipelineSettings>('/pipelines/settings', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    }),
+  getAll: async (): Promise<CrmPipeline[]> => {
+    const res = await apiClient.get<CrmPipeline[]>('/pipelines');
+    return res.data;
+  },
+  create: async (pipeline: Partial<CrmPipeline>): Promise<CrmPipeline> => {
+    const res = await apiClient.post<CrmPipeline>('/pipelines', pipeline);
+    return res.data;
+  },
+  getStages: async (): Promise<CrmStageDefinition[]> => {
+    const res = await apiClient.get<CrmStageDefinition[]>('/pipelines/stages');
+    return res.data;
+  },
+  updateStages: async (stages: CrmStageDefinition[]): Promise<CrmStageDefinition[]> => {
+    const res = await apiClient.put<CrmStageDefinition[]>('/pipelines/stages', stages);
+    return res.data;
+  },
+  getSettings: async (): Promise<CrmPipelineSettings> => {
+    const res = await apiClient.get<CrmPipelineSettings>('/pipelines/settings');
+    return res.data;
+  },
+  updateSettings: async (settings: Partial<CrmPipelineSettings>): Promise<CrmPipelineSettings> => {
+    const res = await apiClient.put<CrmPipelineSettings>('/pipelines/settings', settings);
+    return res.data;
+  },
 };
 
 export const membersApi = {
-  getAll: (): Promise<TeamMember[]> => request<TeamMember[]>('/members'),
-  create: (member: Partial<TeamMember>): Promise<TeamMember> =>
-    request<TeamMember>('/members', {
-      method: 'POST',
-      body: JSON.stringify(member),
-    }),
+  getAll: async (): Promise<TeamMember[]> => {
+    const res = await apiClient.get<TeamMember[]>('/members');
+    return res.data;
+  },
+  create: async (member: Partial<TeamMember>): Promise<TeamMember> => {
+    const res = await apiClient.post<TeamMember>('/members', member);
+    return res.data;
+  },
 };
 
 export const contactsApi = {
-  getAll: (): Promise<DirectoryContact[]> => request<DirectoryContact[]>('/contacts'),
-  create: (contact: Partial<DirectoryContact>): Promise<DirectoryContact> =>
-    request<DirectoryContact>('/contacts', {
-      method: 'POST',
-      body: JSON.stringify(contact),
-    }),
-  update: (id: string, contact: Partial<DirectoryContact>): Promise<DirectoryContact> =>
-    request<DirectoryContact>(`/contacts/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(contact),
-    }),
-  delete: (id: string): Promise<{ id: string }> =>
-    request<{ id: string }>(`/contacts/${id}`, {
-      method: 'DELETE',
-    }),
+  getAll: async (): Promise<DirectoryContact[]> => {
+    const res = await apiClient.get<DirectoryContact[]>('/contacts');
+    return res.data;
+  },
+  create: async (contact: Partial<DirectoryContact>): Promise<DirectoryContact> => {
+    const res = await apiClient.post<DirectoryContact>('/contacts', contact);
+    return res.data;
+  },
+  update: async (id: string, contact: Partial<DirectoryContact>): Promise<DirectoryContact> => {
+    const res = await apiClient.patch<DirectoryContact>(`/contacts/${id}`, contact);
+    return res.data;
+  },
+  delete: async (id: string): Promise<{ id: string }> => {
+    const res = await apiClient.delete<{ id: string }>(`/contacts/${id}`);
+    return res.data;
+  },
 };
 
 export const workspaceApi = {
-  getFolders: (): Promise<SpaceFolder[]> => request<SpaceFolder[]>('/folders'),
-  createFolder: (folder: Partial<SpaceFolder>): Promise<SpaceFolder> =>
-    request<SpaceFolder>('/folders', {
-      method: 'POST',
-      body: JSON.stringify(folder),
-    }),
-  updateFolder: (id: string, folder: Partial<SpaceFolder>): Promise<SpaceFolder> =>
-    request<SpaceFolder>(`/folders/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify(folder),
-    }),
-  deleteFolder: (id: string): Promise<{ id: string }> =>
-    request<{ id: string }>(`/folders/${id}`, {
-      method: 'DELETE',
-    }),
-  getStatuses: (): Promise<StatusDefinition[]> => request<StatusDefinition[]>('/statuses'),
-  updateStatuses: (statuses: StatusDefinition[]): Promise<StatusDefinition[]> =>
-    request<StatusDefinition[]>('/statuses', {
-      method: 'PUT',
-      body: JSON.stringify(statuses),
-    }),
-  getListSettings: (): Promise<ListSettings> => request<ListSettings>('/settings/list'),
-  updateListSettings: (settings: Partial<ListSettings>): Promise<ListSettings> =>
-    request<ListSettings>('/settings/list', {
-      method: 'PUT',
-      body: JSON.stringify(settings),
-    }),
+  getFolders: async (): Promise<SpaceFolder[]> => {
+    const res = await apiClient.get<SpaceFolder[]>('/folders');
+    return res.data;
+  },
+  createFolder: async (folder: Partial<SpaceFolder>): Promise<SpaceFolder> => {
+    const res = await apiClient.post<SpaceFolder>('/folders', folder);
+    return res.data;
+  },
+  updateFolder: async (id: string, folder: Partial<SpaceFolder>): Promise<SpaceFolder> => {
+    const res = await apiClient.patch<SpaceFolder>(`/folders/${id}`, folder);
+    return res.data;
+  },
+  deleteFolder: async (id: string): Promise<{ id: string }> => {
+    const res = await apiClient.delete<{ id: string }>(`/folders/${id}`);
+    return res.data;
+  },
+  getStatuses: async (): Promise<StatusDefinition[]> => {
+    const res = await apiClient.get<StatusDefinition[]>('/statuses');
+    return res.data;
+  },
+  updateStatuses: async (statuses: StatusDefinition[]): Promise<StatusDefinition[]> => {
+    const res = await apiClient.put<StatusDefinition[]>('/statuses', statuses);
+    return res.data;
+  },
+  getListSettings: async (): Promise<ListSettings> => {
+    const res = await apiClient.get<ListSettings>('/settings/list');
+    return res.data;
+  },
+  updateListSettings: async (settings: Partial<ListSettings>): Promise<ListSettings> => {
+    const res = await apiClient.put<ListSettings>('/settings/list', settings);
+    return res.data;
+  },
 };
