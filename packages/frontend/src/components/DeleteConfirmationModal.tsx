@@ -1,25 +1,49 @@
-import React from 'react';
-import { TaskItem } from '../types';
+import React, { useEffect } from 'react';
+import { TaskItem, SpaceFolder, CrmPipeline } from '../types';
 
-interface DeleteConfirmationModalProps {
+export type DeletionTarget =
+  | { type: 'task'; item: TaskItem }
+  | { type: 'folder'; item: SpaceFolder }
+  | { type: 'pipeline'; item: CrmPipeline };
+
+export interface DeleteConfirmationModalProps {
   isOpen: boolean;
-  task: TaskItem | null;
+  task?: TaskItem | null;
+  target?: DeletionTarget | null;
   onClose: () => void;
-  onConfirmDelete: (taskId: string) => void;
+  onConfirmDelete?: (taskId: string) => void;
+  onConfirmDeleteTarget?: () => void;
 }
 
 export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = ({
   isOpen,
   task,
+  target,
   onClose,
   onConfirmDelete,
+  onConfirmDeleteTarget,
 }) => {
-  if (!isOpen || !task) return null;
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
-  const subtasksCount = task.subtasks?.length || 4;
-  const linkedCrmDeal = task.linkedCrmDeal?.name
-    ? `${task.linkedCrmDeal.name} (${task.linkedCrmDeal.value} ARR)`
-    : 'Acme Corp ($180k ARR)';
+  const activeTarget: DeletionTarget | null =
+    target || (task ? { type: 'task', item: task } : null);
+
+  if (!isOpen || !activeTarget) return null;
+
+  const handleConfirm = () => {
+    if (onConfirmDeleteTarget) {
+      onConfirmDeleteTarget();
+    } else if (activeTarget.type === 'task' && onConfirmDelete) {
+      onConfirmDelete(activeTarget.item.id);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#18181b]/40 backdrop-blur-[4px] p-4 transition-all duration-200 select-none animate-in fade-in">
@@ -37,7 +61,9 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                 Destructive Action
               </span>
               <h2 className="text-[17px] font-bold text-zinc-900 leading-tight">
-                Delete Deliverable Permanently?
+                {activeTarget.type === 'folder' && 'Delete Folder Permanently?'}
+                {activeTarget.type === 'pipeline' && 'Delete Pipeline Permanently?'}
+                {activeTarget.type === 'task' && 'Delete Deliverable Permanently?'}
               </h2>
             </div>
           </div>
@@ -57,27 +83,80 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
 
         {/* Modal Body Content */}
         <div className="px-6 space-y-4">
-          {/* Impact Description & Deliverable Identifier */}
-          <div className="text-zinc-600 text-[13px] leading-relaxed">
-            Are you sure you want to delete{' '}
-            <span className="font-semibold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200 font-mono text-[12px]">
-              {task.id}
-            </span>{' '}
-            <strong className="text-zinc-900 font-medium">{task.title}</strong>? This will permanently
-            erase the deliverable, all activity logs, and its{' '}
-            <span className="font-semibold text-zinc-900">{subtasksCount} linked subtasks</span>.
-          </div>
+          {activeTarget.type === 'folder' && (
+            <>
+              {/* Impact Description & Folder Identifier */}
+              <div className="text-zinc-600 text-[13px] leading-relaxed">
+                Are you sure you want to delete folder{' '}
+                <span className="font-semibold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200 font-mono text-[12px]">
+                  {activeTarget.item.name}
+                </span>
+                ? This will permanently remove the folder and its{' '}
+                <span className="font-semibold text-zinc-900">{activeTarget.item.items?.length || 0} sub-lists</span>.
+              </div>
 
-          {/* Linked CRM Deal Alert Chip */}
-          <div className="bg-violet-50/80 border border-violet-200 text-violet-900 text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-2.5">
-            <span className="material-symbols-outlined text-[16px] text-[#9900c2] shrink-0">
-              link_off
-            </span>
-            <div className="text-[12px] leading-tight">
-              <span className="font-semibold text-[#9900c2]">Linked CRM Deal:</span> {linkedCrmDeal} —
-              deal link will be severed immediately.
-            </div>
-          </div>
+              {/* Alert chip */}
+              <div className="bg-amber-50/80 border border-amber-200 text-amber-900 text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[16px] text-amber-700 shrink-0">folder_off</span>
+                <div className="text-[12px] leading-tight">
+                  Contains {activeTarget.item.items?.length || 0} deliverable lists. Active workspace views will reset to the next available folder.
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTarget.type === 'pipeline' && (
+            <>
+              {/* Impact Description & Pipeline Identifier */}
+              <div className="text-zinc-600 text-[13px] leading-relaxed">
+                Are you sure you want to delete sales pipeline{' '}
+                <span className="font-semibold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200 font-mono text-[12px]">
+                  {activeTarget.item.name}
+                </span>
+                ? Its{' '}
+                <span className="font-semibold text-zinc-900">{activeTarget.item.dealCount || 0} active deals</span> will have their pipeline assignment unlinked.
+              </div>
+
+              {/* Alert chip */}
+              <div className="bg-violet-50/80 border border-violet-200 text-violet-900 text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[16px] text-[#9900c2] shrink-0">link_off</span>
+                <div className="text-[12px] leading-tight">
+                  Existing deals will be preserved and unassigned. Your active pipeline view will automatically switch to the remaining pipelines.
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTarget.type === 'task' && (
+            <>
+              {/* Impact Description & Deliverable Identifier */}
+              <div className="text-zinc-600 text-[13px] leading-relaxed">
+                Are you sure you want to delete{' '}
+                <span className="font-semibold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200 font-mono text-[12px]">
+                  {activeTarget.item.id}
+                </span>{' '}
+                <strong className="text-zinc-900 font-medium">{activeTarget.item.title}</strong>? This will permanently
+                erase the deliverable, all activity logs, and its{' '}
+                <span className="font-semibold text-zinc-900">
+                  {activeTarget.item.subtasks?.length || 4} linked subtasks
+                </span>.
+              </div>
+
+              {/* Linked CRM Deal Alert Chip */}
+              <div className="bg-violet-50/80 border border-violet-200 text-violet-900 text-xs px-3.5 py-2.5 rounded-lg flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[16px] text-[#9900c2] shrink-0">
+                  link_off
+                </span>
+                <div className="text-[12px] leading-tight">
+                  <span className="font-semibold text-[#9900c2]">Linked CRM Deal:</span>{' '}
+                  {activeTarget.item.linkedCrmDeal?.name
+                    ? `${activeTarget.item.linkedCrmDeal.name} (${activeTarget.item.linkedCrmDeal.value} ARR)`
+                    : 'Acme Corp ($180k ARR)'}{' '}
+                  — deal link will be severed immediately.
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Local-First Storage Notice Box */}
           <div className="bg-amber-50/70 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-950 flex items-start gap-2.5">
@@ -121,7 +200,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
 
             {/* Primary Destructive Action */}
             <button
-              onClick={() => onConfirmDelete(task.id)}
+              onClick={handleConfirm}
               className="bg-rose-600 hover:bg-rose-700 text-white rounded-full px-5 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition-all active:scale-[0.98] flex items-center gap-1.5"
             >
               <span className="material-symbols-outlined text-[16px]">delete</span>
@@ -133,3 +212,4 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
     </div>
   );
 };
+
