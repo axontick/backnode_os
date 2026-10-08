@@ -15,7 +15,7 @@
 **Files:**
 - Create: `packages/frontend/src/components/BacknodeLogo.tsx`
 
-- [ ] **Step 1: Write `BacknodeLogo.tsx`**
+- [x] **Step 1: Write `BacknodeLogo.tsx`**
 
 Implement a crisp, scalable SVG logo with:
 - Hexagonal shield perimeter filled with linear gradient (`#ea580c` to `#f97316`) and sharp outline `#fb923c`
@@ -23,12 +23,12 @@ Implement a crisp, scalable SVG logo with:
 - Typography lockup: "Backnode" in Plus Jakarta Sans (`font-headline font-bold text-zinc-100`) and "OS" in JetBrains Mono (`font-mono font-bold text-orange-500`)
 - Props: `size?: 'xs' | 'sm' | 'md' | 'lg'`, `showWordmark?: boolean`, `showVersion?: boolean`, `className?: string`
 
-- [ ] **Step 2: Typecheck frontend**
+- [x] **Step 2: Typecheck frontend**
 
 Run: `npm run lint` in `packages/frontend`
 Expected: Output clean with 0 errors.
 
-- [ ] **Step 3: Commit changes**
+- [x] **Step 3: Commit changes**
 
 ```bash
 git add packages/frontend/src/components/BacknodeLogo.tsx
@@ -42,7 +42,7 @@ git commit -m "feat(brand): add BacknodeLogo vector SVG component"
 **Files:**
 - Modify: `packages/frontend/src/components/TopNavBar.tsx`
 
-- [ ] **Step 1: Mount `BacknodeLogo` and modernize container, search, breadcrumbs, and popovers**
+- [x] **Step 1: Mount `BacknodeLogo` and modernize container, search, breadcrumbs, and popovers**
 
 In `packages/frontend/src/components/TopNavBar.tsx`:
 - Import `BacknodeLogo` from `./BacknodeLogo`
@@ -69,12 +69,12 @@ In `packages/frontend/src/components/TopNavBar.tsx`:
 - Primary CTA:
   - `bg-orange-600 hover:bg-orange-700 text-white font-semibold text-xs px-3.5 py-1.5 rounded-[6px] shadow-sm`
 
-- [ ] **Step 2: Typecheck frontend**
+- [x] **Step 2: Typecheck frontend**
 
 Run: `npm run lint` in `packages/frontend`
 Expected: Output clean with 0 errors.
 
-- [ ] **Step 3: Commit changes**
+- [x] **Step 3: Commit changes**
 
 ```bash
 git add packages/frontend/src/components/TopNavBar.tsx
@@ -89,19 +89,19 @@ git commit -m "feat(navigation): modernize TopNavBar to dark theme with SVG logo
 - Modify: `packages/frontend/src/pages/AuthPage.tsx`
 - Modify: `packages/frontend/src/components/AuthModal.tsx`
 
-- [ ] **Step 1: Replace emoji icon with `BacknodeLogo` in auth headers**
+- [x] **Step 1: Replace emoji icon with `BacknodeLogo` in auth headers**
 
 In `AuthPage.tsx` and `AuthModal.tsx`, replace the previous generic div with:
 ```tsx
 <BacknodeLogo size="md" showWordmark={false} />
 ```
 
-- [ ] **Step 2: Typecheck frontend**
+- [x] **Step 2: Typecheck frontend**
 
 Run: `npm run lint` in `packages/frontend`
 Expected: Output clean with 0 errors.
 
-- [ ] **Step 3: Commit changes**
+- [x] **Step 3: Commit changes**
 
 ```bash
 git add packages/frontend/src/pages/AuthPage.tsx packages/frontend/src/components/AuthModal.tsx
@@ -118,16 +118,16 @@ git commit -m "style(auth): embed BacknodeLogo SVG into AuthPage and AuthModal"
 - Audit: `packages/frontend/src/pages/AuthPage.tsx`
 - Audit: `packages/frontend/src/components/AuthModal.tsx`
 
-- [ ] **Step 1: Scan for prohibited tokens & banned radii**
+- [x] **Step 1: Scan for prohibited tokens & banned radii**
 
 Verify zero occurrences of `#9900c2`, `#b731e0`, `#f4f2fd`, `#eeedf7`, `#d4c0d5`, `#fbd7ff`, or non-compliant border radii (`rounded-2xl`, `rounded-xl`, `rounded-lg`).
 
-- [ ] **Step 2: Verify production build**
+- [x] **Step 2: Verify production build**
 
 Run: `npm run build` in `packages/frontend`
 Expected: Vite build succeeds with zero errors.
 
-- [ ] **Step 3: Commit any final refinements**
+- [x] **Step 3: Commit any final refinements**
 
 ```bash
 git commit -m "chore(navigation): finalize dark topnavbar and svg logo verification" --allow-empty
