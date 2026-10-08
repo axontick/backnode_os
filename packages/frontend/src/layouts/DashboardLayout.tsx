@@ -1,6 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
-import { SideNavBar } from '../components/SideNavBar';
+import { PrimarySidebar } from '../components/PrimarySidebar';
+import { InnerSidebar } from '../components/InnerSidebar';
 import { TopNavBar } from '../components/TopNavBar';
 import { OverviewPage } from '../pages/OverviewPage';
 import { TaskSpacesPage } from '../pages/TaskSpacesPage';
@@ -87,7 +88,43 @@ export const DashboardLayout: React.FC = () => {
     toastMessage,
   } = useWorkspace();
 
-  // Keyboard shortcut listener (⌘K, Esc)
+  const [isPrimarySidebarCollapsed, setIsPrimarySidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('backnode_primary_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const [isInnerSidebarCollapsed, setIsInnerSidebarCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem('backnode_inner_sidebar_collapsed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleTogglePrimarySidebar = () => {
+    setIsPrimarySidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('backnode_primary_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleToggleInnerSidebar = () => {
+    setIsInnerSidebarCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('backnode_inner_sidebar_collapsed', String(next));
+      } catch {}
+      return next;
+    });
+  };
+
+  // Keyboard shortcut listener (⌘K, Esc, ⌘[, ⌘])
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
@@ -96,6 +133,12 @@ export const DashboardLayout: React.FC = () => {
       } else if (e.key === 'Escape') {
         setIsCommandPaletteOpen(false);
         setIsNewItemModalOpen(false);
+      } else if ((e.metaKey || e.ctrlKey) && e.key === '[') {
+        e.preventDefault();
+        handleTogglePrimarySidebar();
+      } else if ((e.metaKey || e.ctrlKey) && e.key === ']') {
+        e.preventDefault();
+        handleToggleInnerSidebar();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
@@ -104,8 +147,8 @@ export const DashboardLayout: React.FC = () => {
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 font-sans antialiased select-none">
-      {/* 1. Left Fixed Sidebar (280px) */}
-      <SideNavBar
+      {/* 1. Primary Sidebar (220px expanded, 60px collapsed icon rail) */}
+      <PrimarySidebar
         currentHub={currentHub}
         onSelectHub={(hub) => {
           setCurrentHub(hub);
@@ -120,62 +163,73 @@ export const DashboardLayout: React.FC = () => {
             setCrmView('dashboard');
           }
         }}
-        activeSpace={activeSpace}
-        onSelectSpace={handleSelectSpace}
         onOpenNewItem={() => {
           setNewItemType(currentHub === 'crm' ? 'deal' : 'task');
           setNewItemDefaultStatus('Backlog');
           setIsNewItemModalOpen(true);
         }}
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
-        folders={folders}
-        onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
-        onEditFolder={(folder) => {
-          setFolderToEdit(folder);
-          setIsNewFolderModalOpen(true);
-        }}
-        onDeleteFolder={(folder) => setItemToDelete({ type: 'folder', item: folder })}
-        currentView={currentView}
-        onSelectDashboard={() => {
-          setCurrentHub('task-spaces');
-          setSelectedTaskId(null);
-          setCurrentView('dashboard');
-        }}
-        crmView={crmView}
-        onSelectCrmDashboard={() => {
-          setCurrentHub('crm');
-          setSelectedDealId(null);
-          setCrmView('dashboard');
-        }}
-        onSelectCrmBoard={() => {
-          setCurrentHub('crm');
-          setSelectedDealId(null);
-          setCrmView('board');
-        }}
-        pipelines={pipelines}
-        activePipelineId={activePipelineId}
-        onSelectPipeline={(pipeId) => {
-          setCurrentHub('crm');
-          setActivePipelineId(pipeId);
-          setSelectedDealId(null);
-          setCrmView('board');
-        }}
-        onOpenAddPipeline={() => setIsNewPipelineModalOpen(true)}
-        onEditPipeline={(pipe) => {
-          setPipelineToEdit(pipe);
-          setIsNewPipelineModalOpen(true);
-        }}
-        onDeletePipeline={(pipe) => setItemToDelete({ type: 'pipeline', item: pipe })}
-        onSelectPipelineView={(pipeId, view) => {
-          setCurrentHub('crm');
-          setActivePipelineId(pipeId);
-          setSelectedDealId(null);
-          setCrmView(view);
-        }}
+        isCollapsed={isPrimarySidebarCollapsed}
+        onToggleCollapse={handleTogglePrimarySidebar}
       />
 
-      {/* 2. Main Canvas Viewport (offset 280px left rail) */}
-      <div className="ml-[280px] w-[calc(100vw-280px)] flex-1 flex flex-col h-screen overflow-hidden relative">
+      {/* 2. Inner Sub-Navigation Sidebar (240px expanded, 28px collapsed ribbon) */}
+      {(currentHub === 'task-spaces' || currentHub === 'crm') && (
+        <InnerSidebar
+          currentHub={currentHub}
+          isCollapsed={isInnerSidebarCollapsed}
+          onToggleCollapse={handleToggleInnerSidebar}
+          folders={folders}
+          activeSpace={activeSpace}
+          currentView={currentView}
+          onSelectSpace={handleSelectSpace}
+          onSelectDashboard={() => {
+            setCurrentHub('task-spaces');
+            setSelectedTaskId(null);
+            setCurrentView('dashboard');
+          }}
+          onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
+          onEditFolder={(folder) => {
+            setFolderToEdit(folder);
+            setIsNewFolderModalOpen(true);
+          }}
+          onDeleteFolder={(folder) => setItemToDelete({ type: 'folder', item: folder })}
+          pipelines={pipelines}
+          activePipelineId={activePipelineId}
+          crmView={crmView}
+          onSelectPipeline={(pipeId) => {
+            setCurrentHub('crm');
+            setActivePipelineId(pipeId);
+            setSelectedDealId(null);
+            setCrmView('board');
+          }}
+          onSelectCrmDashboard={() => {
+            setCurrentHub('crm');
+            setSelectedDealId(null);
+            setCrmView('dashboard');
+          }}
+          onSelectCrmBoard={() => {
+            setCurrentHub('crm');
+            setSelectedDealId(null);
+            setCrmView('board');
+          }}
+          onSelectPipelineView={(pipeId, view) => {
+            setCurrentHub('crm');
+            setActivePipelineId(pipeId);
+            setSelectedDealId(null);
+            setCrmView(view);
+          }}
+          onOpenAddPipeline={() => setIsNewPipelineModalOpen(true)}
+          onEditPipeline={(pipe) => {
+            setPipelineToEdit(pipe);
+            setIsNewPipelineModalOpen(true);
+          }}
+          onDeletePipeline={(pipe) => setItemToDelete({ type: 'pipeline', item: pipe })}
+        />
+      )}
+
+      {/* 3. Main Canvas Viewport (fluid flex-1 min-w-0) */}
+      <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden relative">
         {/* Top Header Bar */}
         <TopNavBar
           currentHub={currentHub}

@@ -54,7 +54,7 @@ export const ActionContextMenu: React.FC<ActionContextMenuProps> = ({
       onClick={(e) => e.stopPropagation()}
       className={`absolute top-full mt-1 ${
         align === 'right' ? 'right-0' : 'left-0'
-      } w-36 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 p-1 flex flex-col gap-0.5 text-xs animate-in fade-in zoom-in-95 duration-100 select-none`}
+      } w-36 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-1 flex flex-col gap-0.5 text-xs animate-in fade-in zoom-in-95 duration-100 select-none`}
     >
       <button
         type="button"
@@ -64,13 +64,13 @@ export const ActionContextMenu: React.FC<ActionContextMenuProps> = ({
           onEdit();
           onClose();
         }}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[#504252] hover:text-[#9900c2] hover:bg-[#f4f2fd] transition-colors text-left font-medium"
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-zinc-300 hover:text-orange-400 hover:bg-zinc-800/60 transition-colors text-left font-medium cursor-pointer"
       >
-        <span className="material-symbols-outlined text-[15px] text-[#837284]" aria-hidden="true">edit</span>
+        <span className="material-symbols-outlined text-[15px] text-zinc-400" aria-hidden="true">edit</span>
         <span>{editLabel}</span>
       </button>
 
-      <div className="h-px bg-[#d4c0d5]/30 my-0.5" role="separator" />
+      <div className="h-px bg-[#27272a] my-0.5" role="separator" />
 
       <button
         type="button"
@@ -80,9 +80,9 @@ export const ActionContextMenu: React.FC<ActionContextMenuProps> = ({
           onDelete();
           onClose();
         }}
-        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-rose-600 hover:text-rose-700 hover:bg-rose-50 transition-colors text-left font-medium"
+        className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-red-400 hover:text-red-300 hover:bg-red-950/30 transition-colors text-left font-medium cursor-pointer"
       >
-        <span className="material-symbols-outlined text-[15px] text-rose-500" aria-hidden="true">delete</span>
+        <span className="material-symbols-outlined text-[15px] text-red-400" aria-hidden="true">delete</span>
         <span>{deleteLabel}</span>
       </button>
     </div>
