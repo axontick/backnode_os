@@ -32,6 +32,8 @@ export const TaskSpacesPage: React.FC = () => {
     folders,
     handleSelectSpace,
     setIsNewFolderModalOpen,
+    setFolderToEdit,
+    setItemToDelete,
     setCurrentView,
     setSelectedTaskId,
     listSettings,
@@ -89,6 +91,13 @@ export const TaskSpacesPage: React.FC = () => {
             onNavigateToView={(v) => {
               setSelectedTaskId(null);
               setCurrentView(v);
+            }}
+            onEditFolder={(folder) => {
+              setFolderToEdit(folder);
+              setIsNewFolderModalOpen(true);
+            }}
+            onDeleteFolder={(folder) => {
+              setItemToDelete({ type: 'folder', item: folder });
             }}
           />
         )}

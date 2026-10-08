@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { SpaceFolder, TaskItem } from '../types';
+import { ActionContextMenu } from './ActionContextMenu';
 
 interface TaskSpaceDashboardViewProps {
   folders: SpaceFolder[];
@@ -8,6 +9,8 @@ interface TaskSpaceDashboardViewProps {
   onOpenAddFolder: () => void;
   onOpenCreateTask: () => void;
   onNavigateToView: (view: 'board' | 'list' | 'table' | 'timeline' | 'calendar') => void;
+  onEditFolder?: (folder: SpaceFolder) => void;
+  onDeleteFolder?: (folder: SpaceFolder) => void;
 }
 
 export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
@@ -17,7 +20,11 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
   onOpenAddFolder,
   onOpenCreateTask,
   onNavigateToView,
+  onEditFolder,
+  onDeleteFolder,
 }) => {
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+
   // Local state to track which folder cards have their item drawer expanded on the dashboard
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
     'fld-engineering': true,
@@ -189,7 +196,9 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
             return (
               <div
                 key={folder.id}
-                className="bg-white rounded-xl border border-[#d4c0d5]/40 shadow-xs overflow-hidden transition-all duration-200 hover:shadow-md hover:border-[#9900c2]/40 flex flex-col"
+                className={`bg-white rounded-xl border border-[#d4c0d5]/40 shadow-xs transition-all duration-200 hover:shadow-md hover:border-[#9900c2]/40 flex flex-col ${
+                  activeMenuId === folder.id ? 'overflow-visible z-20' : 'overflow-hidden'
+                }`}
               >
                 {/* Folder Card Header */}
                 <div className="p-4 flex items-start justify-between gap-3">
@@ -216,27 +225,58 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
                     </div>
                   </div>
 
-                  {/* Expand / Collapse Action Button */}
-                  {hasItems ? (
-                    <button
-                      onClick={() => toggleFolderExpand(folder.id)}
-                      className="p-1.5 rounded-lg hover:bg-[#eeedf7] text-[#504252] hover:text-[#1a1b22] transition-all flex items-center gap-1 text-xs font-mono"
-                      title={isExpanded ? 'Collapse folder items' : 'Expand folder items'}
-                    >
-                      <span className="text-[10px] hidden sm:inline">
-                        {isExpanded ? 'Collapse' : 'Expand'}
-                      </span>
-                      <span
-                        className={`material-symbols-outlined text-[18px] transition-transform duration-200 ${
-                          isExpanded ? 'rotate-180 text-[#9900c2]' : 'rotate-0'
-                        }`}
+                  {/* Right side controls: Expand / Collapse + 3-dots actions */}
+                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Expand / Collapse Action Button */}
+                    {hasItems ? (
+                      <button
+                        onClick={() => toggleFolderExpand(folder.id)}
+                        className="p-1.5 rounded-lg hover:bg-[#eeedf7] text-[#504252] hover:text-[#1a1b22] transition-all flex items-center gap-1 text-xs font-mono"
+                        title={isExpanded ? 'Collapse folder items' : 'Expand folder items'}
                       >
-                        expand_more
-                      </span>
-                    </button>
-                  ) : (
-                    <span className="font-mono text-[10px] text-[#837284] italic">Empty</span>
-                  )}
+                        <span className="text-[10px] hidden sm:inline">
+                          {isExpanded ? 'Collapse' : 'Expand'}
+                        </span>
+                        <span
+                          className={`material-symbols-outlined text-[18px] transition-transform duration-200 ${
+                            isExpanded ? 'rotate-180 text-[#9900c2]' : 'rotate-0'
+                          }`}
+                        >
+                          expand_more
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="font-mono text-[10px] text-[#837284] italic">Empty</span>
+                    )}
+
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onMouseDown={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === folder.id ? null : folder.id);
+                        }}
+                        aria-haspopup="menu"
+                        aria-expanded={activeMenuId === folder.id}
+                        aria-label="Folder actions"
+                        className={`w-7 h-7 rounded-lg hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#9900c2] ${
+                          activeMenuId === folder.id ? 'text-[#9900c2] bg-purple-50' : 'text-zinc-400 hover:text-zinc-700'
+                        }`}
+                        title="Folder actions"
+                      >
+                        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">more_vert</span>
+                      </button>
+                      <ActionContextMenu
+                        isOpen={activeMenuId === folder.id}
+                        onClose={() => setActiveMenuId(null)}
+                        onEdit={() => onEditFolder?.(folder)}
+                        onDelete={() => onDeleteFolder?.(folder)}
+                        editLabel="Edit Folder"
+                        deleteLabel="Delete Folder"
+                      />
+                    </div>
+                  </div>
                 </div>
 
                 {/* Expandable Sub-Items Drawer with Smooth Transition */}
