@@ -64,9 +64,18 @@ export const DashboardLayout: React.FC = () => {
     isNewFolderModalOpen,
     setIsNewFolderModalOpen,
     handleCreateFolder,
+    folderToEdit,
+    setFolderToEdit,
+    handleUpdateFolder,
     isNewPipelineModalOpen,
     setIsNewPipelineModalOpen,
     handleCreatePipeline,
+    pipelineToEdit,
+    setPipelineToEdit,
+    handleUpdatePipeline,
+    itemToDelete,
+    setItemToDelete,
+    handleConfirmDeleteItem,
     isNewContactModalOpen,
     setIsNewContactModalOpen,
     handleCreateContact,
@@ -121,6 +130,11 @@ export const DashboardLayout: React.FC = () => {
         onOpenCommandPalette={() => setIsCommandPaletteOpen(true)}
         folders={folders}
         onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
+        onEditFolder={(folder) => {
+          setFolderToEdit(folder);
+          setIsNewFolderModalOpen(true);
+        }}
+        onDeleteFolder={(folder) => setItemToDelete({ type: 'folder', item: folder })}
         currentView={currentView}
         onSelectDashboard={() => {
           setCurrentHub('task-spaces');
@@ -147,6 +161,11 @@ export const DashboardLayout: React.FC = () => {
           setCrmView('board');
         }}
         onOpenAddPipeline={() => setIsNewPipelineModalOpen(true)}
+        onEditPipeline={(pipe) => {
+          setPipelineToEdit(pipe);
+          setIsNewPipelineModalOpen(true);
+        }}
+        onDeletePipeline={(pipe) => setItemToDelete({ type: 'pipeline', item: pipe })}
         onSelectPipelineView={(pipeId, view) => {
           setCurrentHub('crm');
           setActivePipelineId(pipeId);
@@ -230,15 +249,25 @@ export const DashboardLayout: React.FC = () => {
       {/* Add Folder Modal */}
       <NewFolderModal
         isOpen={isNewFolderModalOpen}
-        onClose={() => setIsNewFolderModalOpen(false)}
+        onClose={() => {
+          setIsNewFolderModalOpen(false);
+          setFolderToEdit(null);
+        }}
         onCreateFolder={handleCreateFolder}
+        folderToEdit={folderToEdit}
+        onUpdateFolder={handleUpdateFolder}
       />
 
       {/* Add Pipeline Modal */}
       <NewPipelineModal
         isOpen={isNewPipelineModalOpen}
-        onClose={() => setIsNewPipelineModalOpen(false)}
+        onClose={() => {
+          setIsNewPipelineModalOpen(false);
+          setPipelineToEdit(null);
+        }}
         onCreatePipeline={handleCreatePipeline}
+        pipelineToEdit={pipelineToEdit}
+        onUpdatePipeline={handleUpdatePipeline}
       />
 
       {/* Add Contact Modal */}
@@ -250,9 +279,14 @@ export const DashboardLayout: React.FC = () => {
 
       {/* Delete Confirmation Modal Dialog */}
       <DeleteConfirmationModal
-        isOpen={!!taskToDelete}
+        isOpen={Boolean(itemToDelete || taskToDelete)}
+        target={itemToDelete || (taskToDelete ? { type: 'task', item: taskToDelete } : null)}
         task={taskToDelete}
-        onClose={() => setTaskToDelete(null)}
+        onClose={() => {
+          setItemToDelete(null);
+          setTaskToDelete(null);
+        }}
+        onConfirmDeleteTarget={handleConfirmDeleteItem}
         onConfirmDelete={handleConfirmDeleteTask}
       />
 

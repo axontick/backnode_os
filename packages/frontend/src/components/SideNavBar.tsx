@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { SpaceFolder, CrmPipeline } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { ActionContextMenu } from './ActionContextMenu';
 
 interface SideNavBarProps {
   currentHub: string;
@@ -12,6 +13,8 @@ interface SideNavBarProps {
   onOpenCommandPalette: () => void;
   folders?: SpaceFolder[];
   onOpenAddFolder?: () => void;
+  onEditFolder?: (folder: SpaceFolder) => void;
+  onDeleteFolder?: (folder: SpaceFolder) => void;
   currentView?: string;
   onSelectDashboard?: () => void;
   crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
@@ -21,6 +24,8 @@ interface SideNavBarProps {
   activePipelineId?: string;
   onSelectPipeline?: (pipelineId: string) => void;
   onOpenAddPipeline?: () => void;
+  onEditPipeline?: (pipeline: CrmPipeline) => void;
+  onDeletePipeline?: (pipeline: CrmPipeline) => void;
   onSelectPipelineView?: (pipelineId: string, view: 'board' | 'analytics' | 'settings') => void;
   isEngineActive?: boolean;
   onToggleEngine?: () => void;
@@ -36,6 +41,8 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   onOpenCommandPalette,
   folders = [],
   onOpenAddFolder,
+  onEditFolder,
+  onDeleteFolder,
   currentView,
   onSelectDashboard,
   crmView = 'dashboard',
@@ -45,6 +52,8 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   activePipelineId = 'pipe-enterprise',
   onSelectPipeline,
   onOpenAddPipeline,
+  onEditPipeline,
+  onDeletePipeline,
   onSelectPipelineView,
 }) => {
   const { user } = useAuth();
@@ -55,6 +64,8 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
     handleCreateUserSpace,
     members,
   } = useWorkspace();
+
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
     'fld-engineering': true,
@@ -426,9 +437,35 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                             </span>
                             <span className="truncate font-medium">{folder.name}</span>
                           </div>
-                          <span className="text-[10px] font-mono text-[#837284] shrink-0">
-                            {folder.items?.length || 0}
-                          </span>
+                          <div className="flex items-center gap-1 shrink-0">
+                            <span className="text-[10px] font-mono text-[#837284]">
+                              {folder.items?.length || 0}
+                            </span>
+                            <div className="relative shrink-0 flex items-center">
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(activeMenuId === `fld-${folder.id}` ? null : `fld-${folder.id}`);
+                                }}
+                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all ${
+                                  activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-[#9900c2]' : 'opacity-0 group-hover:opacity-100'
+                                }`}
+                                title="Folder actions"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">more_vert</span>
+                              </button>
+                              <ActionContextMenu
+                                isOpen={activeMenuId === `fld-${folder.id}`}
+                                onClose={() => setActiveMenuId(null)}
+                                onEdit={() => onEditFolder?.(folder)}
+                                onDelete={() => onDeleteFolder?.(folder)}
+                                editLabel="Edit Folder"
+                                deleteLabel="Delete Folder"
+                              />
+                            </div>
+                          </div>
                         </div>
 
                         {/* Expandable Folder Child Items */}
@@ -569,18 +606,20 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
 
                     return (
                       <div key={pipe.id} className="flex flex-col">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (onSelectPipeline) onSelectPipeline(pipe.id);
-                          }}
-                          className={`flex items-center justify-between py-1 px-1.5 rounded-lg text-left text-xs transition-all ${
+                        <div
+                          className={`group flex items-center justify-between py-1 px-1.5 rounded-lg text-left text-xs transition-all ${
                             isSelected
                               ? 'bg-[#eeedf7] text-[#9900c2] font-semibold'
                               : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
                           }`}
                         >
-                          <div className="flex items-center gap-1.5 truncate">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (onSelectPipeline) onSelectPipeline(pipe.id);
+                            }}
+                            className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left"
+                          >
                             <span
                               className="material-symbols-outlined text-[14px] shrink-0"
                               style={{ color: pipe.color || '#9900c2' }}
@@ -588,11 +627,37 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                               {pipe.icon || 'trending_up'}
                             </span>
                             <span className="truncate font-medium">{pipe.name}</span>
+                          </button>
+                          <div className="flex items-center gap-1 shrink-0 ml-1">
+                            <span className="text-[10px] font-mono text-[#837284]">
+                              {pipe.dealCount}
+                            </span>
+                            <div className="relative shrink-0 flex items-center">
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(activeMenuId === `pipe-${pipe.id}` ? null : `pipe-${pipe.id}`);
+                                }}
+                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all ${
+                                  activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-[#9900c2]' : 'opacity-0 group-hover:opacity-100'
+                                }`}
+                                title="Pipeline actions"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">more_vert</span>
+                              </button>
+                              <ActionContextMenu
+                                isOpen={activeMenuId === `pipe-${pipe.id}`}
+                                onClose={() => setActiveMenuId(null)}
+                                onEdit={() => onEditPipeline?.(pipe)}
+                                onDelete={() => onDeletePipeline?.(pipe)}
+                                editLabel="Edit Pipeline"
+                                deleteLabel="Delete Pipeline"
+                              />
+                            </div>
                           </div>
-                          <span className="text-[10px] font-mono text-[#837284] shrink-0">
-                            {pipe.dealCount}
-                          </span>
-                        </button>
+                        </div>
 
                         {/* Pipeline-wise Views: Active Deals, Win/Loss Analytics, Pipeline Settings */}
                         {isSelected && (
