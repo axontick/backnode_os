@@ -48,19 +48,24 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#18181b]/40 backdrop-blur-[4px] p-4 transition-all duration-200 select-none animate-in fade-in">
       {/* 480px Centered Destructive Alert Dialog Container */}
-      <div className="w-[480px] max-w-full bg-[#ffffff] rounded-2xl border border-zinc-200/90 shadow-[0_20px_50px_rgba(0,0,0,0.16),0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="delete-dialog-title"
+        className="w-[480px] max-w-full bg-[#ffffff] rounded-2xl border border-zinc-200/90 shadow-[0_20px_50px_rgba(0,0,0,0.16),0_2px_8px_rgba(0,0,0,0.06)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+      >
         {/* Top Alert Header with Warning Icon Badge and Close Button */}
         <div className="p-6 pb-4 flex items-start justify-between">
           <div className="flex items-center gap-3.5">
             {/* 44px Warning Icon Badge */}
             <div className="w-11 h-11 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 shrink-0 shadow-sm">
-              <span className="material-symbols-outlined text-[22px]">delete_forever</span>
+              <span className="material-symbols-outlined text-[22px]" aria-hidden="true">delete_forever</span>
             </div>
             <div>
               <span className="font-mono text-[10px] uppercase font-bold text-rose-600 tracking-wider">
                 Destructive Action
               </span>
-              <h2 className="text-[17px] font-bold text-zinc-900 leading-tight">
+              <h2 id="delete-dialog-title" className="text-[17px] font-bold text-zinc-900 leading-tight">
                 {activeTarget.type === 'folder' && 'Delete Folder Permanently?'}
                 {activeTarget.type === 'pipeline' && 'Delete Pipeline Permanently?'}
                 {activeTarget.type === 'task' && 'Delete Deliverable Permanently?'}
@@ -70,14 +75,16 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
 
           {/* Close Button [X] with Esc Hint */}
           <button
+            type="button"
             onClick={onClose}
+            aria-label="Close modal"
             className="flex items-center gap-1 text-zinc-400 hover:text-zinc-700 p-1 rounded-md hover:bg-zinc-100 transition-colors"
             title="Close modal"
           >
             <kbd className="font-mono text-[9px] bg-zinc-100 border border-zinc-200 px-1 py-0.5 rounded text-zinc-500 font-medium">
               Esc
             </kbd>
-            <span className="material-symbols-outlined text-[18px]">close</span>
+            <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
           </button>
         </div>
 
@@ -189,8 +196,9 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
           <div className="flex items-center gap-2.5">
             {/* Cancel Button */}
             <button
+              type="button"
               onClick={onClose}
-              className="border border-zinc-200 bg-white hover:bg-zinc-100 rounded-full px-4 py-1.5 text-zinc-700 text-sm font-medium transition-all active:scale-[0.98] flex items-center gap-1.5 shadow-sm"
+              className="border border-zinc-200 bg-white hover:bg-zinc-100 rounded-full px-4 py-1.5 text-zinc-700 text-sm font-medium transition-all active:scale-[0.98] flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <span>Cancel</span>
               <kbd className="font-mono text-[9px] text-zinc-400 bg-zinc-50 border border-zinc-200 px-1 rounded">
@@ -200,10 +208,11 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
 
             {/* Primary Destructive Action */}
             <button
+              type="button"
               onClick={handleConfirm}
-              className="bg-rose-600 hover:bg-rose-700 text-white rounded-full px-5 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition-all active:scale-[0.98] flex items-center gap-1.5"
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-full px-5 py-1.5 text-sm font-semibold shadow-sm hover:shadow transition-all active:scale-[0.98] flex items-center gap-1.5 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[16px]">delete</span>
+              <span className="material-symbols-outlined text-[16px]" aria-hidden="true">delete</span>
               <span>Delete Permanently</span>
             </button>
           </div>
