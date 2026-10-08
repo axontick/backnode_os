@@ -52,15 +52,32 @@ export const OverviewPage: React.FC = () => {
   return (
     <OverviewView
       tasks={tasks}
+      deals={deals}
       onSelectTask={(task) => {
         setSelectedTaskId(task.id);
         setCurrentHub('task-spaces');
         setCurrentView('board');
       }}
+      onSelectDeal={(deal) => {
+        setSelectedDealId(deal.id);
+        setCurrentHub('crm');
+        setCrmView('board');
+      }}
       onNavigateToBoard={() => {
         setCurrentHub('task-spaces');
         setCurrentView('board');
       }}
+      onNavigateToDeals={() => {
+        setSelectedDealId(null);
+        setCurrentHub('crm');
+        setCrmView('dashboard');
+      }}
+      onOpenCreateTask={() => {
+        setNewItemDefaultStatus('In Progress');
+        setNewItemType('task');
+        setIsNewItemModalOpen(true);
+      }}
+      onUpdateTask={handleUpdateTask}
     />
   );
 };
