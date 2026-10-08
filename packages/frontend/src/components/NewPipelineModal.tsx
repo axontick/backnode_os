@@ -1,22 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CrmPipeline } from '../types';
 
 interface NewPipelineModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreatePipeline: (newPipeline: CrmPipeline) => void;
+  onCreatePipeline?: (newPipeline: CrmPipeline) => void;
+  pipelineToEdit?: CrmPipeline | null;
+  onUpdatePipeline?: (updatedPipeline: CrmPipeline) => void;
 }
 
 export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
   isOpen,
   onClose,
   onCreatePipeline,
+  pipelineToEdit,
+  onUpdatePipeline,
 }) => {
   const [pipelineName, setPipelineName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('trending_up');
   const [selectedColor, setSelectedColor] = useState('#9900c2');
   const [targetArr, setTargetArr] = useState('250000');
+
+  useEffect(() => {
+    if (pipelineToEdit) {
+      setPipelineName(pipelineToEdit.name);
+      setDescription(pipelineToEdit.description || '');
+      setSelectedIcon(pipelineToEdit.icon || 'trending_up');
+      setSelectedColor(pipelineToEdit.color || '#9900c2');
+      setTargetArr(String(pipelineToEdit.totalValue || 250000));
+    } else {
+      setPipelineName('');
+      setDescription('');
+      setSelectedIcon('trending_up');
+      setSelectedColor('#9900c2');
+      setTargetArr('250000');
+    }
+  }, [isOpen, pipelineToEdit]);
 
   if (!isOpen) return null;
 
@@ -49,17 +69,29 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
 
     const val = parseInt(targetArr.replace(/[^0-9]/g, '')) || 150000;
 
-    const newPipeline: CrmPipeline = {
-      id: `pipe-${pipelineName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`,
-      name: pipelineName.trim(),
-      description: description.trim() || 'New commercial opportunities & sales funnel.',
-      icon: selectedIcon,
-      color: selectedColor,
-      dealCount: 0,
-      totalValue: val,
-    };
+    if (pipelineToEdit) {
+      onUpdatePipeline?.({
+        ...pipelineToEdit,
+        name: pipelineName.trim(),
+        description: description.trim(),
+        icon: selectedIcon,
+        color: selectedColor,
+        totalValue: val,
+      });
+    } else {
+      const newPipeline: CrmPipeline = {
+        id: `pipe-${pipelineName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`,
+        name: pipelineName.trim(),
+        description: description.trim() || 'New commercial opportunities & sales funnel.',
+        icon: selectedIcon,
+        color: selectedColor,
+        dealCount: 0,
+        totalValue: val,
+      };
 
-    onCreatePipeline(newPipeline);
+      onCreatePipeline?.(newPipeline);
+    }
+
     setPipelineName('');
     setDescription('');
     onClose();
@@ -79,7 +111,7 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
             </div>
             <div>
               <h2 className="text-[17px] font-bold text-zinc-900 leading-tight">
-                Add Sales Pipeline
+                {pipelineToEdit ? 'Edit Sales Pipeline' : 'Add Sales Pipeline'}
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5">
                 Create a segregated pipeline with custom stages and target ARR.
@@ -197,8 +229,10 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
               type="submit"
               className="px-5 py-2 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] active:scale-[0.98] text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-[16px]">add_chart</span>
-              <span>Create Pipeline</span>
+              <span className="material-symbols-outlined text-[16px]">
+                {pipelineToEdit ? 'save' : 'add_chart'}
+              </span>
+              <span>{pipelineToEdit ? 'Save Changes' : 'Create Pipeline'}</span>
             </button>
           </div>
         </form>

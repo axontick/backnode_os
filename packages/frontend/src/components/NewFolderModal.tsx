@@ -1,22 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { SpaceFolder } from '../types';
 
 interface NewFolderModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onCreateFolder: (newFolder: SpaceFolder) => void;
+  onCreateFolder?: (newFolder: SpaceFolder) => void;
+  folderToEdit?: SpaceFolder | null;
+  onUpdateFolder?: (updatedFolder: SpaceFolder) => void;
 }
 
 export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   isOpen,
   onClose,
   onCreateFolder,
+  folderToEdit,
+  onUpdateFolder,
 }) => {
   const [folderName, setFolderName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('folder');
   const [selectedColor, setSelectedColor] = useState('#9900c2');
   const [initialListName, setInitialListName] = useState('Sprint 1 - Initial Backlog');
+
+  useEffect(() => {
+    if (folderToEdit) {
+      setFolderName(folderToEdit.name);
+      setDescription(folderToEdit.description || '');
+      setSelectedIcon(folderToEdit.icon || 'folder');
+      setSelectedColor(folderToEdit.color || '#9900c2');
+    } else {
+      setFolderName('');
+      setDescription('');
+      setSelectedIcon('folder');
+      setSelectedColor('#9900c2');
+      setInitialListName('Sprint 1 - Initial Backlog');
+    }
+  }, [isOpen, folderToEdit]);
 
   if (!isOpen) return null;
 
@@ -47,26 +66,37 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
     e.preventDefault();
     if (!folderName.trim()) return;
 
-    const newFolder: SpaceFolder = {
-      id: `fld-${folderName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`,
-      name: folderName.trim(),
-      icon: selectedIcon,
-      color: selectedColor,
-      description: description.trim() || 'Custom workspace folder with deliverables.',
-      items: initialListName.trim()
-        ? [
-            {
-              id: `list-${Date.now()}`,
-              name: initialListName.trim(),
-              taskCount: 0,
-              status: 'Active',
-              active: true,
-            },
-          ]
-        : [],
-    };
+    if (folderToEdit) {
+      onUpdateFolder?.({
+        ...folderToEdit,
+        name: folderName.trim(),
+        description: description.trim(),
+        icon: selectedIcon,
+        color: selectedColor,
+      });
+    } else {
+      const newFolder: SpaceFolder = {
+        id: `fld-${folderName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`,
+        name: folderName.trim(),
+        icon: selectedIcon,
+        color: selectedColor,
+        description: description.trim() || 'Custom workspace folder with deliverables.',
+        items: initialListName.trim()
+          ? [
+              {
+                id: `list-${Date.now()}`,
+                name: initialListName.trim(),
+                taskCount: 0,
+                status: 'Active',
+                active: true,
+              },
+            ]
+          : [],
+      };
 
-    onCreateFolder(newFolder);
+      onCreateFolder?.(newFolder);
+    }
+
     setFolderName('');
     setDescription('');
     onClose();
@@ -86,7 +116,7 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
             </div>
             <div>
               <h2 className="text-[17px] font-bold text-zinc-900 leading-tight">
-                Add Task Folder
+                {folderToEdit ? 'Edit Task Folder' : 'Add Task Folder'}
               </h2>
               <p className="text-xs text-zinc-500 mt-0.5">
                 Organize sprint cycles, deliverables, and engineering domains.
@@ -178,18 +208,20 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
           </div>
 
           {/* Initial List inside Folder */}
-          <div className="space-y-1 pt-1 border-t border-zinc-100">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Initial Sub-List / Deliverable Cycle
-            </label>
-            <input
-              type="text"
-              value={initialListName}
-              onChange={(e) => setInitialListName(e.target.value)}
-              placeholder="e.g. Sprint 1, Phase Alpha"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs focus:outline-none focus:border-[#9900c2]"
-            />
-          </div>
+          {!folderToEdit && (
+            <div className="space-y-1 pt-1 border-t border-zinc-100">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
+                Initial Sub-List / Deliverable Cycle
+              </label>
+              <input
+                type="text"
+                value={initialListName}
+                onChange={(e) => setInitialListName(e.target.value)}
+                placeholder="e.g. Sprint 1, Phase Alpha"
+                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs focus:outline-none focus:border-[#9900c2]"
+              />
+            </div>
+          )}
 
           {/* Footer Actions */}
           <div className="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2.5">
@@ -204,8 +236,10 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
               type="submit"
               className="px-5 py-2 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] active:scale-[0.98] text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
             >
-              <span className="material-symbols-outlined text-[16px]">create_new_folder</span>
-              <span>Create Folder</span>
+              <span className="material-symbols-outlined text-[16px]">
+                {folderToEdit ? 'save' : 'create_new_folder'}
+              </span>
+              <span>{folderToEdit ? 'Save Changes' : 'Create Folder'}</span>
             </button>
           </div>
         </form>
