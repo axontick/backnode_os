@@ -75,7 +75,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
   const [isSpaceDropdownOpen, setIsSpaceDropdownOpen] = useState(false);
   const [isCreatingSpace, setIsCreatingSpace] = useState(false);
   const [newSpaceName, setNewSpaceName] = useState('');
-  const [newSpaceColor, setNewSpaceColor] = useState('#9900c2');
+  const [newSpaceColor, setNewSpaceColor] = useState('#ea580c');
   const spaceDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close space dropdown on outside click
@@ -98,40 +98,40 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
     }));
   };
 
-  const accountName = user?.account?.name || activeUserSpace?.name || 'Backnode OS';
-  const initialLetter = (activeUserSpace?.name || accountName).charAt(0).toUpperCase() || 'B';
-  const operatorName = user?.name || 'Operator';
+  const initialLetter = activeUserSpace?.name ? activeUserSpace.name.charAt(0).toUpperCase() : 'B';
+  const accountName = user?.account?.name || 'Backnode Operations';
+  const operatorName = user?.name ? user.name.split(' ')[0] : 'Operator';
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-[280px] shrink-0 border-r border-[#d4c0d5]/30 bg-white flex flex-col justify-between p-4 z-30 select-none">
+    <aside className="fixed top-0 left-0 h-screen w-[280px] shrink-0 border-r border-[#27272a] bg-[#0c0a09] text-zinc-100 flex flex-col justify-between p-4 z-30 select-none">
       {/* Top Header & Workspace Switcher */}
       <div className="shrink-0 flex flex-col gap-3 relative pb-2">
         {/* Workspace Brand Header & Space Dropdown */}
         <div ref={spaceDropdownRef} className="relative w-full">
           <div
             onClick={() => setIsSpaceDropdownOpen((prev) => !prev)}
-            className="flex items-center justify-between p-1.5 rounded-xl hover:bg-[#f4f2fd] transition-colors cursor-pointer group border border-transparent hover:border-[#d4c0d5]/40"
+            className="flex items-center justify-between p-2 rounded-[6px] hover:bg-zinc-800/40 transition-colors cursor-pointer group border border-transparent hover:border-[#27272a]"
             title="Switch or create workspace"
           >
             <div className="flex items-center gap-2.5 min-w-0">
               <div
-                className="w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold text-sm shadow-sm shadow-[#9900c2]/20 shrink-0 transition-transform group-hover:scale-105"
-                style={{ backgroundColor: activeUserSpace?.color || '#9900c2' }}
+                className="w-8 h-8 rounded-[6px] flex items-center justify-center text-white font-semibold text-sm shadow-sm shrink-0 transition-transform group-hover:scale-105"
+                style={{ backgroundColor: activeUserSpace?.color || '#ea580c' }}
               >
                 {initialLetter}
               </div>
               <div className="flex flex-col min-w-0">
-                <span className="font-semibold text-sm text-[#1a1b22] tracking-tight leading-tight truncate">
+                <span className="font-semibold text-sm text-zinc-100 tracking-tight leading-tight truncate font-headline">
                   {activeUserSpace?.name || accountName}
                 </span>
-                <span className="text-[11px] font-mono text-[#5f5e61] truncate">
+                <span className="text-[11px] font-mono text-zinc-400 truncate">
                   {operatorName} • {activeUserSpace?.role || 'Workspace'}
                 </span>
               </div>
             </div>
             <span
-              className={`material-symbols-outlined text-[#837284] text-[18px] transition-transform duration-200 ${
-                isSpaceDropdownOpen ? 'rotate-180 text-[#9900c2]' : 'opacity-70 group-hover:opacity-100'
+              className={`material-symbols-outlined text-zinc-400 text-[18px] transition-transform duration-200 ${
+                isSpaceDropdownOpen ? 'rotate-180 text-orange-400' : 'opacity-70 group-hover:opacity-100'
               }`}
             >
               unfold_more
@@ -140,12 +140,12 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
 
           {/* User Spaces Dropdown - Full width aligned with sidebar content */}
           {isSpaceDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 w-full mt-2 bg-white border border-[#d4c0d5]/60 rounded-2xl shadow-xl z-50 p-2.5 flex flex-col gap-2 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-1.5 py-1 flex items-center justify-between border-b border-[#d4c0d5]/30">
-                <span className="font-mono text-[10px] uppercase font-bold text-[#837284] tracking-wider">
+            <div className="absolute top-full left-0 right-0 w-full mt-2 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2.5 flex flex-col gap-2 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-1.5 py-1 flex items-center justify-between border-b border-[#27272a]">
+                <span className="font-mono text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
                   Workspaces ({userSpaces.length})
                 </span>
-                <span className="text-[10px] font-mono text-[#9900c2] bg-[#f4f2fd] px-1.5 py-0.5 rounded font-semibold">
+                <span className="text-[10px] font-mono text-orange-400 bg-orange-950/40 border border-orange-500/30 px-1.5 py-0.5 rounded-[6px] font-semibold">
                   Active
                 </span>
               </div>
@@ -162,30 +162,30 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                         handleSelectUserSpace(space.id);
                         setIsSpaceDropdownOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between p-2 rounded-xl text-left transition-all ${
+                      className={`w-full flex items-center justify-between p-2 rounded-[6px] text-left transition-all ${
                         isActive
-                          ? 'bg-[#f4f2fd] border border-[#9900c2]/30 text-[#9900c2]'
-                          : 'hover:bg-[#fafafc] border border-transparent text-[#1a1b22]'
+                          ? 'bg-orange-950/40 border border-orange-500/30 text-orange-400'
+                          : 'hover:bg-zinc-800/40 border border-transparent text-zinc-300'
                       }`}
                     >
                       <div className="flex items-center gap-2.5 min-w-0 flex-1">
                         <div
-                          className="w-7 h-7 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-xs"
-                          style={{ backgroundColor: space.color || '#9900c2' }}
+                          className="w-7 h-7 rounded-[6px] flex items-center justify-center text-white text-xs font-bold shrink-0 shadow-xs"
+                          style={{ backgroundColor: space.color || '#ea580c' }}
                         >
                           {space.name.charAt(0).toUpperCase()}
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
-                          <span className={`text-xs font-semibold truncate ${isActive ? 'text-[#9900c2]' : 'text-[#1a1b22]'}`}>
+                          <span className={`text-xs font-semibold truncate ${isActive ? 'text-orange-400' : 'text-zinc-200'}`}>
                             {space.name}
                           </span>
-                          <span className="text-[10px] text-[#837284] font-mono truncate">
+                          <span className="text-[10px] text-zinc-500 font-mono truncate">
                             {space.role || 'Owner'} • {space.memberCount || 1} {space.memberCount === 1 ? 'member' : 'members'}
                           </span>
                         </div>
                       </div>
                       {isActive && (
-                        <span className="material-symbols-outlined text-[16px] text-[#9900c2] shrink-0 ml-1.5">
+                        <span className="material-symbols-outlined text-[16px] text-orange-400 shrink-0 ml-1.5">
                           check_circle
                         </span>
                       )}
@@ -194,26 +194,26 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                 })}
               </div>
 
-              <div className="h-px bg-[#d4c0d5]/30 my-0.5"></div>
+              <div className="h-px bg-[#27272a] my-0.5"></div>
 
               {/* Create New Space Area */}
               {!isCreatingSpace ? (
                 <button
                   type="button"
                   onClick={() => setIsCreatingSpace(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#fafafc] hover:bg-[#f4f2fd] text-[#9900c2] border border-dashed border-[#9900c2]/40 font-semibold text-xs transition-colors"
+                  className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-orange-400 border border-dashed border-orange-500/40 font-semibold text-xs transition-colors cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px]">add_circle</span>
                   <span>Create New Space</span>
                 </button>
               ) : (
-                <div className="p-2.5 rounded-xl bg-[#fafafc] border border-[#d4c0d5]/40 flex flex-col gap-2">
+                <div className="p-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex flex-col gap-2">
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-xs text-[#1a1b22]">New Workspace</span>
+                    <span className="font-semibold text-xs text-zinc-200">New Workspace</span>
                     <button
                       type="button"
                       onClick={() => setIsCreatingSpace(false)}
-                      className="text-[#837284] hover:text-[#1a1b22] text-xs font-bold px-1"
+                      className="text-zinc-400 hover:text-zinc-100 text-xs font-bold px-1 cursor-pointer"
                     >
                       ✕
                     </button>
@@ -224,7 +224,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                     value={newSpaceName}
                     onChange={(e) => setNewSpaceName(e.target.value)}
                     placeholder="e.g. Mobile Apps"
-                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-[#d4c0d5]/60 rounded-lg focus:outline-none focus:border-[#9900c2]"
+                    className="w-full px-2.5 py-1.5 text-xs bg-[#121214] border border-[#27272a] rounded-[6px] text-zinc-100 focus:outline-none focus:border-orange-500"
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && newSpaceName.trim()) {
                         handleCreateUserSpace({ name: newSpaceName, color: newSpaceColor });
@@ -236,22 +236,21 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                   />
                   {/* Color chips */}
                   <div className="flex items-center justify-between px-0.5 pt-0.5">
-                    {['#9900c2', '#0284c7', '#10b981', '#f59e0b', '#ec4899', '#6366f1'].map((c) => (
+                    {['#ea580c', '#0284c7', '#10b981', '#f59e0b', '#ec4899', '#6366f1'].map((c) => (
                       <button
                         key={c}
                         type="button"
                         onClick={() => setNewSpaceColor(c)}
-                        className={`w-4 h-4 rounded-full transition-transform ${
-                          newSpaceColor === c ? 'scale-125 ring-2 ring-offset-1 ring-[#9900c2]' : 'opacity-80 hover:opacity-100'
+                        className={`w-5 h-5 rounded-[6px] transition-transform ${
+                          newSpaceColor === c ? 'scale-125 ring-2 ring-orange-500' : 'opacity-80 hover:opacity-100'
                         }`}
                         style={{ backgroundColor: c }}
                       />
                     ))}
                   </div>
-                  <div className="flex items-center gap-1.5 pt-1">
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
                     <button
                       type="button"
-                      disabled={!newSpaceName.trim()}
                       onClick={() => {
                         if (newSpaceName.trim()) {
                           handleCreateUserSpace({ name: newSpaceName, color: newSpaceColor });
@@ -260,14 +259,14 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                           setIsSpaceDropdownOpen(false);
                         }
                       }}
-                      className="flex-1 py-1.5 rounded-lg bg-[#9900c2] hover:bg-[#b731e0] text-white text-xs font-semibold disabled:opacity-50 transition-all shadow-xs"
+                      className="px-2.5 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold"
                     >
                       Create
                     </button>
                     <button
                       type="button"
                       onClick={() => setIsCreatingSpace(false)}
-                      className="px-2.5 py-1.5 rounded-lg bg-white border border-[#d4c0d5]/40 text-[#504252] hover:bg-[#fafafc] text-xs font-medium"
+                      className="px-2.5 py-1.5 rounded-[6px] bg-[#121214] border border-[#27272a] text-zinc-400 hover:bg-zinc-800 text-xs font-medium"
                     >
                       Cancel
                     </button>
@@ -281,10 +280,10 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
         {/* Primary CTA */}
         <button
           onClick={onOpenNewItem}
-          className="w-full bg-[#9900c2] hover:bg-[#b731e0] text-white font-medium text-sm py-2 px-3.5 rounded-full flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98]"
+          className="w-full bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-semibold text-xs py-2 px-3.5 rounded-[6px] flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
         >
-          <span className="material-symbols-outlined text-[18px]">add</span>
-          <span>New Pipeline Item</span>
+          <span className="material-symbols-outlined text-[16px]">add</span>
+          <span>New Item</span>
         </button>
       </div>
 
@@ -295,23 +294,23 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
           {/* Overview */}
           <button
             onClick={() => onSelectHub('overview')}
-            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-full text-left transition-colors ${
+            className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-[6px] text-left transition-colors cursor-pointer ${
               currentHub === 'overview'
-                ? 'text-[#9900c2] bg-[#f4f2fd] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
+                ? 'text-orange-400 bg-orange-950/40 border-l-2 border-orange-500 font-semibold'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">dashboard</span>
+            <span className="material-symbols-outlined text-[18px]">dashboard</span>
             <span>Overview</span>
           </button>
 
           {/* Task Spaces (Active Destination) */}
           <div className="flex flex-col">
             <div
-              className={`flex items-center justify-between px-3 py-2 text-sm font-medium rounded-full text-left transition-colors ${
+              className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-[6px] text-left transition-colors ${
                 currentHub === 'task-spaces'
-                  ? 'text-[#9900c2] bg-[#f4f2fd] font-semibold'
-                  : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
+                  ? 'text-orange-400 bg-orange-950/40 border-l-2 border-orange-500 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
               }`}
             >
               <button
@@ -323,10 +322,10 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                     onSelectHub('task-spaces');
                   }
                 }}
-                className="flex items-center gap-2.5 flex-1 text-left"
+                className="flex items-center gap-2.5 flex-1 text-left cursor-pointer"
               >
                 <span
-                  className="material-symbols-outlined text-[20px]"
+                  className="material-symbols-outlined text-[18px]"
                   style={{
                     fontVariationSettings: currentHub === 'task-spaces' ? "'FILL' 1" : "'FILL' 0",
                   }}
@@ -343,51 +342,53 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                       e.stopPropagation();
                       onOpenAddFolder();
                     }}
-                    className="w-5 h-5 rounded-md hover:bg-[#9900c2]/15 text-[#9900c2] flex items-center justify-center transition-all hover:scale-105"
+                    className="w-5 h-5 rounded-[6px] hover:bg-orange-950/40 text-orange-400 flex items-center justify-center transition-all hover:scale-105 cursor-pointer"
                     title="Add new folder"
                   >
                     <span className="material-symbols-outlined text-[15px]">add</span>
                   </button>
                 )}
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#9900c2]/10 text-[#9900c2] font-semibold">
-                  Active
-                </span>
+                {currentHub === 'task-spaces' && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 border border-orange-500/30 font-semibold">
+                    Active
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Sub-Spaces Tree (visible under Task Spaces) */}
             {currentHub === 'task-spaces' && (
-              <div className="ml-3 pl-2.5 border-l border-[#d4c0d5]/40 my-1 flex flex-col gap-1 transition-all duration-300">
+              <div className="ml-3 pl-2.5 border-l border-[#27272a] my-1 flex flex-col gap-1 transition-all duration-300">
                 {/* 1. Task Spaces Custom Dashboard Entry */}
                 <button
                   onClick={() => {
                     if (onSelectDashboard) onSelectDashboard();
                   }}
-                  className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-xs transition-all ${
+                  className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-xs transition-all cursor-pointer ${
                     currentView === 'dashboard'
-                      ? 'bg-[#eeedf7] text-[#9900c2] font-semibold border-l-2 border-[#9900c2]'
-                      : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
+                      ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="material-symbols-outlined text-[15px] text-[#9900c2]">
+                    <span className="material-symbols-outlined text-[15px] text-orange-400">
                       space_dashboard
                     </span>
                     <span className="truncate">Spaces Dashboard</span>
                   </div>
-                  <span className="font-mono text-[9px] uppercase px-1 rounded bg-[#fbd7ff] text-[#330043] font-bold">
+                  <span className="font-mono text-[9px] uppercase px-1 rounded-[6px] bg-orange-950/50 text-orange-400 font-bold border border-orange-500/20">
                     Hub
                   </span>
                 </button>
 
                 {/* 2. Dynamic Folders with Expandable Items */}
                 <div className="pt-1 flex flex-col gap-1">
-                  <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase text-[#837284] font-semibold tracking-wider">
+                  <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold tracking-wider">
                     <span>Folders ({folders.length})</span>
                     {onOpenAddFolder && (
                       <button
                         onClick={onOpenAddFolder}
-                        className="hover:text-[#9900c2] transition-colors flex items-center gap-0.5 text-[10px] lowercase"
+                        className="hover:text-orange-400 transition-colors flex items-center gap-0.5 text-[10px] lowercase cursor-pointer"
                         title="Add Folder"
                       >
                         <span className="material-symbols-outlined text-[12px]">add</span>
@@ -409,18 +410,18 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                               toggleFolder(folder.id);
                             }
                           }}
-                          className={`flex items-center justify-between py-1 px-1.5 rounded-lg text-left text-xs text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd] transition-all cursor-pointer group select-none`}
+                          className={`flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-all cursor-pointer group select-none`}
                         >
                           <div className="flex items-center gap-1.5 truncate">
                             {hasItems ? (
                               <button
                                 type="button"
                                 onClick={(e) => toggleFolder(folder.id, e)}
-                                className="w-3.5 h-3.5 flex items-center justify-center text-[#837284] group-hover:text-[#9900c2] transition-all"
+                                className="w-3.5 h-3.5 flex items-center justify-center text-zinc-400 group-hover:text-orange-400 transition-all cursor-pointer"
                               >
                                 <span
                                   className={`material-symbols-outlined text-[14px] transition-transform duration-200 ${
-                                    isExpanded ? 'rotate-90 text-[#9900c2]' : 'rotate-0'
+                                    isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
                                   }`}
                                 >
                                   chevron_right
@@ -438,7 +439,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                             <span className="truncate font-medium">{folder.name}</span>
                           </div>
                           <div className="flex items-center gap-1 shrink-0">
-                            <span className="text-[10px] font-mono text-[#837284]">
+                            <span className="text-[10px] font-mono text-zinc-500">
                               {folder.items?.length || 0}
                             </span>
                             <div className="relative shrink-0 flex items-center">
@@ -452,8 +453,8 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                                 aria-haspopup="menu"
                                 aria-expanded={activeMenuId === `fld-${folder.id}`}
                                 aria-label="Folder actions"
-                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[#9900c2] ${
-                                  activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-[#9900c2]' : 'opacity-0 group-hover:opacity-100'
+                                className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                                  activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
                                 }`}
                                 title="Folder actions"
                               >
@@ -474,7 +475,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                         {/* Expandable Folder Child Items */}
                         {hasItems && (
                           <div
-                            className={`transition-all duration-300 ease-in-out overflow-hidden flex flex-col gap-0.5 pl-4 ml-1 border-l border-[#d4c0d5]/30 ${
+                            className={`transition-all duration-300 ease-in-out overflow-hidden flex flex-col gap-0.5 pl-4 ml-1 border-l border-[#27272a] ${
                               isExpanded ? 'max-h-60 opacity-100 py-0.5' : 'max-h-0 opacity-0 py-0'
                             }`}
                           >
@@ -484,21 +485,21 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                                 <button
                                   key={subItem.id}
                                   onClick={() => onSelectSpace(subItem.id)}
-                                  className={`flex items-center justify-between py-1 px-2 rounded-md text-left text-[11px] transition-all ${
+                                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
                                     isActive
-                                      ? 'bg-[#eeedf7] text-[#9900c2] font-semibold border-l-2 border-[#9900c2]'
-                                      : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
+                                      ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                                   }`}
                                 >
                                   <div className="flex items-center gap-1.5 truncate">
                                     <span
                                       className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                        isActive ? 'bg-[#9900c2] animate-pulse' : 'bg-zinc-400'
+                                        isActive ? 'bg-orange-500 animate-pulse' : 'bg-zinc-500'
                                       }`}
                                     />
                                     <span className="truncate">{subItem.name}</span>
                                   </div>
-                                  <span className="text-[9.5px] font-mono text-[#837284] shrink-0 ml-1">
+                                  <span className="text-[9.5px] font-mono text-zinc-500 shrink-0 ml-1">
                                     {subItem.taskCount}
                                   </span>
                                 </button>
@@ -517,10 +518,10 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
           {/* Pipeline CRM */}
           <div className="flex flex-col">
             <div
-              className={`flex items-center justify-between px-3 py-2 text-sm font-medium rounded-full text-left transition-colors ${
+              className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-[6px] text-left transition-colors ${
                 currentHub === 'crm'
-                  ? 'text-[#9900c2] bg-[#f4f2fd] font-semibold'
-                  : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
+                  ? 'text-orange-400 bg-orange-950/40 border-l-2 border-orange-500 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
               }`}
             >
               <button
@@ -529,10 +530,10 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                   if (onSelectCrmDashboard) onSelectCrmDashboard();
                   else onSelectHub('crm');
                 }}
-                className="flex items-center gap-2.5 flex-1 text-left"
+                className="flex items-center gap-2.5 flex-1 text-left cursor-pointer"
               >
                 <span
-                  className="material-symbols-outlined text-[20px]"
+                  className="material-symbols-outlined text-[18px]"
                   style={{
                     fontVariationSettings: currentHub === 'crm' ? "'FILL' 1" : "'FILL' 0",
                   }}
@@ -549,53 +550,55 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                       e.stopPropagation();
                       onOpenAddPipeline();
                     }}
-                    className="w-5 h-5 rounded-md hover:bg-[#9900c2]/15 text-[#9900c2] flex items-center justify-center transition-all hover:scale-105"
+                    className="w-5 h-5 rounded-[6px] hover:bg-orange-950/40 text-orange-400 flex items-center justify-center transition-all hover:scale-105 cursor-pointer"
                     title="Add new sales pipeline"
                   >
                     <span className="material-symbols-outlined text-[15px]">add</span>
                   </button>
                 )}
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#9900c2]/10 text-[#9900c2] font-semibold">
-                  Active
-                </span>
+                {currentHub === 'crm' && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 border border-orange-500/30 font-semibold">
+                    Active
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Sub-items hierarchy for CRM */}
             {currentHub === 'crm' && (
-              <div className="ml-3 pl-2.5 border-l border-[#d4c0d5]/40 my-1 flex flex-col gap-1 transition-all duration-300">
+              <div className="ml-3 pl-2.5 border-l border-[#27272a] my-1 flex flex-col gap-1 transition-all duration-300">
                 {/* 1. CRM Overview Dashboard */}
                 <button
                   onClick={() => {
                     if (onSelectCrmDashboard) onSelectCrmDashboard();
                     else onSelectHub('crm');
                   }}
-                  className={`flex items-center justify-between py-1.5 px-2 rounded-lg text-left text-xs transition-all ${
+                  className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-xs transition-all cursor-pointer ${
                     crmView === 'dashboard'
-                      ? 'bg-[#eeedf7] text-[#9900c2] font-semibold border-l-2 border-[#9900c2]'
-                      : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
+                      ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                   }`}
                 >
                   <div className="flex items-center gap-1.5 truncate">
-                    <span className="material-symbols-outlined text-[15px] text-[#9900c2]">
+                    <span className="material-symbols-outlined text-[15px] text-orange-400">
                       space_dashboard
                     </span>
                     <span className="truncate">CRM Dashboard</span>
                   </div>
-                  <span className="font-mono text-[9px] uppercase px-1 rounded bg-[#fbd7ff] text-[#330043] font-bold">
+                  <span className="font-mono text-[9px] uppercase px-1 rounded-[6px] bg-orange-950/50 text-orange-400 font-bold border border-orange-500/20">
                     Hub
                   </span>
                 </button>
 
                 {/* 2. Pipelines Tree Header */}
                 <div className="pt-1 flex flex-col gap-1">
-                  <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase text-[#837284] font-semibold tracking-wider">
+                  <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold tracking-wider">
                     <span>Pipelines ({pipelines.length})</span>
                     {onOpenAddPipeline && (
                       <button
                         type="button"
                         onClick={onOpenAddPipeline}
-                        className="hover:text-[#9900c2] transition-colors flex items-center gap-0.5 text-[10px] lowercase"
+                        className="hover:text-orange-400 transition-colors flex items-center gap-0.5 text-[10px] lowercase cursor-pointer"
                         title="Add new pipeline"
                       >
                         <span className="material-symbols-outlined text-[12px]">add</span>
@@ -610,10 +613,10 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                     return (
                       <div key={pipe.id} className="flex flex-col">
                         <div
-                          className={`group flex items-center justify-between py-1 px-1.5 rounded-lg text-left text-xs transition-all ${
+                          className={`group flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-xs transition-all ${
                             isSelected
-                              ? 'bg-[#eeedf7] text-[#9900c2] font-semibold'
-                              : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
+                              ? 'bg-orange-950/40 text-orange-400 font-semibold'
+                              : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                           }`}
                         >
                           <button
@@ -621,18 +624,18 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                             onClick={() => {
                               if (onSelectPipeline) onSelectPipeline(pipe.id);
                             }}
-                            className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left"
+                            className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left cursor-pointer"
                           >
                             <span
                               className="material-symbols-outlined text-[14px] shrink-0"
-                              style={{ color: pipe.color || '#9900c2' }}
+                              style={{ color: pipe.color || '#ea580c' }}
                             >
                               {pipe.icon || 'trending_up'}
                             </span>
                             <span className="truncate font-medium">{pipe.name}</span>
                           </button>
                           <div className="flex items-center gap-1 shrink-0 ml-1">
-                            <span className="text-[10px] font-mono text-[#837284]">
+                            <span className="text-[10px] font-mono text-zinc-500">
                               {pipe.dealCount}
                             </span>
                             <div className="relative shrink-0 flex items-center">
@@ -646,8 +649,8 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                                 aria-haspopup="menu"
                                 aria-expanded={activeMenuId === `pipe-${pipe.id}`}
                                 aria-label="Pipeline actions"
-                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[#9900c2] ${
-                                  activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-[#9900c2]' : 'opacity-0 group-hover:opacity-100'
+                                className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                                  activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
                                 }`}
                                 title="Pipeline actions"
                               >
@@ -667,17 +670,17 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
 
                         {/* Pipeline-wise Views: Active Deals, Win/Loss Analytics, Pipeline Settings */}
                         {isSelected && (
-                          <div className="flex flex-col gap-0.5 pl-4 ml-1 my-0.5 border-l border-[#d4c0d5]/30">
+                          <div className="flex flex-col gap-0.5 pl-4 ml-1 my-0.5 border-l border-[#27272a]">
                             <button
                               type="button"
                               onClick={() => {
                                 if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'board');
                                 else if (onSelectCrmBoard) onSelectCrmBoard();
                               }}
-                              className={`flex items-center justify-between py-1 px-2 rounded-md text-left text-[11px] transition-all ${
+                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
                                 crmView === 'board'
-                                  ? 'bg-[#eeedf7] text-[#9900c2] font-semibold border-l-2 border-[#9900c2]'
-                                  : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
+                                  ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                               }`}
                             >
                               <div className="flex items-center gap-1.5 truncate">
@@ -691,17 +694,17 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                               onClick={() => {
                                 if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'analytics');
                               }}
-                              className={`flex items-center justify-between py-1 px-2 rounded-md text-left text-[11px] transition-all ${
+                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
                                 crmView === 'analytics'
-                                  ? 'bg-[#eeedf7] text-[#9900c2] font-semibold border-l-2 border-[#9900c2]'
-                                  : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
+                                  ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                               }`}
                             >
                               <div className="flex items-center gap-1.5 truncate">
-                                <span className="material-symbols-outlined text-[13px] text-emerald-600">leaderboard</span>
+                                <span className="material-symbols-outlined text-[13px] text-emerald-400">leaderboard</span>
                                 <span className="truncate">Win/Loss Analytics</span>
                               </div>
-                              <span className="text-[9.5px] font-mono text-emerald-600 font-semibold">68%</span>
+                              <span className="text-[9.5px] font-mono text-emerald-400 font-semibold">68%</span>
                             </button>
 
                             <button
@@ -709,17 +712,17 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                               onClick={() => {
                                 if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'settings');
                               }}
-                              className={`flex items-center justify-between py-1 px-2 rounded-md text-left text-[11px] transition-all ${
+                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
                                 crmView === 'settings'
-                                  ? 'bg-[#eeedf7] text-[#9900c2] font-semibold border-l-2 border-[#9900c2]'
-                                  : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#f4f2fd]'
+                                  ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                               }`}
                             >
                               <div className="flex items-center gap-1.5 truncate">
                                 <span className="material-symbols-outlined text-[13px]">tune</span>
                                 <span className="truncate">Pipeline Settings</span>
                               </div>
-                              <span className="text-[9px] font-mono uppercase px-1 rounded bg-[#fbd7ff] text-[#330043] font-bold">
+                              <span className="text-[9px] font-mono uppercase px-1 rounded-[6px] bg-orange-950/50 text-orange-400 font-bold border border-orange-500/20">
                                 Edit
                               </span>
                             </button>
@@ -736,28 +739,28 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
           {/* Contacts */}
           <button
             onClick={() => onSelectHub('contacts')}
-            className={`flex items-center gap-2.5 px-3 py-2 text-sm font-medium rounded-full text-left transition-colors ${
+            className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-[6px] text-left transition-colors cursor-pointer ${
               currentHub === 'contacts'
-                ? 'text-[#9900c2] bg-[#f4f2fd] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
+                ? 'text-orange-400 bg-orange-950/40 border-l-2 border-orange-500 font-semibold'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
             }`}
           >
-            <span className="material-symbols-outlined text-[20px]">group</span>
+            <span className="material-symbols-outlined text-[18px]">group</span>
             <span>Contacts</span>
           </button>
 
           {/* Team & Access */}
           <button
             onClick={() => onSelectHub('team')}
-            className={`flex items-center justify-between px-3 py-2 text-sm font-medium rounded-full text-left transition-colors ${
+            className={`flex items-center justify-between px-3 py-2 text-xs font-medium rounded-[6px] text-left transition-colors cursor-pointer ${
               currentHub === 'team'
-                ? 'text-[#9900c2] bg-[#f4f2fd] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
+                ? 'text-orange-400 bg-orange-950/40 border-l-2 border-orange-500 font-semibold'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
             }`}
           >
             <div className="flex items-center gap-2.5">
               <span
-                className="material-symbols-outlined text-[20px]"
+                className="material-symbols-outlined text-[18px]"
                 style={{
                   fontVariationSettings: currentHub === 'team' ? "'FILL' 1" : "'FILL' 0",
                 }}
@@ -766,7 +769,7 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
               </span>
               <span>Team &amp; Access</span>
             </div>
-            <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-[#9900c2]/10 text-[#9900c2] font-semibold">
+            <span className="text-[10px] font-mono px-2 py-0.5 rounded-[6px] bg-zinc-800 text-zinc-300 font-semibold">
               {members.length}
             </span>
           </button>
@@ -774,16 +777,16 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
       </div>
 
       {/* Sidebar Footer */}
-      <div className="flex flex-col gap-2 pt-3 border-t border-[#d4c0d5]/30">
+      <div className="flex flex-col gap-2 pt-3 border-t border-[#27272a]">
         <button
           onClick={onOpenCommandPalette}
-          className="flex items-center justify-between px-2.5 py-1.5 text-xs text-[#837284] hover:text-[#1a1b22] hover:bg-[#f4f2fd] rounded-lg transition-colors font-mono"
+          className="flex items-center justify-between px-2.5 py-1.5 text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 rounded-[6px] transition-colors font-mono cursor-pointer"
         >
           <span className="flex items-center gap-1.5">
             <span className="material-symbols-outlined text-[15px]">bolt</span>
             <span>Quick Actions</span>
           </span>
-          <kbd className="px-1.5 py-0.5 rounded bg-white border border-[#d4c0d5]/50 text-[10px]">
+          <kbd className="px-1.5 py-0.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-[10px] text-zinc-400">
             ⌘K
           </kbd>
         </button>

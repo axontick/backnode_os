@@ -206,7 +206,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [crmSettingsInitialTab, setCrmSettingsInitialTab] = useState<'general' | 'stages'>('general');
 
   // Navigation state
-  const [currentHub, setCurrentHub] = useState<string>('task-spaces');
+  const [currentHub, setCurrentHub] = useState<string>('overview');
   const [activeSpace, setActiveSpace] = useState<string>('sprint-14');
   const [currentView, setCurrentView] = useState<
     'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs'

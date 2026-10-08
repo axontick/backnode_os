@@ -103,7 +103,7 @@ export const DashboardLayout: React.FC = () => {
   }, [isCommandPaletteOpen, setIsCommandPaletteOpen, setIsNewItemModalOpen]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#fbf8ff] text-[#1a1b22] font-sans antialiased select-none">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 font-sans antialiased select-none">
       {/* 1. Left Fixed Sidebar (280px) */}
       <SideNavBar
         currentHub={currentHub}
