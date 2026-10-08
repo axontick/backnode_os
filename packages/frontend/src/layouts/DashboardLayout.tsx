@@ -286,7 +286,13 @@ export const DashboardLayout: React.FC = () => {
           setItemToDelete(null);
           setTaskToDelete(null);
         }}
-        onConfirmDeleteTarget={handleConfirmDeleteItem}
+        onConfirmDeleteTarget={() => {
+          if (itemToDelete) {
+            handleConfirmDeleteItem();
+          } else if (taskToDelete) {
+            handleConfirmDeleteTask();
+          }
+        }}
         onConfirmDelete={handleConfirmDeleteTask}
       />
 

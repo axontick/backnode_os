@@ -449,12 +449,15 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                                   e.stopPropagation();
                                   setActiveMenuId(activeMenuId === `fld-${folder.id}` ? null : `fld-${folder.id}`);
                                 }}
-                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all ${
+                                aria-haspopup="menu"
+                                aria-expanded={activeMenuId === `fld-${folder.id}`}
+                                aria-label="Folder actions"
+                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[#9900c2] ${
                                   activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-[#9900c2]' : 'opacity-0 group-hover:opacity-100'
                                 }`}
                                 title="Folder actions"
                               >
-                                <span className="material-symbols-outlined text-[15px]">more_vert</span>
+                                <span className="material-symbols-outlined text-[15px]" aria-hidden="true">more_vert</span>
                               </button>
                               <ActionContextMenu
                                 isOpen={activeMenuId === `fld-${folder.id}`}
@@ -640,12 +643,15 @@ export const SideNavBar: React.FC<SideNavBarProps> = ({
                                   e.stopPropagation();
                                   setActiveMenuId(activeMenuId === `pipe-${pipe.id}` ? null : `pipe-${pipe.id}`);
                                 }}
-                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all ${
+                                aria-haspopup="menu"
+                                aria-expanded={activeMenuId === `pipe-${pipe.id}`}
+                                aria-label="Pipeline actions"
+                                className={`w-5 h-5 rounded hover:bg-[#9900c2]/10 text-[#837284] hover:text-[#9900c2] flex items-center justify-center transition-all focus:outline-none focus-visible:opacity-100 focus-visible:ring-1 focus-visible:ring-[#9900c2] ${
                                   activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-[#9900c2]' : 'opacity-0 group-hover:opacity-100'
                                 }`}
                                 title="Pipeline actions"
                               >
-                                <span className="material-symbols-outlined text-[15px]">more_vert</span>
+                                <span className="material-symbols-outlined text-[15px]" aria-hidden="true">more_vert</span>
                               </button>
                               <ActionContextMenu
                                 isOpen={activeMenuId === `pipe-${pipe.id}`}
