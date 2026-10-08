@@ -3,6 +3,8 @@ import {
   Get,
   Post,
   Put,
+  Patch,
+  Delete,
   Body,
   Param,
   UseGuards,
@@ -62,5 +64,22 @@ export class PipelinesController {
     @Body() data: any,
   ) {
     return this.pipelinesService.create(user.accountId, data);
+  }
+
+  @Patch(':id')
+  async update(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() data: any,
+  ) {
+    return this.pipelinesService.update(user.accountId, id, data);
+  }
+
+  @Delete(':id')
+  async delete(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.pipelinesService.delete(user.accountId, id);
   }
 }

@@ -50,6 +50,30 @@ export class PipelinesService {
     return this.pipelineRepo.save(pipeline);
   }
 
+  async update(accountId: string, id: string, data: any) {
+    const pipeline = await this.pipelineRepo.findOne({ where: { id, accountId } });
+    if (!pipeline) {
+      throw new NotFoundException(`Pipeline ${id} not found in this account`);
+    }
+
+    if (data.name !== undefined) pipeline.name = data.name;
+    if (data.description !== undefined) pipeline.description = data.description;
+    if (data.icon !== undefined) pipeline.icon = data.icon;
+    if (data.color !== undefined) pipeline.color = data.color;
+    if (data.totalValue !== undefined) pipeline.totalValue = data.totalValue;
+
+    return this.pipelineRepo.save(pipeline);
+  }
+
+  async delete(accountId: string, id: string) {
+    const pipeline = await this.pipelineRepo.findOne({ where: { id, accountId } });
+    if (!pipeline) {
+      throw new NotFoundException(`Pipeline ${id} not found in this account`);
+    }
+    await this.pipelineRepo.remove(pipeline);
+    return { id };
+  }
+
   async getStages(accountId: string) {
     return this.stageRepo.find({
       where: { accountId },
