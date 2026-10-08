@@ -1,187 +1,63 @@
 import React from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
-import { TaskSpaceViewsBar } from '../components/TaskSpaceViewsBar';
 import { TaskSpaceDashboardView } from '../components/TaskSpaceDashboardView';
-import { TaskSpaceSettings } from '../components/TaskSpaceSettings';
-import { KanbanBoard } from '../components/KanbanBoard';
-import { ListView } from '../components/ListView';
-import { DeliverablesTableView } from '../components/DeliverablesTableView';
-import { GanttTimelineView } from '../components/GanttTimelineView';
-import { MonthlyCalendarView } from '../components/MonthlyCalendarView';
-import { DocsCanvasView } from '../components/DocsCanvasView';
-import { TaskInspector } from '../components/TaskInspector';
+import { findFolderByListId } from '../utils/treeUtils';
 
 export const TaskSpacesPage: React.FC = () => {
+  const { spaceId } = useParams<{ spaceId?: string }>();
+  const navigate = useNavigate();
   const {
-    currentView,
-    handleSelectView,
+    activeUserSpaceId,
+    userSpaces,
     filteredTasks,
-    tasks,
-    filterPriority,
-    setFilterPriority,
-    filterStatus,
-    setFilterStatus,
-    quickFilter,
-    setQuickFilter,
-    taskGroupBy,
-    setTaskGroupBy,
-    handleClearAllFilters,
-    setNewItemDefaultStatus,
-    setNewItemType,
-    setIsNewItemModalOpen,
     folders,
-    handleSelectSpace,
     setIsNewFolderModalOpen,
     setFolderToEdit,
     setItemToDelete,
-    setCurrentView,
-    setSelectedTaskId,
-    listSettings,
-    statuses,
-    handleUpdateListSettings,
-    handleUpdateStatuses,
-    selectedTaskId,
     handleOpenAddTaskToColumn,
-    handleOpenCreateTask,
     handleOpenAddListToFolder,
-    handleOpenEditTask,
-    handleMoveTaskStatus,
-    setTaskToDelete,
-    selectedTask,
-    handleUpdateTask,
-    members,
   } = useWorkspace();
 
+  const currentSpaceId = spaceId || activeUserSpaceId || userSpaces[0]?.id || 'space-main';
+  const spacePrefix = `/space/${currentSpaceId}`;
+
+  const handleSelectSpaceOrList = (spaceOrListId: string) => {
+    // Check if it's a folder
+    const isFolder = folders.some((f) => f.id === spaceOrListId);
+    if (isFolder) {
+      navigate(`${spacePrefix}/spaces/${spaceOrListId}`);
+      return;
+    }
+
+    // It's a list: find the parent folder
+    const parentFolder = findFolderByListId(folders, spaceOrListId);
+    const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
+    navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceOrListId}/board`);
+  };
+
   return (
-    <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-      {/* Views Bar (Tabs: Board, List, Table, Timeline, Calendar, Docs, Settings) */}
-      {currentView !== 'dashboard' && (
-        <TaskSpaceViewsBar
-          currentView={currentView}
-          onSelectView={handleSelectView}
-          taskCount={filteredTasks.length}
-          totalCount={tasks.length}
-          filterPriority={filterPriority}
-          onSelectFilterPriority={setFilterPriority}
-          filterStatus={filterStatus}
-          onSelectFilterStatus={setFilterStatus}
-          quickFilter={quickFilter}
-          onSelectQuickFilter={setQuickFilter}
-          groupBy={taskGroupBy}
-          onSelectGroupBy={setTaskGroupBy}
-          onClearFilters={handleClearAllFilters}
-          onOpenCreateTask={() => {
-            setNewItemDefaultStatus('In Progress');
-            setNewItemType('task');
-            setIsNewItemModalOpen(true);
-          }}
-        />
-      )}
-
-      {/* Viewport switching */}
-      <div className="flex-1 flex overflow-hidden relative">
-        {currentView === 'dashboard' && (
-          <TaskSpaceDashboardView
-            folders={folders}
-            tasks={filteredTasks}
-            onSelectSpace={handleSelectSpace}
-            onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
-            onOpenAddListToFolder={handleOpenAddListToFolder}
-            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
-            onNavigateToView={(v) => {
-              setSelectedTaskId(null);
-              setCurrentView(v);
-            }}
-            onEditFolder={(folder) => {
-              setFolderToEdit(folder);
-              setIsNewFolderModalOpen(true);
-            }}
-            onDeleteFolder={(folder) => {
-              setItemToDelete({ type: 'folder', item: folder });
-            }}
-          />
-        )}
-
-        {currentView === 'settings' && (
-          <TaskSpaceSettings
-            settings={listSettings}
-            statuses={statuses}
-            onUpdateSettings={handleUpdateListSettings}
-            onUpdateStatuses={handleUpdateStatuses}
-            onBackToBoard={() => setCurrentView('board')}
-          />
-        )}
-
-        {currentView === 'board' && (
-          <KanbanBoard
-            tasks={filteredTasks}
-            selectedTaskId={selectedTaskId}
-            onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onAddTaskToColumn={handleOpenAddTaskToColumn}
-            onMoveTaskStatus={handleMoveTaskStatus}
-            onEditTask={handleOpenEditTask}
-          />
-        )}
-
-        {currentView === 'list' && (
-          <ListView
-            tasks={filteredTasks}
-            selectedTaskId={selectedTaskId}
-            onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onQuickStatusChange={(taskId, status) => handleMoveTaskStatus(taskId, status)}
-            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
-          />
-        )}
-
-        {currentView === 'table' && (
-          <DeliverablesTableView
-            tasks={filteredTasks}
-            selectedTaskId={selectedTaskId}
-            onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
-            onRequestDeleteTask={(t) => setTaskToDelete(t)}
-            onNavigateToView={(v) => setCurrentView(v)}
-            onEditTask={handleOpenEditTask}
-          />
-        )}
-
-        {currentView === 'timeline' && (
-          <GanttTimelineView
-            tasks={filteredTasks}
-            onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
-            onNavigateToView={(v) => setCurrentView(v)}
-          />
-        )}
-
-        {currentView === 'calendar' && (
-          <MonthlyCalendarView
-            tasks={filteredTasks}
-            onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
-            onNavigateToView={(v) => setCurrentView(v)}
-          />
-        )}
-
-        {currentView === 'docs' && (
-          <DocsCanvasView
-            onNavigateToTasks={() => setCurrentView('board')}
-            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
-          />
-        )}
-
-        {/* Task Inspector Slide-Over */}
-        {selectedTask && currentView !== 'settings' && currentView !== 'docs' && currentView !== 'dashboard' && (
-          <TaskInspector
-            task={selectedTask}
-            members={members}
-            onClose={() => setSelectedTaskId(null)}
-            onUpdateTask={handleUpdateTask}
-            onEditTask={handleOpenEditTask}
-            onRequestDelete={(t) => setTaskToDelete(t)}
-          />
-        )}
-      </div>
+    <div className="flex-1 flex overflow-hidden relative font-sans">
+      <TaskSpaceDashboardView
+        folders={folders}
+        tasks={filteredTasks}
+        onSelectSpace={handleSelectSpaceOrList}
+        onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
+        onOpenAddListToFolder={handleOpenAddListToFolder}
+        onOpenCreateTask={() => handleOpenAddTaskToColumn('In Progress')}
+        onNavigateToView={(view) => {
+          const firstFolder = folders[0];
+          const firstList = firstFolder?.items[0]?.id || 'sprint-14';
+          navigate(`${spacePrefix}/spaces/${firstFolder?.id || 'fld-engineering'}/lists/${firstList}/${view}`);
+        }}
+        onEditFolder={(folder) => {
+          setFolderToEdit(folder);
+          setIsNewFolderModalOpen(true);
+        }}
+        onDeleteFolder={(folder) => {
+          setItemToDelete({ type: 'folder', item: folder });
+        }}
+      />
     </div>
   );
 };

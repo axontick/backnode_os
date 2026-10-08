@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
 
 export const WorkspaceSettingsPage: React.FC = () => {
+  const navigate = useNavigate();
   const {
     activeUserSpace,
     userSpaces,
@@ -91,9 +93,12 @@ export const WorkspaceSettingsPage: React.FC = () => {
     if (confirmNameInput.trim().toLowerCase() !== activeUserSpace.name.trim().toLowerCase()) return;
     setIsDeleting(true);
     try {
+      const remaining = userSpaces.filter((s) => s.id !== activeUserSpace.id);
+      const nextSpaceId = remaining[0]?.id || 'space-main';
       await handleDeleteWorkspace(activeUserSpace.id);
       setIsDeleteModalOpen(false);
       setConfirmNameInput('');
+      navigate(`/space/${nextSpaceId}/dashboard`);
     } finally {
       setIsDeleting(false);
     }

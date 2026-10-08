@@ -394,7 +394,7 @@ export class AuthService {
       department: 'Engineering',
       activeTasks: 2,
       capacityStatus: 'Available',
-      avatarBg: '#9900c2',
+      avatarBg: '#ea580c',
       avatarColor: '#ffffff',
       accountId,
     });
@@ -440,7 +440,7 @@ export class AuthService {
       id: `fld-sprint-${accountId.slice(0, 8)}`,
       name: `${accountName} Core`,
       icon: 'folder',
-      color: '#9900c2',
+      color: '#ea580c',
       description: 'Active sprint tasks and deliverables',
       items: [
         {
@@ -460,8 +460,8 @@ export class AuthService {
       id: pipelineId,
       name: `${accountName} Sales Pipeline`,
       description: 'Primary customer deals and revenue flow',
-      icon: 'building',
-      color: '#9900c2',
+      icon: 'leaderboard',
+      color: '#ea580c',
       dealCount: 1,
       totalValue: 95000,
       accountId,

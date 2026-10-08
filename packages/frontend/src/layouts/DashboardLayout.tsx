@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { PrimarySidebar } from '../components/PrimarySidebar';
 import { InnerSidebar } from '../components/InnerSidebar';
 import { TopNavBar } from '../components/TopNavBar';
-import { OverviewPage } from '../pages/OverviewPage';
-import { TaskSpacesPage } from '../pages/TaskSpacesPage';
-import { CrmPage } from '../pages/CrmPage';
-import { ContactsPage } from '../pages/ContactsPage';
-import { TeamAccessPage } from '../pages/TeamAccessPage';
-import { ReplicationPage } from '../pages/ReplicationPage';
-import { WorkspaceSettingsPage } from '../pages/WorkspaceSettingsPage';
 import { UniversalAddEditModal } from '../components/UniversalAddEditModal';
 import { NewFolderModal } from '../components/NewFolderModal';
 import { NewSubFolderModal } from '../components/NewSubFolderModal';
@@ -20,9 +14,14 @@ import { NewContactModal } from '../components/NewContactModal';
 import { NewWorkspaceModal } from '../components/NewWorkspaceModal';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { CommandPalette } from '../components/CommandPalette';
+import { findFolderByListId } from '../utils/treeUtils';
 
 export const DashboardLayout: React.FC = () => {
+  const { spaceId } = useParams<{ spaceId: string }>();
   const {
+    activeUserSpaceId,
+    setActiveUserSpaceId,
+    userSpaces,
     currentHub,
     setCurrentHub,
     activeSpace,
@@ -134,6 +133,43 @@ export const DashboardLayout: React.FC = () => {
     toastMessage,
   } = useWorkspace();
 
+  const location = useLocation();
+  const navigate = useNavigate();
+  const pathname = location.pathname;
+
+  const effectiveSpaceId = spaceId || activeUserSpaceId || userSpaces[0]?.id || 'space-main';
+  const spacePrefix = `/space/${effectiveSpaceId}`;
+
+  // Keep activeUserSpaceId in sync with route parameter
+  useEffect(() => {
+    if (spaceId && spaceId !== activeUserSpaceId) {
+      setActiveUserSpaceId(spaceId);
+      try {
+        localStorage.setItem('backnode_active_user_space_id', spaceId);
+      } catch {}
+    }
+  }, [spaceId, activeUserSpaceId, setActiveUserSpaceId]);
+
+  const normalizedPath = pathname.replace(/^\/space\/[^/]+/, '');
+  let effectiveHub = currentHub;
+  if (normalizedPath === '' || normalizedPath === '/' || normalizedPath.startsWith('/dashboard') || normalizedPath.startsWith('/overview')) {
+    effectiveHub = 'overview';
+  } else if (normalizedPath.startsWith('/spaces') || normalizedPath.startsWith('/lists')) {
+    effectiveHub = 'task-spaces';
+  } else if (normalizedPath.startsWith('/crm')) {
+    effectiveHub = 'crm';
+  } else if (normalizedPath.startsWith('/contacts')) {
+    effectiveHub = 'contacts';
+  } else if (normalizedPath.startsWith('/team')) {
+    effectiveHub = 'team';
+  } else if (normalizedPath.startsWith('/replication') || normalizedPath.startsWith('/telemetry')) {
+    effectiveHub = 'replication';
+  } else if (normalizedPath.startsWith('/settings')) {
+    effectiveHub = 'settings';
+  }
+
+  const showInnerSidebar = effectiveHub === 'task-spaces' || effectiveHub === 'crm';
+
   const [isPrimarySidebarCollapsed, setIsPrimarySidebarCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem('backnode_primary_sidebar_collapsed') === 'true';
@@ -195,7 +231,7 @@ export const DashboardLayout: React.FC = () => {
     <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 font-sans antialiased select-none">
       {/* 1. Primary Sidebar (220px expanded, 60px collapsed icon rail) */}
       <PrimarySidebar
-        currentHub={currentHub}
+        currentHub={effectiveHub}
         onSelectHub={(hub) => {
           setCurrentHub(hub);
           if (hub === 'task-spaces') {
@@ -207,7 +243,7 @@ export const DashboardLayout: React.FC = () => {
           }
         }}
         onOpenNewItem={() => {
-          setNewItemType(currentHub === 'crm' ? 'deal' : 'task');
+          setNewItemType(effectiveHub === 'crm' ? 'deal' : 'task');
           setNewItemDefaultStatus('Backlog');
           setIsNewItemModalOpen(true);
         }}
@@ -217,19 +253,22 @@ export const DashboardLayout: React.FC = () => {
       />
 
       {/* 2. Inner Sub-Navigation Sidebar (240px expanded, 28px collapsed ribbon) */}
-      {(currentHub === 'task-spaces' || currentHub === 'crm') && (
+      {showInnerSidebar && (
         <InnerSidebar
-          currentHub={currentHub}
+          currentHub={effectiveHub}
           isCollapsed={isInnerSidebarCollapsed}
           onToggleCollapse={handleToggleInnerSidebar}
           folders={folders}
           activeSpace={activeSpace}
           currentView={currentView}
-          onSelectSpace={handleSelectSpace}
+          onSelectSpace={(spaceId) => {
+            handleSelectSpace(spaceId);
+            const parentFolder = findFolderByListId(folders, spaceId);
+            const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
+            navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceId}/board`);
+          }}
           onSelectDashboard={() => {
-            setCurrentHub('task-spaces');
-            setSelectedTaskId(null);
-            setCurrentView('dashboard');
+            navigate(`${spacePrefix}/spaces`);
           }}
           onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
           onOpenAddListToFolder={handleOpenAddListToFolder}
@@ -254,34 +293,30 @@ export const DashboardLayout: React.FC = () => {
           activePipelineSubFolderId={activePipelineSubFolderId}
           crmView={crmView}
           onSelectPipeline={(pipeId) => {
-            setCurrentHub('crm');
             setActivePipelineId(pipeId);
             setActivePipelineSubFolderId(null);
             setSelectedDealId(null);
-            setCrmView('board');
+            navigate(`${spacePrefix}/crm/pipelines/${pipeId}/board`);
           }}
           onSelectPipelineSubFolder={(pipeId, subId) => {
-            setCurrentHub('crm');
             setActivePipelineId(pipeId);
             setActivePipelineSubFolderId(activePipelineSubFolderId === subId ? null : subId);
             setSelectedDealId(null);
-            setCrmView('board');
+            navigate(`${spacePrefix}/crm/pipelines/${pipeId}/folders/${subId}/board`);
           }}
           onSelectCrmDashboard={() => {
-            setCurrentHub('crm');
             setSelectedDealId(null);
-            setCrmView('dashboard');
+            navigate(`${spacePrefix}/crm`);
           }}
           onSelectCrmBoard={() => {
-            setCurrentHub('crm');
             setSelectedDealId(null);
-            setCrmView('board');
+            const pipeId = activePipelineId || pipelines[0]?.id || 'pipe-enterprise';
+            navigate(`${spacePrefix}/crm/pipelines/${pipeId}/board`);
           }}
           onSelectPipelineView={(pipeId, view) => {
-            setCurrentHub('crm');
             setActivePipelineId(pipeId);
             setSelectedDealId(null);
-            setCrmView(view);
+            navigate(`${spacePrefix}/crm/pipelines/${pipeId}/${view}`);
           }}
           onOpenAddPipeline={() => setIsNewPipelineModalOpen(true)}
           onEditPipeline={(pipe) => {
@@ -304,7 +339,7 @@ export const DashboardLayout: React.FC = () => {
       <div className="flex-1 flex flex-col h-screen min-w-0 overflow-hidden relative">
         {/* Top Header Bar */}
         <TopNavBar
-          currentHub={currentHub}
+          currentHub={effectiveHub}
           currentView={currentView}
           crmView={crmView}
           syncStatus={syncStatus}
@@ -313,7 +348,7 @@ export const DashboardLayout: React.FC = () => {
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           onOpenCreateTask={() => {
-            if (currentHub === 'crm') {
+            if (effectiveHub === 'crm') {
               handleOpenAddDealToStage();
             } else {
               setNewItemDefaultStatus('In Progress');
@@ -338,25 +373,20 @@ export const DashboardLayout: React.FC = () => {
           deals={deals}
           onSelectTask={(task) => {
             setSelectedTaskId(task.id);
-            setCurrentHub('task-spaces');
-            setCurrentView('board');
+            const parentFolder = findFolderByListId(folders, task.targetCycle);
+            const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
+            navigate(`${spacePrefix}/spaces/${parentId}/lists/${task.targetCycle || 'sprint-14'}/board`);
           }}
           onSelectDeal={(deal) => {
             setSelectedDealId(deal.id);
-            setCurrentHub('crm');
-            setCrmView('board');
+            const pipeId = deal.pipelineId || activePipeline?.id || 'pipe-enterprise';
+            navigate(`${spacePrefix}/crm/pipelines/${pipeId}/board`);
           }}
         />
 
-        {/* Modular Viewport Hub Switching */}
+        {/* Modular Viewport Hub Outlet */}
         <div className="flex-1 flex overflow-hidden relative">
-          {currentHub === 'overview' && <OverviewPage />}
-          {currentHub === 'task-spaces' && <TaskSpacesPage />}
-          {currentHub === 'crm' && <CrmPage />}
-          {currentHub === 'contacts' && <ContactsPage />}
-          {currentHub === 'team' && <TeamAccessPage />}
-          {currentHub === 'replication' && <ReplicationPage />}
-          {currentHub === 'settings' && <WorkspaceSettingsPage />}
+          <Outlet />
         </div>
       </div>
 
@@ -495,14 +525,21 @@ export const DashboardLayout: React.FC = () => {
         tasks={tasks}
         onSelectTask={(t) => {
           setSelectedTaskId(t.id);
-          setCurrentHub('task-spaces');
-          setCurrentView('board');
+          const parentFolder = findFolderByListId(folders, t.targetCycle);
+          const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
+          navigate(`${spacePrefix}/spaces/${parentId}/lists/${t.targetCycle || 'sprint-14'}/board`);
         }}
         onSelectView={(v) => {
-          setCurrentHub('task-spaces');
-          setCurrentView(v);
+          const parentFolder = findFolderByListId(folders, activeSpace);
+          const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
+          navigate(`${spacePrefix}/spaces/${parentId}/lists/${activeSpace}/${v}`);
         }}
-        onSelectHub={(h) => setCurrentHub(h)}
+        onSelectHub={(h) => {
+          if (h === 'crm') navigate(`${spacePrefix}/crm`);
+          else if (h === 'settings') navigate(`${spacePrefix}/settings`);
+          else if (h === 'task-spaces') navigate(`${spacePrefix}/spaces`);
+          else if (h === 'overview') navigate(`${spacePrefix}/dashboard`);
+        }}
         onOpenCreateTask={() => {
           setNewItemDefaultStatus('In Progress');
           setNewItemType('task');

@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 
@@ -20,9 +21,14 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   onToggleCollapse,
 }) => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { spaceId } = useParams<{ spaceId?: string }>();
+
   const {
     userSpaces,
     activeUserSpace,
+    activeUserSpaceId,
     handleSelectUserSpace,
     members,
     setIsNewWorkspaceModalOpen,
@@ -46,13 +52,37 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const accountName = user?.account?.name || 'Backnode Operations';
   const operatorName = user?.name ? user.name.split(' ')[0] : 'Operator';
 
+  // Derive active space prefix
+  const effectiveSpaceId = spaceId || activeUserSpaceId || activeUserSpace?.id || userSpaces[0]?.id || 'space-main';
+  const spacePrefix = `/space/${effectiveSpaceId}`;
+
+  // Derive active hub from current route pathname
+  const pathname = location.pathname;
+  const normalizedPath = pathname.replace(/^\/space\/[^/]+/, '');
+  let effectiveHub = currentHub;
+  if (normalizedPath === '' || normalizedPath === '/' || normalizedPath.startsWith('/dashboard') || normalizedPath.startsWith('/overview')) {
+    effectiveHub = 'overview';
+  } else if (normalizedPath.startsWith('/spaces') || normalizedPath.startsWith('/lists')) {
+    effectiveHub = 'task-spaces';
+  } else if (normalizedPath.startsWith('/crm')) {
+    effectiveHub = 'crm';
+  } else if (normalizedPath.startsWith('/contacts')) {
+    effectiveHub = 'contacts';
+  } else if (normalizedPath.startsWith('/team')) {
+    effectiveHub = 'team';
+  } else if (normalizedPath.startsWith('/replication') || normalizedPath.startsWith('/telemetry')) {
+    effectiveHub = 'replication';
+  } else if (normalizedPath.startsWith('/settings')) {
+    effectiveHub = 'settings';
+  }
+
   const hubs = [
-    { id: 'overview', label: 'Overview', icon: 'dashboard', description: 'System Overview & KPIs' },
-    { id: 'task-spaces', label: 'Task Spaces', icon: 'folder_open', description: 'Execution Workspaces' },
-    { id: 'crm', label: 'CRM Pipelines', icon: 'leaderboard', description: 'Deals & Revenue Pipeline' },
-    { id: 'contacts', label: 'Contacts', icon: 'group', description: 'Client & Partner Directory' },
-    { id: 'team', label: 'Team & Access', icon: 'shield_person', description: 'Access Controls & Roles', count: members.length },
-    { id: 'replication', label: 'Telemetry', icon: 'sync_saved_locally', description: 'Replication Telemetry' },
+    { id: 'overview', path: `${spacePrefix}/dashboard`, label: 'Overview', icon: 'dashboard', description: 'System Overview & KPIs' },
+    { id: 'task-spaces', path: `${spacePrefix}/spaces`, label: 'Task Spaces', icon: 'folder_open', description: 'Execution Workspaces' },
+    { id: 'crm', path: `${spacePrefix}/crm`, label: 'CRM Pipelines', icon: 'leaderboard', description: 'Deals & Revenue Pipeline' },
+    { id: 'contacts', path: `${spacePrefix}/contacts`, label: 'Contacts', icon: 'group', description: 'Client & Partner Directory' },
+    { id: 'team', path: `${spacePrefix}/team`, label: 'Team & Access', icon: 'shield_person', description: 'Access Controls & Roles', count: members.length },
+    { id: 'replication', path: `${spacePrefix}/replication`, label: 'Telemetry', icon: 'sync_saved_locally', description: 'Replication Telemetry' },
   ];
 
   return (
@@ -145,6 +175,8 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                       onClick={() => {
                         handleSelectUserSpace(space.id);
                         setIsSpaceDropdownOpen(false);
+                        const subRoute = location.pathname.replace(/^\/space\/[^/]+/, '') || '/dashboard';
+                        navigate(`/space/${space.id}${subRoute}`);
                       }}
                       className={`w-full flex items-center justify-between p-2 rounded-[6px] text-left transition-all ${
                         isActive
@@ -229,14 +261,17 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
         </div>
 
         {hubs.map((hub) => {
-          const isActive = currentHub === hub.id;
+          const isActive = effectiveHub === hub.id;
 
           if (isCollapsed) {
             return (
               <button
                 key={hub.id}
                 type="button"
-                onClick={() => onSelectHub(hub.id)}
+                onClick={() => {
+                  onSelectHub(hub.id);
+                  navigate(hub.path);
+                }}
                 title={`${hub.label}: ${hub.description}`}
                 className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer relative group ${
                   isActive
@@ -265,7 +300,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             <button
               key={hub.id}
               type="button"
-              onClick={() => onSelectHub(hub.id)}
+              onClick={() => {
+                onSelectHub(hub.id);
+                navigate(hub.path);
+              }}
               className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-[6px] text-left transition-colors cursor-pointer ${
                 isActive
                   ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30 font-semibold'
@@ -302,10 +340,13 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
         {isCollapsed ? (
           <button
             type="button"
-            onClick={() => onSelectHub('settings')}
+            onClick={() => {
+              onSelectHub('settings');
+              navigate(`${spacePrefix}/settings`);
+            }}
             title="Workspace Settings"
             className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer ${
-              currentHub === 'settings'
+              effectiveHub === 'settings'
                 ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30'
                 : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
             }`}
@@ -313,7 +354,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             <span
               className="material-symbols-outlined text-[19px]"
               style={{
-                fontVariationSettings: currentHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
+                fontVariationSettings: effectiveHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
               }}
             >
               settings
@@ -322,9 +363,12 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
         ) : (
           <button
             type="button"
-            onClick={() => onSelectHub('settings')}
+            onClick={() => {
+              onSelectHub('settings');
+              navigate(`${spacePrefix}/settings`);
+            }}
             className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer ${
-              currentHub === 'settings'
+              effectiveHub === 'settings'
                 ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30 font-semibold'
                 : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
             }`}
@@ -332,7 +376,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             <span
               className="material-symbols-outlined text-[18px]"
               style={{
-                fontVariationSettings: currentHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
+                fontVariationSettings: effectiveHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
               }}
             >
               settings

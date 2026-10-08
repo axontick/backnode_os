@@ -427,3 +427,41 @@ export function findPipelineSubFolderPath(
   }
   return null;
 }
+
+/**
+ * Finds the parent SpaceFolder that contains a specific listId (either directly or in a subfolder).
+ */
+export function findFolderByListId(folders: SpaceFolder[], listId: string): SpaceFolder | undefined {
+  if (!folders || !listId) return undefined;
+  for (const folder of folders) {
+    if (folder.items?.some((item) => item.id === listId)) {
+      return folder;
+    }
+    const allItems = getAllItemsFromFolder(folder);
+    if (allItems.some((item) => item.id === listId)) {
+      return folder;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Finds a specific FolderChildItem (list) by its id across all folders.
+ */
+export function findListItemById(folders: SpaceFolder[], listId: string): FolderChildItem | undefined {
+  if (!folders || !listId) return undefined;
+  for (const folder of folders) {
+    const allItems = getAllItemsFromFolder(folder);
+    const found = allItems.find((item) => item.id === listId);
+    if (found) return found;
+  }
+  return undefined;
+}
+
+/**
+ * Finds a folder or subfolder by id.
+ */
+export function findFolderById(folders: SpaceFolder[], folderId: string): SpaceFolder | undefined {
+  if (!folders || !folderId) return undefined;
+  return folders.find((f) => f.id === folderId);
+}

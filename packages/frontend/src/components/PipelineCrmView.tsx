@@ -290,7 +290,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                 className="material-symbols-outlined text-[15px]"
                 style={{ color: activePipeline.color && activePipeline.color !== '#9900c2' ? activePipeline.color : '#ea580c' }}
               >
-                {activePipeline.icon || 'leaderboard'}
+                {!activePipeline.icon || activePipeline.icon === 'building' ? 'leaderboard' : activePipeline.icon}
               </span>
               <span className="truncate max-w-[140px]">{activePipeline.name}</span>
             </div>
@@ -378,7 +378,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                 className="material-symbols-outlined text-[15px]"
                 style={{ color: activePipeline.color && activePipeline.color !== '#9900c2' ? activePipeline.color : '#ea580c' }}
               >
-                {activePipeline.icon || 'leaderboard'}
+                {!activePipeline.icon || activePipeline.icon === 'building' ? 'leaderboard' : activePipeline.icon}
               </span>
               <span className="truncate max-w-[130px]">{activePipeline.name}</span>
               <span className="material-symbols-outlined text-[13px] text-zinc-400">
@@ -412,7 +412,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                           className="material-symbols-outlined text-[15px] shrink-0"
                           style={{ color: pColor }}
                         >
-                          {p.icon || 'leaderboard'}
+                          {!p.icon || p.icon === 'building' ? 'leaderboard' : p.icon}
                         </span>
                         <span className="truncate">{p.name}</span>
                       </div>

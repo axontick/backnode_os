@@ -15,7 +15,7 @@ export class ListSettings {
   @Column('varchar', { default: '' })
   description: string;
 
-  @Column('varchar', { default: '#9900c2' })
+  @Column('varchar', { default: '#ea580c' })
   color: string;
 
   @Column('varchar', { default: 'folder' })

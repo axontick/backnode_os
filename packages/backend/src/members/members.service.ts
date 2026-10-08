@@ -45,7 +45,7 @@ export class MembersService {
       department: data.department || 'Engineering',
       activeTasks: data.activeTasks || 0,
       capacityStatus: data.capacityStatus || 'Available',
-      avatarBg: data.avatarBg || '#9900c2',
+      avatarBg: data.avatarBg || '#ea580c',
       avatarColor: data.avatarColor || '#ffffff',
       invitedAt: data.invitedAt || new Date().toISOString(),
       accountId,

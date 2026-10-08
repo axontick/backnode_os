@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { SpaceFolder, SpaceSubFolder, CrmPipeline, CrmPipelineSubFolder } from '../types';
 import { ActionContextMenu } from './ActionContextMenu';
 
@@ -75,6 +76,9 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
   setActiveMenuId,
   filterText,
 }) => {
+  const navigate = useNavigate();
+  const { spaceId } = useParams<{ spaceId?: string }>();
+  const spacePrefix = spaceId ? `/space/${spaceId}` : '';
   const isExpanded = !!expandedSubFolderIds[subFolder.id] || Boolean(filterText);
   const hasItems = subFolder.items && subFolder.items.length > 0;
   const hasSubFolders = subFolder.subFolders && subFolder.subFolders.length > 0;
@@ -102,11 +106,18 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
           </button>
           <span
             className="material-symbols-outlined text-[14px] shrink-0"
-            style={{ color: subFolder.color || '#ea580c' }}
+            style={{ color: subFolder.color && subFolder.color !== '#9900c2' ? subFolder.color : '#ea580c' }}
           >
-            {subFolder.icon || 'folder_open'}
+            {!subFolder.icon || subFolder.icon === 'building' ? 'folder_open' : subFolder.icon}
           </span>
-          <span className="truncate text-[11.5px] font-medium text-zinc-300">
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`${spacePrefix}/spaces/${folder.id}/folders/${subFolder.id}`);
+            }}
+            className="truncate text-[11.5px] font-medium text-zinc-300 hover:text-orange-400 transition-colors cursor-pointer"
+            title={`View sub-folder: ${subFolder.name}`}
+          >
             {subFolder.name}
           </span>
         </div>
@@ -323,9 +334,9 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
           >
             <span
               className="material-symbols-outlined text-[13px] shrink-0"
-              style={{ color: subFolder.color || '#ea580c' }}
+              style={{ color: subFolder.color && subFolder.color !== '#9900c2' ? subFolder.color : '#ea580c' }}
             >
-              {subFolder.icon || 'folder'}
+              {!subFolder.icon || subFolder.icon === 'building' ? 'folder' : subFolder.icon}
             </span>
             <span className="truncate">{subFolder.name}</span>
           </button>
@@ -447,6 +458,9 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
   onEditPipelineSubFolder,
   onDeletePipelineSubFolder,
 }) => {
+  const navigate = useNavigate();
+  const { spaceId } = useParams<{ spaceId?: string }>();
+  const spacePrefix = spaceId ? `/space/${spaceId}` : '';
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
@@ -671,13 +685,22 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                             </span>
                           </button>
 
-                          <span
-                            className="material-symbols-outlined text-[14px] shrink-0"
-                            style={{ color: folder.color && folder.color !== '#9900c2' ? folder.color : '#ea580c' }}
+                          <div
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate(`${spacePrefix}/spaces/${folder.id}`);
+                            }}
+                            className="flex items-center gap-1.5 truncate flex-1 hover:text-orange-400 cursor-pointer transition-colors"
+                            title={`Customize & view space: ${folder.name}`}
                           >
-                            {folder.icon || 'folder'}
-                          </span>
-                          <span className="truncate font-medium">{folder.name}</span>
+                            <span
+                              className="material-symbols-outlined text-[14px] shrink-0"
+                              style={{ color: folder.color && folder.color !== '#9900c2' ? folder.color : '#ea580c' }}
+                            >
+                              {folder.icon || 'folder'}
+                            </span>
+                            <span className="truncate font-medium">{folder.name}</span>
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -880,9 +903,9 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                         >
                           <span
                             className="material-symbols-outlined text-[14px] shrink-0"
-                            style={{ color: pipe.color || '#ea580c' }}
+                            style={{ color: pipe.color && pipe.color !== '#9900c2' ? pipe.color : '#ea580c' }}
                           >
-                            {pipe.icon || 'leaderboard'}
+                            {!pipe.icon || pipe.icon === 'building' ? 'leaderboard' : pipe.icon}
                           </span>
                           <span className="truncate font-medium">{pipe.name}</span>
                         </button>

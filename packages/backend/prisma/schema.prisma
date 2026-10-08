@@ -45,7 +45,7 @@ model ListSettings {
   name                    String
   listId                  String  @unique
   description             String  @default("")
-  color                   String  @default("#9900c2")
+  color                   String  @default("#ea580c")
   icon                    String  @default("folder")
   defaultView             String  @default("Board")
   defaultPriority         String  @default("P2 - Medium (Normal)")
@@ -135,8 +135,8 @@ model CrmPipelineSettings {
   code                    String  @unique @default("PIPE-ENT")
   name                    String
   description             String  @default("")
-  accentColor             String  @default("#9900c2")
-  icon                    String  @default("building")
+  accentColor             String  @default("#ea580c")
+  icon                    String  @default("leaderboard")
   currency                String  @default("USD")
   formatNotation          String  @default("Compact")
   defaultCloseCycleDays   Int     @default(60)

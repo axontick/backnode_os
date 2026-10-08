@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { TaskItem, TaskStatus } from '../types';
 
-interface DeliverablesTableViewProps {
+export interface DeliverablesTableViewProps {
   tasks: TaskItem[];
   selectedTaskId: string | null;
   onSelectTask: (task: TaskItem) => void;
@@ -9,6 +9,8 @@ interface DeliverablesTableViewProps {
   onRequestDeleteTask: (task: TaskItem) => void;
   onNavigateToView: (view: 'board' | 'list' | 'table' | 'timeline' | 'calendar' | 'docs') => void;
   onEditTask?: (task: TaskItem) => void;
+  activeStatusRoute?: string;
+  onSelectStatusRoute?: (statusSlug: string) => void;
 }
 
 export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
@@ -19,11 +21,36 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   onRequestDeleteTask,
   onNavigateToView,
   onEditTask,
+  activeStatusRoute,
+  onSelectStatusRoute,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>(['ENG-101', 'ENG-103']);
   const [density, setDensity] = useState<'compact' | 'comfortable'>('compact');
   const [filterQuery, setFilterQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [localStatusFilter, setLocalStatusFilter] = useState<string>('All');
+
+  // Map route slug to TaskStatus
+  const statusSlugToStatus: Record<string, string> = {
+    'all': 'All',
+    'in-progress': 'In Progress',
+    'in-review': 'In Review',
+    'done': 'Done',
+    'blocked': 'Blocked',
+    'backlog': 'Backlog',
+  };
+
+  const statusToSlug: Record<string, string> = {
+    'All': 'all',
+    'In Progress': 'in-progress',
+    'In Review': 'in-review',
+    'Done': 'done',
+    'Blocked': 'blocked',
+    'Backlog': 'backlog',
+  };
+
+  const effectiveStatus = activeStatusRoute
+    ? statusSlugToStatus[activeStatusRoute.toLowerCase()] || 'All'
+    : localStatusFilter;
 
   const filteredTasks = tasks.filter((t) => {
     const matchesQuery =
@@ -31,7 +58,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
       t.title.toLowerCase().includes(filterQuery.toLowerCase()) ||
       t.id.toLowerCase().includes(filterQuery.toLowerCase()) ||
       t.assignee.name.toLowerCase().includes(filterQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
+    const matchesStatus = effectiveStatus === 'All' || t.status === effectiveStatus;
     return matchesQuery && matchesStatus;
   });
 
@@ -158,8 +185,15 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
 
           {/* Status Filter */}
           <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            value={effectiveStatus}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (onSelectStatusRoute) {
+                onSelectStatusRoute(statusToSlug[val] || 'all');
+              } else {
+                setLocalStatusFilter(val);
+              }
+            }}
             className="h-8 px-2.5 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-200 text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
           >
             <option value="All">All Statuses ({tasks.length})</option>
@@ -219,6 +253,58 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
             <span className="material-symbols-outlined text-[15px]">download</span>
             <span>Export CSV</span>
           </button>
+        </div>
+      </div>
+
+      {/* Table Separate Route Views Strip */}
+      <div className="px-6 py-1.5 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">
+          <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-500 mr-2 shrink-0">
+            Table View:
+          </span>
+          {[
+            { label: 'All Records', slug: 'all', count: tasks.length },
+            { label: 'In Progress', slug: 'in-progress', count: inProgressCount },
+            { label: 'In Review', slug: 'in-review', count: inReviewCount },
+            { label: 'Done', slug: 'done', count: doneCount },
+            { label: 'Blocked', slug: 'blocked', count: tasks.filter((t) => t.status === 'Blocked').length },
+            { label: 'Backlog', slug: 'backlog', count: backlogCount },
+          ].map((tab) => {
+            const isActive =
+              (effectiveStatus === 'All' && tab.slug === 'all') ||
+              (effectiveStatus === 'In Progress' && tab.slug === 'in-progress') ||
+              (effectiveStatus === 'In Review' && tab.slug === 'in-review') ||
+              (effectiveStatus === 'Done' && tab.slug === 'done') ||
+              (effectiveStatus === 'Blocked' && tab.slug === 'blocked') ||
+              (effectiveStatus === 'Backlog' && tab.slug === 'backlog');
+            return (
+              <button
+                key={tab.slug}
+                type="button"
+                onClick={() => {
+                  if (onSelectStatusRoute) {
+                    onSelectStatusRoute(tab.slug);
+                  } else {
+                    setLocalStatusFilter(statusSlugToStatus[tab.slug] || 'All');
+                  }
+                }}
+                className={`px-2.5 py-1 rounded-[6px] text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  isActive
+                    ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30 font-semibold'
+                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
+                }`}
+              >
+                <span>{tab.label}</span>
+                <span
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-[4px] ${
+                    isActive ? 'bg-orange-950 text-orange-300' : 'bg-zinc-800 text-zinc-500'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
         </div>
       </div>
 

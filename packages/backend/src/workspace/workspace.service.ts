@@ -311,7 +311,7 @@ export class WorkspaceService {
         listId: `sprint-${accountId.slice(0, 8)}`,
         name: 'Sprint 14 - Q4 Infra & Engine Triage',
         description: 'High-throughput transactional queue for Backnode core engine, replication runtime, and 0.5px hairline visual tokens.',
-        color: '#9900c2',
+        color: '#ea580c',
         icon: 'layers',
         defaultView: 'Board',
         defaultPriority: 'P2 - Medium (Normal)',
@@ -322,6 +322,9 @@ export class WorkspaceService {
         autoArchiveDone: false,
         accountId,
       });
+      await this.listSettingsRepo.save(settings);
+    } else if (settings.color === '#9900c2') {
+      settings.color = '#ea580c';
       await this.listSettingsRepo.save(settings);
     }
     return settings;

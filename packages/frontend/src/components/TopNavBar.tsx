@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { TaskItem, CrmDeal } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { BacknodeLogo } from './BacknodeLogo';
-import { findSpaceBreadcrumbs, findPipelineSubFolderPath } from '../utils/treeUtils';
+import { findSpaceBreadcrumbs, findPipelineSubFolderPath, findListItemById } from '../utils/treeUtils';
 
 interface TopNavBarProps {
   currentHub?: string;
@@ -61,7 +62,25 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   syncStatus = 'connected',
 }) => {
   const { user, isAuthenticated, logout, setIsAuthModalOpen } = useAuth();
-  const { activeUserSpace, activeSpace, folders, listSettings, activePipelineSubFolderId, activePipeline, pipelines } = useWorkspace();
+  const {
+    activeUserSpace,
+    activeSpace,
+    folders,
+    listSettings,
+    activePipelineSubFolderId,
+    activePipeline,
+    pipelines,
+    activeUserSpaceId,
+    userSpaces,
+  } = useWorkspace();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const pathname = location.pathname;
+  const effectiveSpaceId = activeUserSpaceId || activeUserSpace?.id || userSpaces[0]?.id || 'space-main';
+  const spacePrefix = `/space/${effectiveSpaceId}`;
+  const normalizedPath = pathname.replace(/^\/space\/[^/]+/, '');
+
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -72,6 +91,24 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const notifRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+
+  // Derive active hub from route
+  let effectiveHub = currentHub;
+  if (normalizedPath === '' || normalizedPath === '/' || normalizedPath.startsWith('/dashboard') || normalizedPath.startsWith('/overview')) {
+    effectiveHub = 'overview';
+  } else if (normalizedPath.startsWith('/spaces') || normalizedPath.startsWith('/lists')) {
+    effectiveHub = 'task-spaces';
+  } else if (normalizedPath.startsWith('/crm')) {
+    effectiveHub = 'crm';
+  } else if (normalizedPath.startsWith('/contacts')) {
+    effectiveHub = 'contacts';
+  } else if (normalizedPath.startsWith('/team')) {
+    effectiveHub = 'team';
+  } else if (normalizedPath.startsWith('/replication') || normalizedPath.startsWith('/telemetry')) {
+    effectiveHub = 'telemetry';
+  } else if (normalizedPath.startsWith('/settings')) {
+    effectiveHub = 'settings';
+  }
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -143,16 +180,24 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const assigneesList = availableAssignees.length > 0 ? availableAssignees : [user?.name || 'Operator'];
 
   const renderBreadcrumbs = () => {
-    switch (currentHub) {
+    switch (effectiveHub) {
       case 'crm':
-        if (crmView === 'dashboard') {
+        if (crmView === 'dashboard' || normalizedPath === '/crm' || normalizedPath === '') {
           return (
             <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-              <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+              <span
+                onClick={() => navigate(`${spacePrefix}/dashboard`)}
+                className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+              >
                 {workspaceName}
               </span>
               <span className="text-zinc-600 font-mono">/</span>
-              <span className="hover:text-zinc-200 cursor-pointer transition-colors">CRM Pipelines</span>
+              <span
+                onClick={() => navigate(`${spacePrefix}/crm`)}
+                className="hover:text-zinc-200 cursor-pointer transition-colors"
+              >
+                CRM Pipelines
+              </span>
               <span className="text-zinc-600 font-mono">/</span>
               <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
                 Dashboard
@@ -166,23 +211,37 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           : null;
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+            <span
+              onClick={() => navigate(`${spacePrefix}/dashboard`)}
+              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+            >
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="hover:text-zinc-200 cursor-pointer transition-colors">CRM Pipelines</span>
+            <span
+              onClick={() => navigate(`${spacePrefix}/crm`)}
+              className="hover:text-zinc-200 cursor-pointer transition-colors"
+            >
+              CRM Pipelines
+            </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+            <span
+              onClick={() => {
+                if (currentPipeline?.id) navigate(`${spacePrefix}/crm/pipelines/${currentPipeline.id}/board`);
+              }}
+              className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate cursor-pointer hover:border-orange-500/60 transition-colors"
+            >
               {activePipelineName || currentPipeline?.name || 'Enterprise Deals 2026'}
             </span>
-            {subFolderTrail && subFolderTrail.map((sfName, idx) => (
-              <React.Fragment key={idx}>
-                <span className="text-zinc-600 font-mono">/</span>
-                <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate max-w-[120px]">
-                  {sfName}
-                </span>
-              </React.Fragment>
-            ))}
+            {subFolderTrail &&
+              subFolderTrail.map((sfName, idx) => (
+                <React.Fragment key={idx}>
+                  <span className="text-zinc-600 font-mono">/</span>
+                  <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate max-w-[120px]">
+                    {sfName}
+                  </span>
+                </React.Fragment>
+              ))}
             {crmView === 'analytics' && (
               <>
                 <span className="text-zinc-600 font-mono">/</span>
@@ -204,13 +263,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       case 'contacts':
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+            <span
+              onClick={() => navigate(`${spacePrefix}/dashboard`)}
+              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+            >
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="hover:text-zinc-200 cursor-pointer transition-colors">Directory</span>
-            <span className="text-zinc-600 font-mono">/</span>
-            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+            <span
+              onClick={() => navigate(`${spacePrefix}/contacts`)}
+              className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate cursor-pointer"
+            >
               Enterprise Contacts
             </span>
           </div>
@@ -218,11 +281,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       case 'team':
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+            <span
+              onClick={() => navigate(`${spacePrefix}/dashboard`)}
+              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+            >
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+            <span
+              onClick={() => navigate(`${spacePrefix}/team`)}
+              className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate cursor-pointer"
+            >
               Team &amp; Access Control
             </span>
           </div>
@@ -230,7 +299,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       case 'overview':
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+            <span
+              onClick={() => navigate(`${spacePrefix}/dashboard`)}
+              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+            >
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
@@ -242,11 +314,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       case 'telemetry':
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+            <span
+              onClick={() => navigate(`${spacePrefix}/dashboard`)}
+              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+            >
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+            <span
+              onClick={() => navigate(`${spacePrefix}/replication`)}
+              className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate cursor-pointer"
+            >
               Replication Telemetry
             </span>
           </div>
@@ -254,49 +332,287 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       case 'settings':
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+            <span
+              onClick={() => navigate(`${spacePrefix}/dashboard`)}
+              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+            >
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+            <span
+              onClick={() => navigate(`${spacePrefix}/settings`)}
+              className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate cursor-pointer"
+            >
               Workspace Settings
             </span>
           </div>
         );
       case 'task-spaces':
       default: {
-        if (currentView === 'dashboard') {
+        if (normalizedPath === '/spaces') {
           return (
             <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-              <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+              <span
+                onClick={() => navigate(`${spacePrefix}/dashboard`)}
+                className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+              >
                 {workspaceName}
               </span>
               <span className="text-zinc-600 font-mono">/</span>
-              <span className="hover:text-zinc-200 cursor-pointer transition-colors">Task Spaces</span>
+              <span
+                onClick={() => navigate(`${spacePrefix}/spaces`)}
+                className="hover:text-zinc-200 cursor-pointer transition-colors"
+              >
+                Task Spaces
+              </span>
               <span className="text-zinc-600 font-mono">/</span>
               <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
-                Dashboard
+                Catalog & Hub
               </span>
             </div>
           );
         }
 
+        // Check if on a /spaces/:folderId route
+        if (normalizedPath.startsWith('/spaces/')) {
+          const parts = normalizedPath.replace('/spaces/', '').split('/');
+          const routeFolderId = parts[0];
+          const spaceFolder = folders.find((f) => f.id === routeFolderId);
+          const spaceFolderName = spaceFolder?.name || routeFolderId;
+
+          // Space Hub Overview: /spaces/:folderId or /spaces/:folderId/overview
+          if (parts.length === 1 || parts[1] === 'overview') {
+            return (
+              <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+                <span
+                  onClick={() => navigate(`${spacePrefix}/dashboard`)}
+                  className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+                >
+                  {workspaceName}
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span
+                  onClick={() => navigate(`${spacePrefix}/spaces`)}
+                  className="hover:text-zinc-200 cursor-pointer transition-colors"
+                >
+                  Task Spaces
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span
+                  onClick={() => navigate(`${spacePrefix}/spaces/${routeFolderId}`)}
+                  className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate cursor-pointer hover:border-orange-500/60 transition-colors"
+                >
+                  {spaceFolderName} (Space Hub)
+                </span>
+              </div>
+            );
+          }
+
+          // Space Settings / Customization: /spaces/:folderId/settings or /customize
+          if (parts[1] === 'settings' || parts[1] === 'customize') {
+            return (
+              <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+                <span
+                  onClick={() => navigate(`${spacePrefix}/dashboard`)}
+                  className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+                >
+                  {workspaceName}
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span
+                  onClick={() => navigate(`${spacePrefix}/spaces`)}
+                  className="hover:text-zinc-200 cursor-pointer transition-colors"
+                >
+                  Task Spaces
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span
+                  onClick={() => navigate(`${spacePrefix}/spaces/${routeFolderId}`)}
+                  className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[140px]"
+                >
+                  {spaceFolderName}
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+                  Space Settings
+                </span>
+              </div>
+            );
+          }
+
+          // Sub-Folder Overview: /spaces/:folderId/folders/:subFolderId
+          if (parts[1] === 'folders' && (!parts[3] || parts[3] !== 'lists')) {
+            const subId = parts[2];
+            const sub = spaceFolder?.subFolders?.find((sf) => sf.id === subId);
+            const subName = sub?.name || subId;
+            return (
+              <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+                <span
+                  onClick={() => navigate(`${spacePrefix}/dashboard`)}
+                  className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+                >
+                  {workspaceName}
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span
+                  onClick={() => navigate(`${spacePrefix}/spaces`)}
+                  className="hover:text-zinc-200 cursor-pointer transition-colors"
+                >
+                  Task Spaces
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span
+                  onClick={() => navigate(`${spacePrefix}/spaces/${routeFolderId}`)}
+                  className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[140px]"
+                >
+                  {spaceFolderName}
+                </span>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+                  {subName}
+                </span>
+              </div>
+            );
+          }
+
+          // List Routes: /spaces/:folderId/lists/:listId/:view... or /spaces/:folderId/folders/:subFolderId/lists/:listId/:view...
+          let routeListId = '';
+          let routeView = 'board';
+          let routeStatus = '';
+          let subFolderName: string | undefined;
+
+          if (parts[1] === 'lists') {
+            routeListId = parts[2];
+            routeView = parts[3] || 'board';
+            if (routeView === 'table' && parts[4]) {
+              routeStatus = parts[4];
+            }
+          } else if (parts[1] === 'folders') {
+            const sub = spaceFolder?.subFolders?.find((sf) => sf.id === parts[2]);
+            subFolderName = sub?.name || parts[2];
+            if (parts[3] === 'lists') {
+              routeListId = parts[4];
+              routeView = parts[5] || 'board';
+              if (routeView === 'table' && parts[6]) {
+                routeStatus = parts[6];
+              }
+            }
+          }
+
+          const matchedItem = routeListId ? findListItemById(folders, routeListId) : undefined;
+          const displayListName = matchedItem?.name || routeListId || listSettings?.name || 'Sprint 14';
+
+          const viewLabels: Record<string, string> = {
+            board: 'Board',
+            list: 'List',
+            table: 'Table',
+            timeline: 'Timeline',
+            calendar: 'Calendar',
+            docs: 'Docs',
+            settings: 'Settings',
+          };
+
+          return (
+            <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+              <span
+                onClick={() => navigate(`${spacePrefix}/dashboard`)}
+                className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+              >
+                {workspaceName}
+              </span>
+              <span className="text-zinc-600 font-mono">/</span>
+              <span
+                onClick={() => navigate(`${spacePrefix}/spaces`)}
+                className="hover:text-zinc-200 cursor-pointer transition-colors"
+              >
+                Task Spaces
+              </span>
+              <span className="text-zinc-600 font-mono">/</span>
+              <span
+                onClick={() => navigate(`${spacePrefix}/spaces/${routeFolderId}`)}
+                className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[120px]"
+                title={`Back to Space: ${spaceFolderName}`}
+              >
+                {spaceFolderName}
+              </span>
+              {subFolderName && (
+                <>
+                  <span className="text-zinc-600 font-mono">/</span>
+                  <span
+                    onClick={() => navigate(`${spacePrefix}/spaces/${routeFolderId}/folders/${parts[2]}`)}
+                    className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[120px]"
+                  >
+                    {subFolderName}
+                  </span>
+                </>
+              )}
+              <span className="text-zinc-600 font-mono">/</span>
+              <span
+                onClick={() => navigate(`${spacePrefix}/spaces/${routeFolderId}/lists/${routeListId}/board`)}
+                className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[140px] text-zinc-300"
+              >
+                {displayListName}
+              </span>
+              {routeView && (
+                <>
+                  <span className="text-zinc-600 font-mono">/</span>
+                  <span
+                    onClick={() => {
+                      if (routeStatus) navigate(`${spacePrefix}/spaces/${routeFolderId}/lists/${routeListId}/${routeView}`);
+                    }}
+                    className={`truncate capitalize ${
+                      !routeStatus
+                        ? 'text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30'
+                        : 'hover:text-zinc-200 cursor-pointer text-zinc-400'
+                    }`}
+                  >
+                    {viewLabels[routeView] || routeView}
+                  </span>
+                </>
+              )}
+              {routeStatus && (
+                <>
+                  <span className="text-zinc-600 font-mono">/</span>
+                  <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+                    {routeStatus}
+                  </span>
+                </>
+              )}
+            </div>
+          );
+        }
+
+        // Generic fallback
         const breadcrumbInfo = findSpaceBreadcrumbs(folders, activeSpace);
         const folderName = breadcrumbInfo?.folderName;
         const subFolderNames = breadcrumbInfo?.subFolderNames || [];
         const spaceName = breadcrumbInfo?.spaceName || listSettings?.name || 'Sprint 14 - Q4 Infra';
+        const matchedFolder = folders.find((f) => f.name === folderName);
 
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+            <span
+              onClick={() => navigate(`${spacePrefix}/dashboard`)}
+              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
+            >
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="hover:text-zinc-200 cursor-pointer transition-colors">Task Spaces</span>
+            <span
+              onClick={() => navigate(`${spacePrefix}/spaces`)}
+              className="hover:text-zinc-200 cursor-pointer transition-colors"
+            >
+              Task Spaces
+            </span>
             {folderName && (
               <>
                 <span className="text-zinc-600 font-mono">/</span>
-                <span className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[120px]">
+                <span
+                  onClick={() => {
+                    if (matchedFolder) navigate(`${spacePrefix}/spaces/${matchedFolder.id}`);
+                  }}
+                  className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[120px]"
+                >
                   {folderName}
                 </span>
               </>
@@ -313,14 +629,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
               {spaceName}
             </span>
-            {currentView === 'settings' && (
-              <>
-                <span className="text-zinc-600 font-mono">/</span>
-                <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
-                  Space Settings
-                </span>
-              </>
-            )}
           </div>
         );
       }

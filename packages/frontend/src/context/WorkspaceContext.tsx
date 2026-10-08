@@ -225,6 +225,7 @@ interface WorkspaceContextType {
   // Top-left User Space Dropdown & Creation
   userSpaces: UserSpace[];
   activeUserSpaceId: string;
+  setActiveUserSpaceId: (id: string) => void;
   activeUserSpace: UserSpace;
   handleSelectUserSpace: (spaceId: string) => void;
   handleCreateUserSpace: (space: { name: string; color?: string; icon?: string }) => void;
@@ -343,21 +344,45 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     memberCount: members.length || 1,
   });
 
+  const getInitialSpaces = (): UserSpace[] => [
+    getInitialSpace(),
+    {
+      id: 'space-engineering',
+      name: 'Engineering Systems',
+      slug: 'engineering-systems',
+      role: 'Admin',
+      color: '#3b82f6',
+      icon: 'terminal',
+      memberCount: 8,
+    },
+    {
+      id: 'space-enterprise',
+      name: 'Enterprise Deals & PoCs',
+      slug: 'enterprise-deals-pocs',
+      role: 'Owner',
+      color: '#10b981',
+      icon: 'domain',
+      memberCount: 5,
+    },
+  ];
+
   const [userSpaces, setUserSpaces] = useState<UserSpace[]>(() => {
     const saved = localStorage.getItem('backnode_user_spaces');
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length >= 2) {
           const cleaned = filterRealWorkspaces(parsed);
-          if (cleaned.length > 0) {
+          if (cleaned.length >= 2) {
             localStorage.setItem('backnode_user_spaces', JSON.stringify(cleaned));
             return cleaned;
           }
         }
       } catch {}
     }
-    return [getInitialSpace()];
+    const initial = getInitialSpaces();
+    localStorage.setItem('backnode_user_spaces', JSON.stringify(initial));
+    return initial;
   });
 
   const [activeUserSpaceId, setActiveUserSpaceId] = useState<string>(() => {
@@ -673,17 +698,28 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
       setTasks(fetchedTasks || []);
       setDeals(fetchedDeals || []);
-      setPipelines(fetchedPipelines || []);
-      if (fetchedPipelines && fetchedPipelines.length > 0) {
+      const sanitizedPipelines = (fetchedPipelines || []).map((p) => ({
+        ...p,
+        icon: !p.icon || p.icon === 'building' ? 'leaderboard' : p.icon,
+        color: !p.color || p.color === '#9900c2' ? '#ea580c' : p.color,
+      }));
+      setPipelines(sanitizedPipelines);
+      if (sanitizedPipelines.length > 0) {
         setActivePipelineId((curr) => {
-          if (!curr || !fetchedPipelines.some((p) => p.id === curr)) {
-            return fetchedPipelines[0].id;
+          if (!curr || !sanitizedPipelines.some((p) => p.id === curr)) {
+            return sanitizedPipelines[0].id;
           }
           return curr;
         });
       }
       if (fetchedStages && fetchedStages.length > 0) setCrmStages(fetchedStages);
-      if (fetchedCrmSettings) setCrmSettings(fetchedCrmSettings);
+      if (fetchedCrmSettings) {
+        setCrmSettings({
+          ...fetchedCrmSettings,
+          icon: !fetchedCrmSettings.icon || fetchedCrmSettings.icon === 'building' ? 'leaderboard' : fetchedCrmSettings.icon,
+          accentColor: !fetchedCrmSettings.accentColor || fetchedCrmSettings.accentColor === '#9900c2' ? '#ea580c' : fetchedCrmSettings.accentColor,
+        });
+      }
       setMembers(fetchedMembers && fetchedMembers.length > 0 ? fetchedMembers : initialTeamMembers);
       setDirectoryContacts(fetchedContacts || []);
       setFolders(fetchedFolders || []);
@@ -1167,21 +1203,31 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleCreatePipeline = (newPipeline: CrmPipeline) => {
-    setPipelines((prev) => [...prev, newPipeline]);
-    setActivePipelineId(newPipeline.id);
-    pipelinesApi.create(newPipeline).catch((err) => {
+    const cleaned = {
+      ...newPipeline,
+      icon: !newPipeline.icon || newPipeline.icon === 'building' ? 'leaderboard' : newPipeline.icon,
+      color: !newPipeline.color || newPipeline.color === '#9900c2' ? '#ea580c' : newPipeline.color,
+    };
+    setPipelines((prev) => [...prev, cleaned]);
+    setActivePipelineId(cleaned.id);
+    pipelinesApi.create(cleaned).catch((err) => {
       console.error('Failed to create pipeline in DB:', err);
     });
-    showToast(`Pipeline "${newPipeline.name}" initialized`);
+    showToast(`Pipeline "${cleaned.name}" initialized`);
     setIsNewPipelineModalOpen(false);
   };
 
   const handleUpdatePipeline = (updatedPipeline: CrmPipeline) => {
-    setPipelines((prev) => prev.map((p) => (p.id === updatedPipeline.id ? updatedPipeline : p)));
-    pipelinesApi.update(updatedPipeline.id, updatedPipeline).catch((err) => {
+    const cleaned = {
+      ...updatedPipeline,
+      icon: !updatedPipeline.icon || updatedPipeline.icon === 'building' ? 'leaderboard' : updatedPipeline.icon,
+      color: !updatedPipeline.color || updatedPipeline.color === '#9900c2' ? '#ea580c' : updatedPipeline.color,
+    };
+    setPipelines((prev) => prev.map((p) => (p.id === cleaned.id ? cleaned : p)));
+    pipelinesApi.update(cleaned.id, cleaned).catch((err) => {
       console.error('Failed to update pipeline in DB:', err);
     });
-    showToast(`Pipeline "${updatedPipeline.name}" updated`);
+    showToast(`Pipeline "${cleaned.name}" updated`);
     setPipelineToEdit(null);
   };
 
@@ -1470,6 +1516,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleCreateContact,
         userSpaces,
         activeUserSpaceId,
+        setActiveUserSpaceId,
         activeUserSpace,
         handleSelectUserSpace,
         handleCreateUserSpace,

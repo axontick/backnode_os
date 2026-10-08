@@ -15,10 +15,25 @@ export class PipelinesService {
   ) {}
 
   async findAll(accountId: string) {
-    return this.pipelineRepo.find({
+    const pipelines = await this.pipelineRepo.find({
       where: { accountId },
       order: { createdAt: 'ASC' },
     });
+    for (const p of pipelines) {
+      let changed = false;
+      if (p.icon === 'building' || !p.icon) {
+        p.icon = 'leaderboard';
+        changed = true;
+      }
+      if (p.color === '#9900c2' || !p.color) {
+        p.color = '#ea580c';
+        changed = true;
+      }
+      if (changed) {
+        await this.pipelineRepo.save(p);
+      }
+    }
+    return pipelines;
   }
 
   async findOne(accountId: string, id: string) {
@@ -28,6 +43,18 @@ export class PipelinesService {
     });
     if (!pipeline) {
       throw new NotFoundException(`Pipeline ${id} not found in this account`);
+    }
+    let changed = false;
+    if (pipeline.icon === 'building' || !pipeline.icon) {
+      pipeline.icon = 'leaderboard';
+      changed = true;
+    }
+    if (pipeline.color === '#9900c2' || !pipeline.color) {
+      pipeline.color = '#ea580c';
+      changed = true;
+    }
+    if (changed) {
+      await this.pipelineRepo.save(pipeline);
     }
     return pipeline;
   }
@@ -114,8 +141,8 @@ export class PipelinesService {
         code: `PIPE-${accountId.slice(0, 4).toUpperCase()}`,
         name: 'Enterprise Land & Expand Pipeline',
         description: 'High-touch strategic expansion motion for Tier-1 engineering organizations.',
-        accentColor: '#9900c2',
-        icon: 'building',
+        accentColor: '#ea580c',
+        icon: 'leaderboard',
         currency: 'USD',
         formatNotation: 'Compact',
         defaultCloseCycleDays: 60,
@@ -136,6 +163,19 @@ export class PipelinesService {
         accountId,
       });
       await this.pipelineSettingsRepo.save(settings);
+    } else {
+      let changed = false;
+      if (settings.icon === 'building' || !settings.icon) {
+        settings.icon = 'leaderboard';
+        changed = true;
+      }
+      if (settings.accentColor === '#9900c2' || !settings.accentColor) {
+        settings.accentColor = '#ea580c';
+        changed = true;
+      }
+      if (changed) {
+        await this.pipelineSettingsRepo.save(settings);
+      }
     }
     return settings;
   }

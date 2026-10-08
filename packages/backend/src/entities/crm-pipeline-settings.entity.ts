@@ -15,10 +15,10 @@ export class CrmPipelineSettings {
   @Column('varchar', { default: '' })
   description: string;
 
-  @Column('varchar', { name: 'accent_color', default: '#9900c2' })
+  @Column('varchar', { name: 'accent_color', default: '#ea580c' })
   accentColor: string;
 
-  @Column('varchar', { default: 'building' })
+  @Column('varchar', { default: 'leaderboard' })
   icon: string;
 
   @Column('varchar', { default: 'USD' })
