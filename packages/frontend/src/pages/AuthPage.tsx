@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { BacknodeLogo } from '../components/BacknodeLogo';
 
 export const AuthPage: React.FC = () => {
   const { login, signup } = useAuth();
@@ -85,9 +86,7 @@ export const AuthPage: React.FC = () => {
         <div className="px-6 pt-6 pb-4 border-b border-[#27272a] flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-[6px] bg-orange-600 flex items-center justify-center text-white text-base font-bold shadow-md shadow-orange-600/20">
-                ⚡
-              </div>
+              <BacknodeLogo size="md" showWordmark={false} />
               <div className="flex flex-col">
                 <div className="flex items-center gap-2">
                   <h1 className="text-base font-bold tracking-tight text-zinc-100 font-headline">Backnode OS</h1>

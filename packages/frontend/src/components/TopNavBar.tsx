@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TaskItem, CrmDeal } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { BacknodeLogo } from './BacknodeLogo';
 
 interface TopNavBarProps {
   currentHub?: string;
@@ -33,7 +34,6 @@ interface TopNavBarProps {
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
   currentHub = 'task-spaces',
-  currentView = 'board',
   crmView = 'dashboard',
   activePipelineName,
   searchQuery,
@@ -92,11 +92,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const isDashboard =
-    currentHub === 'overview' ||
-    currentView === 'dashboard' ||
-    (currentHub === 'crm' && crmView === 'dashboard');
-
   const activeFilterCount =
     (filterPriority ? 1 : 0) +
     (filterStatus ? 1 : 0) +
@@ -147,28 +142,28 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     switch (currentHub) {
       case 'crm':
         return (
-          <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
-            <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
               {workspaceName}
             </span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="hover:text-[#1a1b22] cursor-pointer">CRM</span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="text-[#1a1b22] font-semibold bg-[#f4f2fd] px-2 py-0.5 rounded border border-[#d4c0d5]/40 truncate">
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="hover:text-zinc-200 cursor-pointer transition-colors">CRM</span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
               {activePipelineName || 'Enterprise Deals 2026'}
             </span>
             {crmView === 'analytics' && (
               <>
-                <span className="text-[#d4c0d5] font-mono">/</span>
-                <span className="text-emerald-700 font-semibold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 truncate">
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="text-emerald-400 font-semibold bg-emerald-950/40 px-2 py-0.5 rounded-[6px] border border-emerald-500/30 truncate">
                   Win/Loss Analytics
                 </span>
               </>
             )}
             {crmView === 'settings' && (
               <>
-                <span className="text-[#d4c0d5] font-mono">/</span>
-                <span className="text-[#9900c2] font-semibold bg-[#fbd7ff]/40 px-2 py-0.5 rounded border border-[#9900c2]/30 truncate">
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
                   Pipeline Settings
                 </span>
               </>
@@ -177,43 +172,79 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         );
       case 'contacts':
         return (
-          <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
-            <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
               {workspaceName}
             </span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="hover:text-[#1a1b22] cursor-pointer">Directory</span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="text-[#1a1b22] font-semibold bg-[#f4f2fd] px-2 py-0.5 rounded border border-[#d4c0d5]/40 truncate">
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="hover:text-zinc-200 cursor-pointer transition-colors">Directory</span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
               Enterprise Contacts
             </span>
           </div>
         );
       case 'team':
         return (
-          <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
-            <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
               {workspaceName}
             </span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="text-[#1a1b22] font-semibold bg-[#f4f2fd] px-2 py-0.5 rounded border border-[#d4c0d5]/40 truncate">
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
               Team &amp; Access Control
+            </span>
+          </div>
+        );
+      case 'overview':
+        return (
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+              {workspaceName}
+            </span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+              Overall Dashboard
+            </span>
+          </div>
+        );
+      case 'telemetry':
+        return (
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+              {workspaceName}
+            </span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+              Replication Telemetry
+            </span>
+          </div>
+        );
+      case 'settings':
+        return (
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+              {workspaceName}
+            </span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+              Workspace Settings
             </span>
           </div>
         );
       case 'task-spaces':
       default:
         return (
-          <div className="flex items-center gap-2 text-xs font-medium text-[#504252] truncate">
-            <span className="text-[#1a1b22] font-semibold hover:text-[#9900c2] cursor-pointer">
+          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+            <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
               {workspaceName}
             </span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="hover:text-[#1a1b22] cursor-pointer">Task Spaces</span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="hover:text-[#1a1b22] cursor-pointer">Engineering</span>
-            <span className="text-[#d4c0d5] font-mono">/</span>
-            <span className="text-[#1a1b22] font-semibold bg-[#f4f2fd] px-2 py-0.5 rounded border border-[#d4c0d5]/40 truncate">
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="hover:text-zinc-200 cursor-pointer transition-colors">Task Spaces</span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="hover:text-zinc-200 cursor-pointer transition-colors">Engineering</span>
+            <span className="text-zinc-600 font-mono">/</span>
+            <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
               Sprint 14 - Q4 Infra
             </span>
           </div>
@@ -222,14 +253,22 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 right-0 z-20 h-14 bg-white/95 backdrop-blur-md border-b border-[#d4c0d5]/30 flex items-center justify-between px-6 w-full shrink-0 select-none">
-      {/* Left: Breadcrumbs & Search Bar */}
-      <div className="flex items-center gap-5 flex-1">
-        {!isDashboard && renderBreadcrumbs()}
+    <header className="sticky top-0 right-0 z-20 h-14 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between px-6 w-full shrink-0 select-none text-zinc-100">
+      {/* Left: BacknodeLogo, Breadcrumbs & Search Bar */}
+      <div className="flex items-center gap-5 flex-1 min-w-0">
+        <div className="flex items-center gap-3 shrink-0">
+          <BacknodeLogo size="sm" showWordmark={true} />
+        </div>
+
+        <div className="h-4 w-px bg-[#27272a] shrink-0 hidden sm:block"></div>
+
+        <div className="hidden md:flex items-center min-w-0">
+          {renderBreadcrumbs()}
+        </div>
 
         {/* Search input with Auto-Suggest and shortcut badge */}
-        <div ref={searchRef} className="relative w-80 max-w-sm">
-          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#837284]">
+        <div ref={searchRef} className="relative w-72 lg:w-80 max-w-sm ml-auto sm:ml-0">
+          <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-zinc-500">
             search
           </span>
           <input
@@ -241,13 +280,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               setIsSearchFocused(true);
             }}
             placeholder="Search tasks, operators, deals..."
-            className="w-full bg-[#f4f2fd]/60 border border-[#d4c0d5]/40 rounded-full pl-9 pr-14 py-1.5 text-xs text-[#1a1b22] placeholder:text-[#837284]/70 focus:outline-none focus:border-[#9900c2] focus:ring-2 focus:ring-[#9900c2]/20 transition-all font-sans"
+            className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] pl-9 pr-14 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-all font-sans"
           />
 
           {searchQuery ? (
             <button
               onClick={() => onSearchChange('')}
-              className="absolute right-8 top-1/2 -translate-y-1/2 text-[#837284] hover:text-[#1a1b22] p-0.5"
+              className="absolute right-8 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-200 p-0.5 cursor-pointer"
               title="Clear search"
             >
               <span className="material-symbols-outlined text-[14px]">cancel</span>
@@ -256,7 +295,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
           <button
             onClick={onOpenCommandPalette}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 font-mono text-[10px] text-[#837284] bg-white px-1.5 py-0.5 rounded border border-[#d4c0d5]/40 hover:bg-[#f4f2fd] transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-[10px] text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded-[6px] border border-zinc-700 hover:bg-zinc-700 hover:text-zinc-200 transition-colors cursor-pointer"
             title="Open Command Palette (⌘K)"
           >
             ⌘K
@@ -264,16 +303,16 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
           {/* Live Search Auto-Suggest Dropdown */}
           {isSearchFocused && searchQuery.trim().length > 0 && (
-            <div className="absolute left-0 top-full mt-2 w-96 bg-white border border-[#d4c0d5]/60 rounded-2xl shadow-xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-2.5 py-1 text-[10px] font-mono text-[#837284] uppercase font-semibold flex items-center justify-between">
+            <div className="absolute left-0 top-full mt-2 w-96 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-2.5 py-1 text-[10px] font-mono text-zinc-400 uppercase font-semibold flex items-center justify-between border-b border-[#27272a] pb-1.5">
                 <span>Matching Results</span>
-                <span>{matchingTasks.length + matchingDeals.length} found</span>
+                <span className="text-zinc-500">{matchingTasks.length + matchingDeals.length} found</span>
               </div>
 
               {matchingTasks.length > 0 && (
-                <div className="flex flex-col gap-0.5">
-                  <span className="px-2.5 pt-1 text-[10px] font-mono text-[#9900c2] uppercase font-semibold">
-                    Tasks & Deliverables
+                <div className="flex flex-col gap-0.5 pt-1">
+                  <span className="px-2.5 pt-1 text-[10px] font-mono text-orange-400 uppercase font-semibold">
+                    Tasks &amp; Deliverables
                   </span>
                   {matchingTasks.map((t) => (
                     <button
@@ -282,17 +321,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                         setIsSearchFocused(false);
                         if (onSelectTask) onSelectTask(t);
                       }}
-                      className="px-2.5 py-1.5 rounded-lg hover:bg-[#f4f2fd] text-left flex items-center justify-between group transition-colors"
+                      className="px-2.5 py-1.5 rounded-[6px] hover:bg-zinc-800/60 text-left flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2 truncate">
-                        <span className="font-mono text-[11px] text-[#9900c2] font-semibold">
+                        <span className="font-mono text-[11px] text-orange-400 font-semibold">
                           {t.id}
                         </span>
-                        <span className="truncate group-hover:text-[#9900c2] font-medium">
+                        <span className="truncate group-hover:text-orange-400 font-medium text-zinc-200">
                           {t.title}
                         </span>
                       </div>
-                      <span className="font-mono text-[9.5px] px-1.5 py-0.5 rounded bg-[#eeedf7] text-[#504252] shrink-0 ml-1">
+                      <span className="font-mono text-[9.5px] px-1.5 py-0.5 rounded-[6px] bg-zinc-800 text-zinc-400 shrink-0 ml-1 border border-zinc-700/60">
                         {t.status}
                       </span>
                     </button>
@@ -301,8 +340,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               )}
 
               {matchingDeals.length > 0 && (
-                <div className="flex flex-col gap-0.5 mt-1 border-t border-[#d4c0d5]/20 pt-1">
-                  <span className="px-2.5 text-[10px] font-mono text-[#9900c2] uppercase font-semibold">
+                <div className="flex flex-col gap-0.5 mt-1 border-t border-[#27272a] pt-1.5">
+                  <span className="px-2.5 text-[10px] font-mono text-orange-400 uppercase font-semibold">
                     CRM Deals
                   </span>
                   {matchingDeals.map((d) => (
@@ -312,17 +351,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                         setIsSearchFocused(false);
                         if (onSelectDeal) onSelectDeal(d);
                       }}
-                      className="px-2.5 py-1.5 rounded-lg hover:bg-[#f4f2fd] text-left flex items-center justify-between group transition-colors"
+                      className="px-2.5 py-1.5 rounded-[6px] hover:bg-zinc-800/60 text-left flex items-center justify-between group transition-colors cursor-pointer"
                     >
                       <div className="flex items-center gap-2 truncate">
-                        <span className="material-symbols-outlined text-[14px] text-[#9900c2]">
+                        <span className="material-symbols-outlined text-[14px] text-orange-400">
                           monetization_on
                         </span>
-                        <span className="truncate group-hover:text-[#9900c2] font-medium">
+                        <span className="truncate group-hover:text-orange-400 font-medium text-zinc-200">
                           {d.title}
                         </span>
                       </div>
-                      <span className="font-mono text-[10px] font-bold text-[#1a1b22] shrink-0 ml-1">
+                      <span className="font-mono text-[10px] font-bold text-zinc-100 shrink-0 ml-1">
                         {d.formattedValue}
                       </span>
                     </button>
@@ -331,7 +370,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               )}
 
               {matchingTasks.length === 0 && matchingDeals.length === 0 && (
-                <div className="p-3 text-center text-[#837284] text-[11px]">
+                <div className="p-3 text-center text-zinc-500 text-[11px] font-mono">
                   No items matching &ldquo;{searchQuery}&rdquo;. Press Enter or ⌘K for commands.
                 </div>
               )}
@@ -346,10 +385,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         <div ref={filterRef} className="relative">
           <button
             onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-            className={`px-3 py-1.5 rounded-full border text-xs font-medium flex items-center gap-1.5 transition-all ${
+            className={`px-3 py-1.5 rounded-[6px] border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
               activeFilterCount > 0
-                ? 'border-[#9900c2] bg-[#fbd7ff]/30 text-[#9900c2] font-semibold'
-                : 'border-[#d4c0d5]/40 text-[#1a1b22] hover:bg-[#eeedf7]'
+                ? 'border-orange-500/50 bg-orange-950/40 text-orange-400 font-semibold'
+                : 'border-[#27272a] bg-[#18181b] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">filter_list</span>
@@ -369,16 +408,16 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
           {/* Filter Popover Dropdown Panel */}
           {isFilterDropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-[#d4c0d5]/50 rounded-2xl shadow-xl z-50 p-3.5 flex flex-col gap-3 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-2 border-b border-[#d4c0d5]/30">
-                <span className="font-semibold text-xs text-[#1a1b22]">Filter Options</span>
+            <div className="absolute right-0 top-full mt-2 w-72 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-3.5 flex flex-col gap-3 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
+                <span className="font-semibold text-xs text-zinc-100">Filter Options</span>
                 {activeFilterCount > 0 && onClearFilters && (
                   <button
                     onClick={() => {
                       onClearFilters();
                       setIsFilterDropdownOpen(false);
                     }}
-                    className="text-[11px] text-[#9900c2] hover:underline font-mono"
+                    className="text-[11px] text-orange-400 hover:underline font-mono cursor-pointer"
                   >
                     Clear all
                   </button>
@@ -391,7 +430,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   {/* CRM Stage Filter Section */}
                   {onSelectFilterCrmStage && (
                     <div className="flex flex-col gap-1.5">
-                      <span className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                         By Stage
                       </span>
                       <div className="flex flex-col gap-1 text-[11px]">
@@ -409,10 +448,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                               onClick={() => {
                                 onSelectFilterCrmStage(isSelected ? null : stage);
                               }}
-                              className={`px-2.5 py-1.5 rounded-lg border text-left flex items-center justify-between transition-colors ${
+                              className={`px-2.5 py-1.5 rounded-[6px] border text-left flex items-center justify-between transition-colors cursor-pointer ${
                                 isSelected
-                                  ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold'
-                                  : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#1a1b22] hover:bg-[#eeedf7]'
+                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
+                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
                               }`}
                             >
                               <span>{stage}</span>
@@ -428,8 +467,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
                   {/* CRM Owner Filter Section */}
                   {onSelectFilterCrmOwner && (
-                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#d4c0d5]/20">
-                      <span className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#27272a]">
+                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                         By Owner
                       </span>
                       <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
@@ -441,10 +480,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                               onClick={() => {
                                 onSelectFilterCrmOwner(isSelected ? null : owner);
                               }}
-                              className={`px-2 py-1.5 rounded-lg border text-left flex items-center justify-between truncate transition-colors ${
+                              className={`px-2 py-1.5 rounded-[6px] border text-left flex items-center justify-between truncate transition-colors cursor-pointer ${
                                 isSelected
-                                  ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold'
-                                  : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#1a1b22] hover:bg-[#eeedf7]'
+                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
+                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
                               }`}
                             >
                               <span className="truncate">{owner}</span>
@@ -462,7 +501,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 <>
                   {/* Priority Filter Section */}
                   <div className="flex flex-col gap-1.5">
-                    <span className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+                    <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                       By Priority
                     </span>
                     <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
@@ -474,10 +513,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                             onClick={() => {
                               onSelectFilterPriority?.(isSelected ? null : p);
                             }}
-                            className={`px-2.5 py-1.5 rounded-lg border text-left flex items-center justify-between transition-colors ${
+                            className={`px-2.5 py-1.5 rounded-[6px] border text-left flex items-center justify-between transition-colors cursor-pointer ${
                               isSelected
-                                ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold'
-                                : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#1a1b22] hover:bg-[#eeedf7]'
+                                ? 'bg-orange-600 text-white border-orange-500 font-semibold'
+                                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
                             }`}
                           >
                             <span>{p}</span>
@@ -492,8 +531,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
                   {/* Status Filter Section */}
                   {onSelectFilterStatus && (
-                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#d4c0d5]/20">
-                      <span className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#27272a]">
+                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                         By Lifecycle Status
                       </span>
                       <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
@@ -505,10 +544,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                               onClick={() => {
                                 onSelectFilterStatus(isSelected ? null : s);
                               }}
-                              className={`px-2 py-1.5 rounded-lg border text-left flex items-center justify-between truncate transition-colors ${
+                              className={`px-2 py-1.5 rounded-[6px] border text-left flex items-center justify-between truncate transition-colors cursor-pointer ${
                                 isSelected
-                                  ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold'
-                                  : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#1a1b22] hover:bg-[#eeedf7]'
+                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
+                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
                               }`}
                             >
                               <span className="truncate">{s}</span>
@@ -524,8 +563,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
                   {/* Operator / Assignee Filter Section */}
                   {onSelectFilterAssignee && (
-                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#d4c0d5]/20">
-                      <span className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#27272a]">
+                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                         By Assignee
                       </span>
                       <div className="flex flex-col gap-1 text-[11px]">
@@ -537,10 +576,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                               onClick={() => {
                                 onSelectFilterAssignee(isSelected ? null : op);
                               }}
-                              className={`px-2.5 py-1.5 rounded-lg border text-left flex items-center justify-between transition-colors ${
+                              className={`px-2.5 py-1.5 rounded-[6px] border text-left flex items-center justify-between transition-colors cursor-pointer ${
                                 isSelected
-                                  ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold'
-                                  : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#1a1b22] hover:bg-[#eeedf7]'
+                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
+                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
                               }`}
                             >
                               <span>{op}</span>
@@ -559,49 +598,55 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           )}
         </div>
 
-
+        {/* Primary CTA Button */}
         <button
           onClick={onOpenCreateTask}
-          className="px-3.5 py-1.5 rounded-full bg-[#9900c2] hover:bg-[#b731e0] text-white text-xs font-semibold transition-all shadow-sm flex items-center gap-1 active:scale-[0.98]"
+          className="px-3.5 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold transition-all shadow-sm flex items-center gap-1 active:scale-[0.98] cursor-pointer"
         >
           <span className="material-symbols-outlined text-[16px]">add</span>
           <span>{currentHub === 'crm' ? 'Add Deal' : 'Create Task'}</span>
         </button>
 
-        <div className="h-4 w-px bg-[#d4c0d5]/40 mx-1"></div>
+        {/* Telemetry Peer Node Sync Status */}
+        <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-[6px] bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-mono text-[10px]">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span>{syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'offline' ? 'Offline' : 'Connected'}</span>
+        </div>
+
+        <div className="h-4 w-px bg-[#27272a] mx-1"></div>
 
         {/* Notifications Popover */}
         <div ref={notifRef} className="relative">
           <button
             onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#eeedf7] text-[#837284] hover:text-[#1a1b22] transition-colors relative"
+            className="w-8 h-8 rounded-[6px] flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors relative cursor-pointer"
             title="Notifications"
           >
             <span className="material-symbols-outlined text-[18px]">notifications</span>
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-[#9900c2]"></span>
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500"></span>
           </button>
 
           {isNotificationsOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-[#d4c0d5]/50 rounded-2xl shadow-xl z-50 p-3.5 flex flex-col gap-2.5 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-2 border-b border-[#d4c0d5]/30">
-                <span className="font-semibold text-xs text-[#1a1b22]">Notifications</span>
-                <span className="font-mono text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+            <div className="absolute right-0 top-full mt-2 w-80 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-3.5 flex flex-col gap-2.5 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
+                <span className="font-semibold text-xs text-zinc-100">Notifications</span>
+                <span className="font-mono text-[10px] text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-[6px] border border-emerald-500/30">
                   Sync Nominal
                 </span>
               </div>
               <div className="flex flex-col gap-2">
-                <div className="p-2 rounded-xl bg-[#f4f2fd]/60 border border-[#d4c0d5]/30 flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-[16px] text-[#9900c2] mt-0.5">cloud_done</span>
+                <div className="p-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-start gap-2.5">
+                  <span className="material-symbols-outlined text-[16px] text-orange-500 mt-0.5">cloud_done</span>
                   <div>
-                    <div className="font-semibold text-[11px] text-[#1a1b22]">Peer replication synced</div>
-                    <div className="text-[10px] text-[#504252]">Active node: us-east-local (0.11ms latency)</div>
+                    <div className="font-semibold text-[11px] text-zinc-100">Peer replication synced</div>
+                    <div className="text-[10px] text-zinc-400">Active node: us-east-local (0.11ms latency)</div>
                   </div>
                 </div>
-                <div className="p-2 rounded-xl bg-[#fafafc] border border-[#d4c0d5]/30 flex items-start gap-2.5">
-                  <span className="material-symbols-outlined text-[16px] text-emerald-600 mt-0.5">check_circle</span>
+                <div className="p-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-start gap-2.5">
+                  <span className="material-symbols-outlined text-[16px] text-emerald-400 mt-0.5">check_circle</span>
                   <div>
-                    <div className="font-semibold text-[11px] text-[#1a1b22]">All filters operational</div>
-                    <div className="text-[10px] text-[#504252]">Real-time index query responsive across spaces</div>
+                    <div className="font-semibold text-[11px] text-zinc-100">All filters operational</div>
+                    <div className="text-[10px] text-zinc-400">Real-time index query responsive across spaces</div>
                   </div>
                 </div>
               </div>
@@ -613,30 +658,30 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         <div ref={helpRef} className="relative">
           <button
             onClick={() => setIsHelpOpen(!isHelpOpen)}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#eeedf7] text-[#837284] hover:text-[#1a1b22] transition-colors"
+            className="w-8 h-8 rounded-[6px] flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-colors cursor-pointer"
             title="Help & Shortcuts"
           >
             <span className="material-symbols-outlined text-[18px]">help_outline</span>
           </button>
 
           {isHelpOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white border border-[#d4c0d5]/50 rounded-2xl shadow-xl z-50 p-3.5 flex flex-col gap-2.5 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-2 border-b border-[#d4c0d5]/30">
-                <span className="font-semibold text-xs text-[#1a1b22]">Keyboard Shortcuts</span>
-                <span className="font-mono text-[10px] text-[#837284]">Backnode OS</span>
+            <div className="absolute right-0 top-full mt-2 w-80 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-3.5 flex flex-col gap-2.5 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
+                <span className="font-semibold text-xs text-zinc-100">Keyboard Shortcuts</span>
+                <span className="font-mono text-[10px] text-zinc-400">Backnode OS</span>
               </div>
               <div className="flex flex-col gap-1.5 font-mono text-[11px]">
-                <div className="flex items-center justify-between py-1 border-b border-[#d4c0d5]/20">
-                  <span className="text-[#504252]">Command Palette</span>
-                  <kbd className="px-1.5 py-0.5 bg-[#f4f2fd] border border-[#d4c0d5]/40 rounded text-[10px]">⌘K</kbd>
+                <div className="flex items-center justify-between py-1 border-b border-[#27272a]/60">
+                  <span className="text-zinc-400">Command Palette</span>
+                  <kbd className="px-1.5 py-0.5 bg-[#18181b] border border-[#27272a] text-zinc-300 rounded-[6px] text-[10px]">⌘K</kbd>
                 </div>
-                <div className="flex items-center justify-between py-1 border-b border-[#d4c0d5]/20">
-                  <span className="text-[#504252]">Quick Filter</span>
-                  <kbd className="px-1.5 py-0.5 bg-[#f4f2fd] border border-[#d4c0d5]/40 rounded text-[10px]">F</kbd>
+                <div className="flex items-center justify-between py-1 border-b border-[#27272a]/60">
+                  <span className="text-zinc-400">Quick Filter</span>
+                  <kbd className="px-1.5 py-0.5 bg-[#18181b] border border-[#27272a] text-zinc-300 rounded-[6px] text-[10px]">F</kbd>
                 </div>
                 <div className="flex items-center justify-between py-1">
-                  <span className="text-[#504252]">Dismiss Popovers</span>
-                  <kbd className="px-1.5 py-0.5 bg-[#f4f2fd] border border-[#d4c0d5]/40 rounded text-[10px]">ESC</kbd>
+                  <span className="text-zinc-400">Dismiss Popovers</span>
+                  <kbd className="px-1.5 py-0.5 bg-[#18181b] border border-[#27272a] text-zinc-300 rounded-[6px] text-[10px]">ESC</kbd>
                 </div>
               </div>
             </div>
@@ -656,7 +701,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             )}
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="w-8 h-8 rounded-full bg-[#1e1f28] text-zinc-100 border border-[#27272a] hover:border-orange-500/50 flex items-center justify-center text-xs font-bold font-mono shadow-sm cursor-pointer hover:ring-2 hover:ring-orange-500/30 transition-all relative"
+              className="w-8 h-8 rounded-full bg-[#18181b] text-zinc-100 border border-[#27272a] hover:border-orange-500/50 flex items-center justify-center text-xs font-bold font-mono shadow-sm cursor-pointer hover:ring-2 hover:ring-orange-500/30 transition-all relative"
               title={user ? `Operator: ${user.name} (${user.role})` : 'Operator Profile'}
             >
               {user?.name

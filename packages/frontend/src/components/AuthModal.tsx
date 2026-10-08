@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { BacknodeLogo } from './BacknodeLogo';
 
 export const AuthModal: React.FC = () => {
   const { isAuthModalOpen, setIsAuthModalOpen, login, signup } = useAuth();
@@ -81,9 +82,7 @@ export const AuthModal: React.FC = () => {
         {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-[#27272a] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-[6px] bg-orange-600 flex items-center justify-center text-white font-mono font-bold text-sm shadow-sm shadow-orange-600/20">
-              ⚡
-            </div>
+            <BacknodeLogo size="sm" showWordmark={false} />
             <div>
               <h2 className="text-sm font-semibold text-zinc-100 tracking-wide font-headline">Backnode OS</h2>
               <p className="text-xs text-zinc-400 font-body">Operator Access & Identity Matrix</p>
