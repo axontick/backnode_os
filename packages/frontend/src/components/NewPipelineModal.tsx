@@ -28,7 +28,7 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
       setDescription(pipelineToEdit.description || '');
       setSelectedIcon(pipelineToEdit.icon || 'trending_up');
       setSelectedColor(pipelineToEdit.color || '#9900c2');
-      setTargetArr(String(pipelineToEdit.totalValue || 250000));
+      setTargetArr(String(pipelineToEdit.totalValue ?? 250000));
     } else {
       setPipelineName('');
       setDescription('');
@@ -67,7 +67,8 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
     e.preventDefault();
     if (!pipelineName.trim()) return;
 
-    const val = parseInt(targetArr.replace(/[^0-9]/g, '')) || 150000;
+    const parsed = parseInt(targetArr.replace(/[^0-9]/g, ''), 10);
+    const val = isNaN(parsed) ? 250000 : parsed;
 
     if (pipelineToEdit) {
       onUpdatePipeline?.({
