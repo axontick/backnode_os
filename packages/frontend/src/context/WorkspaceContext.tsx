@@ -81,6 +81,17 @@ interface WorkspaceContextType {
   setSelectedDealId: (id: string | null) => void;
   taskToDelete: TaskItem | null;
   setTaskToDelete: (task: TaskItem | null) => void;
+  folderToEdit: SpaceFolder | null;
+  setFolderToEdit: (folder: SpaceFolder | null) => void;
+  pipelineToEdit: CrmPipeline | null;
+  setPipelineToEdit: (pipeline: CrmPipeline | null) => void;
+  itemToDelete: { type: 'task' | 'folder' | 'pipeline'; item: any } | null;
+  setItemToDelete: (target: { type: 'task' | 'folder' | 'pipeline'; item: any } | null) => void;
+  handleUpdateFolder: (updatedFolder: SpaceFolder) => void;
+  handleDeleteFolder: (folderId: string) => void;
+  handleUpdatePipeline: (updatedPipeline: CrmPipeline) => void;
+  handleDeletePipeline: (pipelineId: string) => void;
+  handleConfirmDeleteItem: () => void;
 
   // Search & Filtering
   searchQuery: string;
@@ -205,6 +216,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Inspector & Modal states
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<TaskItem | null>(null);
+  const [folderToEdit, setFolderToEdit] = useState<SpaceFolder | null>(null);
+  const [pipelineToEdit, setPipelineToEdit] = useState<CrmPipeline | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<{ type: 'task' | 'folder' | 'pipeline'; item: any } | null>(null);
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
   const [isNewFolderModalOpen, setIsNewFolderModalOpen] = useState(false);
   const [isNewContactModalOpen, setIsNewContactModalOpen] = useState(false);
@@ -795,6 +809,31 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setIsNewFolderModalOpen(false);
   };
 
+  const handleUpdateFolder = (updatedFolder: SpaceFolder) => {
+    setFolders((prev) => prev.map((f) => (f.id === updatedFolder.id ? updatedFolder : f)));
+    workspaceApi.updateFolder(updatedFolder.id, updatedFolder).catch((err) => {
+      console.error('Failed to update folder in DB:', err);
+    });
+    showToast(`Folder "${updatedFolder.name}" updated`);
+    setFolderToEdit(null);
+  };
+
+  const handleDeleteFolder = (folderId: string) => {
+    setFolders((prev) => {
+      const remaining = prev.filter((f) => f.id !== folderId);
+      const deletedFolder = prev.find((f) => f.id === folderId);
+      if (deletedFolder?.items?.some((i) => i.id === activeSpace)) {
+        const nextSpace = remaining[0]?.items?.[0]?.id || 'sprint-14';
+        setActiveSpace(nextSpace);
+      }
+      return remaining;
+    });
+    workspaceApi.deleteFolder(folderId).catch((err) => {
+      console.error('Failed to delete folder in DB:', err);
+    });
+    showToast('Folder deleted');
+  };
+
   const handleCreatePipeline = (newPipeline: CrmPipeline) => {
     setPipelines((prev) => [...prev, newPipeline]);
     setActivePipelineId(newPipeline.id);
@@ -803,6 +842,41 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     });
     showToast(`Pipeline "${newPipeline.name}" initialized`);
     setIsNewPipelineModalOpen(false);
+  };
+
+  const handleUpdatePipeline = (updatedPipeline: CrmPipeline) => {
+    setPipelines((prev) => prev.map((p) => (p.id === updatedPipeline.id ? updatedPipeline : p)));
+    pipelinesApi.update(updatedPipeline.id, updatedPipeline).catch((err) => {
+      console.error('Failed to update pipeline in DB:', err);
+    });
+    showToast(`Pipeline "${updatedPipeline.name}" updated`);
+    setPipelineToEdit(null);
+  };
+
+  const handleDeletePipeline = (pipelineId: string) => {
+    setPipelines((prev) => {
+      const remaining = prev.filter((p) => p.id !== pipelineId);
+      if (activePipelineId === pipelineId && remaining.length > 0) {
+        setActivePipelineId(remaining[0].id);
+      }
+      return remaining;
+    });
+    pipelinesApi.delete(pipelineId).catch((err) => {
+      console.error('Failed to delete pipeline in DB:', err);
+    });
+    showToast('Pipeline deleted');
+  };
+
+  const handleConfirmDeleteItem = () => {
+    if (!itemToDelete) return;
+    if (itemToDelete.type === 'task') {
+      handleDeleteTask(itemToDelete.item.id);
+    } else if (itemToDelete.type === 'folder') {
+      handleDeleteFolder(itemToDelete.item.id);
+    } else if (itemToDelete.type === 'pipeline') {
+      handleDeletePipeline(itemToDelete.item.id);
+    }
+    setItemToDelete(null);
   };
 
   const handleCreateContact = (newContact: DirectoryContact) => {
@@ -857,6 +931,12 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setSelectedDealId,
         taskToDelete,
         setTaskToDelete,
+        folderToEdit,
+        setFolderToEdit,
+        pipelineToEdit,
+        setPipelineToEdit,
+        itemToDelete,
+        setItemToDelete,
         searchQuery,
         setSearchQuery,
         filterPriority,
@@ -913,7 +993,12 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleUpdateCrmSettings,
         handleUpdateCrmStages,
         handleCreateFolder,
+        handleUpdateFolder,
+        handleDeleteFolder,
         handleCreatePipeline,
+        handleUpdatePipeline,
+        handleDeletePipeline,
+        handleConfirmDeleteItem,
         handleCreateContact,
         userSpaces,
         activeUserSpaceId,

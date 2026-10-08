@@ -116,6 +116,14 @@ export const pipelinesApi = {
     const res = await apiClient.post<CrmPipeline>('/pipelines', pipeline);
     return res.data;
   },
+  update: async (id: string, pipeline: Partial<CrmPipeline>): Promise<CrmPipeline> => {
+    const res = await apiClient.patch<CrmPipeline>(`/pipelines/${id}`, pipeline);
+    return res.data;
+  },
+  delete: async (id: string): Promise<{ id: string }> => {
+    const res = await apiClient.delete<{ id: string }>(`/pipelines/${id}`);
+    return res.data;
+  },
   getStages: async (): Promise<CrmStageDefinition[]> => {
     const res = await apiClient.get<CrmStageDefinition[]>('/pipelines/stages');
     return res.data;
