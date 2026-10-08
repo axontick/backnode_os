@@ -44,7 +44,7 @@ export const AuthModal: React.FC = () => {
 
   const handleSignupSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!signupName || !signupAccountName || !signupEmail || !signupPassword) {
+    if (!signupName.trim() || !signupAccountName.trim() || !signupEmail.trim() || !signupPassword) {
       setError('All fields are required.');
       return;
     }
@@ -71,68 +71,66 @@ export const AuthModal: React.FC = () => {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs animate-in fade-in duration-150"
       onClick={() => setIsAuthModalOpen(false)}
     >
       <div
-        className="w-full max-w-md bg-[#16171d] text-[#e8e5ec] border border-[#3b3445] rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
+        className="w-full max-w-md bg-[#121214] text-zinc-100 border border-[#27272a] rounded-[6px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-[#2d2938] flex items-center justify-between">
+        <div className="px-6 pt-5 pb-4 border-b border-[#27272a] flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#9900c2] to-[#670085] flex items-center justify-center text-white font-mono font-bold shadow-md shadow-[#9900c2]/20">
+            <div className="w-8 h-8 rounded-[6px] bg-orange-600 flex items-center justify-center text-white font-mono font-bold text-sm shadow-sm shadow-orange-600/20">
               ⚡
             </div>
             <div>
-              <h2 className="text-base font-semibold text-white tracking-wide">Backnode OS</h2>
-              <p className="text-xs text-[#9d93a5]">Operator Access & Identity Matrix</p>
+              <h2 className="text-sm font-semibold text-zinc-100 tracking-wide font-headline">Backnode OS</h2>
+              <p className="text-xs text-zinc-400 font-body">Operator Access & Identity Matrix</p>
             </div>
           </div>
           <button
             onClick={() => setIsAuthModalOpen(false)}
-            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#282633] text-[#8e8597] hover:text-white transition-colors"
+            className="w-7 h-7 rounded-[6px] flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-white transition-colors cursor-pointer"
             title="Close"
           >
             ✕
           </button>
         </div>
 
-        {/* Tabs: Sign In / Create Workspace */}
-        <div className="flex px-6 pt-4 border-b border-[#2d2938]">
+        {/* Tabs: Login / Register */}
+        <div className="flex px-6 pt-2.5 border-b border-[#27272a] bg-[#0c0a09]/50">
           <button
             onClick={() => {
               setTab('login');
               setError(null);
             }}
-            className={`pb-2.5 text-xs font-semibold uppercase tracking-wider transition-colors relative mr-6 ${
-              tab === 'login' ? 'text-white' : 'text-[#83788f] hover:text-[#b4aabf]'
+            className={`px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors relative ${
+              tab === 'login'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20 rounded-t-[6px]'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            Sign In
-            {tab === 'login' && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#9900c2] rounded-full"></span>
-            )}
+            Login
           </button>
           <button
             onClick={() => {
               setTab('signup');
               setError(null);
             }}
-            className={`pb-2.5 text-xs font-semibold uppercase tracking-wider transition-colors relative ${
-              tab === 'signup' ? 'text-white' : 'text-[#83788f] hover:text-[#b4aabf]'
+            className={`px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors relative ${
+              tab === 'signup'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20 rounded-t-[6px]'
+                : 'text-zinc-400 hover:text-zinc-200'
             }`}
           >
-            Create Workspace
-            {tab === 'signup' && (
-              <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#9900c2] rounded-full"></span>
-            )}
+            Register
           </button>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="mx-6 mt-4 p-3 rounded-xl bg-red-950/60 border border-red-800/60 text-red-200 text-xs flex items-start gap-2">
+          <div className="mx-6 mt-4 p-3 rounded-[6px] bg-red-950/60 border border-red-800/60 text-red-200 text-xs flex items-start gap-2">
             <span className="text-red-400 font-bold">⚠️</span>
             <span className="flex-1">{error}</span>
           </div>
@@ -143,21 +141,21 @@ export const AuthModal: React.FC = () => {
           {tab === 'login' ? (
             <form onSubmit={handleLoginSubmit} className="flex flex-col gap-3.5">
               <div>
-                <label className="block text-[11px] font-mono text-[#a59aaf] uppercase tracking-wider mb-1">
-                  Operator Email
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
+                  Work Email
                 </label>
                 <input
                   type="email"
                   value={loginEmail}
                   onChange={(e) => setLoginEmail(e.target.value)}
                   placeholder="operator@company.com"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors font-mono"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono text-[#a59aaf] uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                   Password
                 </label>
                 <input
@@ -165,7 +163,7 @@ export const AuthModal: React.FC = () => {
                   value={loginPassword}
                   onChange={(e) => setLoginPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors font-mono"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
                   required
                 />
               </div>
@@ -173,19 +171,19 @@ export const AuthModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-2 w-full py-2.5 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] text-white text-xs font-semibold shadow-md shadow-[#9900c2]/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                className="mt-2 w-full py-2.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <span>Authenticating...</span>
+                  <span>Logging in...</span>
                 ) : (
-                  <span>Authenticate Operator</span>
+                  <span>Login</span>
                 )}
               </button>
             </form>
           ) : (
             <form onSubmit={handleSignupSubmit} className="flex flex-col gap-3">
               <div>
-                <label className="block text-[11px] font-mono text-[#a59aaf] uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                   Full Name
                 </label>
                 <input
@@ -193,13 +191,13 @@ export const AuthModal: React.FC = () => {
                   value={signupName}
                   onChange={(e) => setSignupName(e.target.value)}
                   placeholder="Sarah Connor"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono text-[#a59aaf] uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                   Workspace / Org Name
                 </label>
                 <input
@@ -207,13 +205,13 @@ export const AuthModal: React.FC = () => {
                   value={signupAccountName}
                   onChange={(e) => setSignupAccountName(e.target.value)}
                   placeholder="Acme Operations"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono text-[#a59aaf] uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                   Work Email
                 </label>
                 <input
@@ -221,13 +219,13 @@ export const AuthModal: React.FC = () => {
                   value={signupEmail}
                   onChange={(e) => setSignupEmail(e.target.value)}
                   placeholder="sarah@acme.corp"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors font-mono"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
                   required
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-mono text-[#a59aaf] uppercase tracking-wider mb-1">
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                   Password (min 8 characters)
                 </label>
                 <input
@@ -235,7 +233,7 @@ export const AuthModal: React.FC = () => {
                   value={signupPassword}
                   onChange={(e) => setSignupPassword(e.target.value)}
                   placeholder="••••••••••••"
-                  className="w-full px-3.5 py-2 rounded-xl bg-[#1e1f28] border border-[#3b3548] text-white text-xs placeholder-[#5c5468] focus:outline-none focus:border-[#9900c2] transition-colors font-mono"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
                   required
                 />
               </div>
@@ -243,12 +241,12 @@ export const AuthModal: React.FC = () => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-2 w-full py-2.5 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] text-white text-xs font-semibold shadow-md shadow-[#9900c2]/30 transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2"
+                className="mt-2 w-full py-2.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
                 {isSubmitting ? (
-                  <span>Initializing Workspace...</span>
+                  <span>Registering...</span>
                 ) : (
-                  <span>Create Account & Workspace</span>
+                  <span>Register</span>
                 )}
               </button>
             </form>
@@ -256,7 +254,7 @@ export const AuthModal: React.FC = () => {
         </div>
 
         {/* Footer info */}
-        <div className="px-6 py-3 bg-[#111217] border-t border-[#2d2938] flex items-center justify-between text-[10px] text-[#71677c] font-mono">
+        <div className="px-6 py-2.5 bg-[#0c0a09] border-t border-[#27272a] flex items-center justify-between text-[10px] text-zinc-500 font-mono">
           <span>JWT-256 • Multi-Tenant</span>
           <span>v1.0.0</span>
         </div>

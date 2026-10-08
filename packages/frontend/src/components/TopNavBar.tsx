@@ -649,14 +649,14 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             {!isAuthenticated && (
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className="px-2.5 py-1 rounded-full bg-[#f4f2fd] hover:bg-[#eae6f8] text-[#9900c2] border border-[#9900c2]/30 text-[11px] font-semibold transition-all shadow-xs"
+                className="px-2.5 py-1 rounded-[6px] bg-orange-950/40 hover:bg-orange-950/60 text-orange-400 border border-orange-500/30 text-[11px] font-semibold transition-all shadow-xs cursor-pointer"
               >
-                Sign In
+                Login
               </button>
             )}
             <button
               onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="w-8 h-8 rounded-full bg-[#1e1f28] text-white border border-[#9900c2]/40 flex items-center justify-center text-xs font-bold font-mono shadow-sm cursor-pointer hover:ring-2 hover:ring-[#9900c2]/40 transition-all relative"
+              className="w-8 h-8 rounded-full bg-[#1e1f28] text-zinc-100 border border-[#27272a] hover:border-orange-500/50 flex items-center justify-center text-xs font-bold font-mono shadow-sm cursor-pointer hover:ring-2 hover:ring-orange-500/30 transition-all relative"
               title={user ? `Operator: ${user.name} (${user.role})` : 'Operator Profile'}
             >
               {user?.name
@@ -668,7 +668,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     .slice(0, 2)
                 : 'AW'}
               <span
-                className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-white ${
+                className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-[#121214] ${
                   isAuthenticated ? 'bg-emerald-500' : 'bg-amber-400'
                 }`}
               ></span>
@@ -676,9 +676,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           </div>
 
           {isProfileOpen && (
-            <div className="absolute right-0 top-full mt-2 w-72 bg-white border border-[#d4c0d5]/60 rounded-2xl shadow-2xl z-50 p-4 flex flex-col gap-3 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center gap-3 pb-3 border-b border-[#d4c0d5]/30">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[#9900c2] to-[#670085] text-white flex items-center justify-center font-mono font-bold text-sm shadow-md">
+            <div className="absolute right-0 top-full mt-2 w-72 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-4 flex flex-col gap-3 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="flex items-center gap-3 pb-3 border-b border-[#27272a]">
+                <div className="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center font-mono font-bold text-sm shadow-md">
                   {user?.name
                     ? user.name
                         .split(' ')
@@ -689,17 +689,17 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     : 'OP'}
                 </div>
                 <div className="flex flex-col min-w-0">
-                  <div className="font-semibold text-sm text-[#1a1b22] truncate">
+                  <div className="font-semibold text-sm text-zinc-100 truncate">
                     {user?.name || (isAuthenticated ? 'Operator' : 'Guest Operator')}
                   </div>
-                  <div className="text-[11px] text-[#71677c] truncate font-mono">
+                  <div className="text-[11px] text-zinc-400 truncate font-mono">
                     {user?.email || (isAuthenticated ? 'operator@backnode.io' : 'guest@backnode.io')}
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-[#f4f2fd] text-[#9900c2] border border-[#d4c0d5]/40">
+                    <span className="px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-orange-950/40 text-orange-400 border border-orange-500/30">
                       {user?.role || (isAuthenticated ? 'MEMBER' : 'GUEST')}
                     </span>
-                    <span className="text-[10px] text-[#71677c] truncate">
+                    <span className="text-[10px] text-zinc-400 truncate">
                       {user?.account?.name || (isAuthenticated ? 'My Workspace' : 'Local Workspace')}
                     </span>
                   </div>
@@ -712,10 +712,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                     setIsProfileOpen(false);
                     setIsAuthModalOpen(true);
                   }}
-                  className="w-full text-left px-3 py-2 rounded-xl hover:bg-[#f4f2fd] text-[#1a1b22] font-medium transition-colors flex items-center justify-between"
+                  className="w-full text-left px-3 py-2 rounded-[6px] hover:bg-orange-950/30 text-zinc-200 hover:text-orange-400 font-medium transition-colors flex items-center justify-between cursor-pointer"
                 >
-                  <span>{isAuthenticated ? 'Switch Account / Log In' : 'Sign In'}</span>
-                  <span className="text-xs text-[#9900c2]">→</span>
+                  <span>{isAuthenticated ? 'Switch Account / Login' : 'Login'}</span>
+                  <span className="text-xs text-orange-400">→</span>
                 </button>
                 {isAuthenticated && (
                   <button
@@ -723,7 +723,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                       logout();
                       setIsProfileOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-xl hover:bg-red-50 text-red-600 font-medium transition-colors flex items-center justify-between"
+                    className="w-full text-left px-3 py-2 rounded-[6px] hover:bg-red-950/40 text-red-400 font-medium transition-colors flex items-center justify-between cursor-pointer"
                   >
                     <span>Sign Out</span>
                     <span className="material-symbols-outlined text-[14px]">logout</span>
