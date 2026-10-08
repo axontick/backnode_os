@@ -185,8 +185,16 @@ export const workspaceApi = {
     const res = await apiClient.get<UserSpace[]>('/workspaces');
     return res.data;
   },
-  createWorkspace: async (data: { name: string; color?: string }): Promise<UserSpace> => {
+  createWorkspace: async (data: { name: string; color?: string; icon?: string }): Promise<UserSpace> => {
     const res = await apiClient.post<UserSpace>('/workspaces', data);
+    return res.data;
+  },
+  updateWorkspace: async (id: string, data: { name?: string; color?: string; icon?: string }): Promise<UserSpace> => {
+    const res = await apiClient.patch<UserSpace>(`/workspaces/${id}`, data);
+    return res.data;
+  },
+  deleteWorkspace: async (id: string): Promise<{ id: string; success: boolean }> => {
+    const res = await apiClient.delete<{ id: string; success: boolean }>(`/workspaces/${id}`);
     return res.data;
   },
   getFolders: async (): Promise<SpaceFolder[]> => {

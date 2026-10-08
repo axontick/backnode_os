@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 
 interface DocsCanvasViewProps {
   onNavigateToTasks: () => void;
@@ -9,394 +9,358 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
   onNavigateToTasks,
   onOpenCreateTask,
 }) => {
-  const [activeSection, setActiveSection] = useState('summary');
-  const [tasks, setTasks] = useState([
-    {
-      id: 'dt-1',
-      title: 'Finalize database schema migration scripts',
-      done: true,
-      status: 'Completed',
-      assignee: 'AW',
-      priority: 'Normal',
-      due: 'Yesterday',
-    },
-    {
-      id: 'dt-2',
-      title: 'Perform cold-boot latency benchmark (<10ms)',
-      done: false,
-      status: 'In Progress',
-      assignee: 'AR',
-      priority: 'Urgent',
-      due: 'Due Tomorrow',
-    },
-    {
-      id: 'dt-3',
-      title: 'Generate PDF export templates for client deliverables',
-      done: false,
-      status: 'Pending',
-      assignee: 'TC',
-      priority: 'Medium',
-      due: 'Due Oct 20',
-    },
-  ]);
+  const [docTitle, setDocTitle] = useState(() => {
+    return localStorage.getItem('backnode_docs_canvas_title') || '';
+  });
 
-  const [activeRightPanel, setActiveRightPanel] = useState<'contacts' | 'activity' | 'versions' | 'comments' | null>(null);
+  const [docContent, setDocContent] = useState(() => {
+    return localStorage.getItem('backnode_docs_canvas_content') || '';
+  });
 
-  const handleToggleTask = (id: string) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t))
+  const [viewMode, setViewMode] = useState<'edit' | 'preview' | 'split'>('edit');
+  const [saveStatus, setSaveStatus] = useState<string>('Saved');
+
+  // Persist edits to localStorage
+  useEffect(() => {
+    setSaveStatus('Saving...');
+    const timer = setTimeout(() => {
+      localStorage.setItem('backnode_docs_canvas_title', docTitle);
+      localStorage.setItem('backnode_docs_canvas_content', docContent);
+      setSaveStatus('Saved');
+    }, 400);
+
+    return () => clearTimeout(timer);
+  }, [docTitle, docContent]);
+
+  // Extract outline headings from document content
+  const outlineHeadings = useMemo(() => {
+    if (!docContent.trim()) return [];
+    const lines = docContent.split('\n');
+    const headings: { level: number; text: string; lineIndex: number }[] = [];
+
+    lines.forEach((line, index) => {
+      if (line.startsWith('# ')) {
+        headings.push({ level: 1, text: line.replace('# ', '').trim(), lineIndex: index });
+      } else if (line.startsWith('## ')) {
+        headings.push({ level: 2, text: line.replace('## ', '').trim(), lineIndex: index });
+      } else if (line.startsWith('### ')) {
+        headings.push({ level: 3, text: line.replace('### ', '').trim(), lineIndex: index });
+      }
+    });
+
+    return headings;
+  }, [docContent]);
+
+  // Document metrics
+  const wordCount = useMemo(() => {
+    const trimmed = docContent.trim();
+    return trimmed ? trimmed.split(/\s+/).length : 0;
+  }, [docContent]);
+
+  const charCount = docContent.length;
+  const readingTimeMinutes = Math.max(1, Math.ceil(wordCount / 200));
+
+  // Quick insertion helpers
+  const handleInsert = (textToInsert: string) => {
+    setDocContent((prev) => (prev ? `${prev}\n\n${textToInsert}` : textToInsert));
+  };
+
+  const handleClearDoc = () => {
+    if (docContent.trim() && !window.confirm('Clear document canvas? All unsaved text will be wiped.')) {
+      return;
+    }
+    setDocTitle('');
+    setDocContent('');
+  };
+
+  // Simple markdown renderer for preview mode
+  const renderMarkdownPreview = (text: string) => {
+    if (!text.trim()) {
+      return (
+        <div className="py-16 text-center text-zinc-500">
+          <span className="material-symbols-outlined text-[36px] text-zinc-600 mb-2">article</span>
+          <p className="text-sm font-semibold text-zinc-400">Empty Document</p>
+          <p className="text-xs text-zinc-500 mt-1">
+            Switch to Edit mode or type markdown content to preview it here.
+          </p>
+        </div>
+      );
+    }
+
+    const lines = text.split('\n');
+
+    return (
+      <div className="space-y-3 font-body text-zinc-200 text-xs leading-relaxed">
+        {lines.map((line, i) => {
+          if (line.startsWith('# ')) {
+            return (
+              <h1 key={i} className="text-xl font-bold text-zinc-100 font-headline pt-3 pb-1 border-b border-[#27272a]">
+                {line.replace('# ', '')}
+              </h1>
+            );
+          }
+          if (line.startsWith('## ')) {
+            return (
+              <h2 key={i} className="text-base font-bold text-zinc-100 font-headline pt-2">
+                {line.replace('## ', '')}
+              </h2>
+            );
+          }
+          if (line.startsWith('### ')) {
+            return (
+              <h3 key={i} className="text-sm font-semibold text-zinc-200 pt-1">
+                {line.replace('### ', '')}
+              </h3>
+            );
+          }
+          if (line.startsWith('> ')) {
+            return (
+              <blockquote key={i} className="border-l-2 border-orange-500 pl-3 py-1 bg-orange-950/20 text-zinc-300 rounded-r-[6px] italic">
+                {line.replace('> ', '')}
+              </blockquote>
+            );
+          }
+          if (line.startsWith('- [ ] ') || line.startsWith('- [x] ')) {
+            const isChecked = line.startsWith('- [x] ');
+            return (
+              <div key={i} className="flex items-center gap-2 py-0.5">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  readOnly
+                  className="rounded-[4px] bg-[#18181b] border-[#27272a] text-orange-600 pointer-events-none"
+                />
+                <span className={isChecked ? 'line-through text-zinc-500' : 'text-zinc-200'}>
+                  {line.replace(/- \[[ x]\] /, '')}
+                </span>
+              </div>
+            );
+          }
+          if (line.startsWith('- ') || line.startsWith('* ')) {
+            return (
+              <div key={i} className="flex items-start gap-2 pl-2">
+                <span className="text-orange-500 font-bold">•</span>
+                <span>{line.replace(/^[-*] /, '')}</span>
+              </div>
+            );
+          }
+          if (line.startsWith('```')) {
+            return (
+              <div key={i} className="p-3 bg-[#18181b] border border-[#27272a] rounded-[6px] font-mono text-[11px] text-orange-300 overflow-x-auto">
+                {line.replace(/```[a-z]*/g, '')}
+              </div>
+            );
+          }
+          if (!line.trim()) {
+            return <div key={i} className="h-2" />;
+          }
+
+          return <p key={i}>{line}</p>;
+        })}
+      </div>
     );
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-[#fafafc] select-none text-xs">
-      {/* 1. Left Table of Contents / Outline Rail (230px fixed) */}
-      <aside className="w-[230px] shrink-0 border-r border-[#d4c0d5]/30 p-5 bg-white/80 backdrop-blur-sm overflow-y-auto custom-scrollbar flex flex-col justify-between">
+    <div className="flex-1 flex overflow-hidden bg-[#09090b] select-none text-xs text-zinc-200">
+      {/* 1. Left Table of Contents / Outline Rail (240px fixed) */}
+      <aside className="w-[240px] shrink-0 border-r border-[#27272a] p-4 bg-[#121214] overflow-y-auto custom-scrollbar flex flex-col justify-between">
         <div className="space-y-4">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-mono text-[10px] uppercase tracking-wider text-[#837284] font-semibold">
+            <span className="font-mono text-[10px] uppercase tracking-wider text-zinc-400 font-semibold">
               Document Outline
             </span>
-            <span className="font-mono text-[10px] text-[#837284]">5 sections</span>
+            <span className="font-mono text-[10px] text-zinc-500">
+              {outlineHeadings.length} {outlineHeadings.length === 1 ? 'section' : 'sections'}
+            </span>
           </div>
 
-          <nav className="space-y-1">
-            {[
-              { id: 'summary', title: '1. Executive Summary' },
-              { id: 'directives', title: '2. Architecture Directives' },
-              { id: 'tasks', title: '3. Embedded Task Matrix', count: tasks.length },
-              { id: 'sla', title: '4. Enterprise SLA Tiers' },
-              { id: 'security', title: '5. Local Security' },
-            ].map((sec) => {
-              const isActive = activeSection === sec.id;
-
-              return (
-                <button
-                  key={sec.id}
-                  onClick={() => setActiveSection(sec.id)}
-                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs transition-colors text-left ${
-                    isActive
-                      ? 'bg-[#f4f2fd] text-[#9900c2] font-semibold border-l-2 border-[#9900c2]'
-                      : 'text-[#504252] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
+          {outlineHeadings.length === 0 ? (
+            <div className="p-3 rounded-[6px] border border-dashed border-[#27272a] bg-[#18181b]/50 text-center">
+              <span className="material-symbols-outlined text-[18px] text-zinc-500 mb-1">format_list_bulleted</span>
+              <p className="font-mono text-[10px] text-zinc-400">No outline yet</p>
+              <p className="font-mono text-[9px] text-zinc-500 mt-1">
+                Type `# Title` or `## Section` in the editor to populate sections.
+              </p>
+            </div>
+          ) : (
+            <nav className="space-y-1">
+              {outlineHeadings.map((h, idx) => (
+                <div
+                  key={idx}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-[6px] text-xs transition-colors truncate ${
+                    h.level === 1
+                      ? 'font-semibold text-zinc-100 hover:bg-[#18181b]'
+                      : h.level === 2
+                      ? 'pl-5 text-zinc-300 hover:bg-[#18181b]'
+                      : 'pl-8 text-zinc-400 hover:bg-[#18181b]'
                   }`}
                 >
-                  <span className="truncate">{sec.title}</span>
-                  {sec.count && (
-                    <span className="font-mono text-[10px] bg-[#eeedf7] px-1 rounded text-[#837284]">
-                      {sec.count}
-                    </span>
-                  )}
-                  {isActive && !sec.count && (
-                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
+                  <span className="truncate">{h.text || `Heading ${idx + 1}`}</span>
+                  <span className="font-mono text-[9px] text-zinc-500 shrink-0">H{h.level}</span>
+                </div>
+              ))}
+            </nav>
+          )}
+
+          {/* Quick Insert Actions */}
+          <div className="pt-2 border-t border-[#27272a] space-y-1.5">
+            <div className="font-mono text-[10px] uppercase text-zinc-500 font-semibold">
+              Insert Snippets
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                onClick={() => handleInsert('# New Heading')}
+                className="px-2 py-1 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 border border-[#27272a] text-[11px] font-mono text-left truncate cursor-pointer transition-colors"
+              >
+                + # Heading
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsert('- [ ] New action item')}
+                className="px-2 py-1 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 border border-[#27272a] text-[11px] font-mono text-left truncate cursor-pointer transition-colors"
+              >
+                + Task Check
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsert('> Important note or design directive')}
+                className="px-2 py-1 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 border border-[#27272a] text-[11px] font-mono text-left truncate cursor-pointer transition-colors"
+              >
+                + Quote Callout
+              </button>
+              <button
+                type="button"
+                onClick={() => handleInsert('```typescript\n// Code snippet\n```')}
+                className="px-2 py-1 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 border border-[#27272a] text-[11px] font-mono text-left truncate cursor-pointer transition-colors"
+              >
+                + Code Block
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Document Analytics Micro Capsule */}
-        <div className="p-3 bg-[#f4f2fd]/70 rounded-xl border border-[#d4c0d5]/30 space-y-2 mt-6">
+        <div className="p-3 bg-[#18181b] rounded-[6px] border border-[#27272a] space-y-2 mt-6">
           <div className="flex items-center justify-between font-mono text-[11px]">
-            <span className="text-[#837284]">Engine Footprint</span>
-            <span className="font-semibold text-[#1a1b22]">142 KB</span>
+            <span className="text-zinc-400">Words / Chars</span>
+            <span className="font-semibold text-zinc-100">{wordCount} / {charCount}</span>
           </div>
-          <div className="w-full bg-[#d4c0d5]/30 h-1.5 rounded-full overflow-hidden">
-            <div className="bg-[#9900c2] h-full rounded-full" style={{ width: '24%' }}></div>
+          <div className="flex items-center justify-between font-mono text-[10px] text-zinc-500">
+            <span>Read time: ~{readingTimeMinutes} min</span>
+            <span className="text-emerald-400 font-semibold">{saveStatus}</span>
           </div>
-          <p className="font-mono text-[10px] text-[#837284] leading-tight">
-            Local storage synchronized across 2 peering nodes
-          </p>
         </div>
       </aside>
 
       {/* 2. Central Editorial Reading & Writing Canvas */}
-      <section className="flex-1 overflow-y-auto custom-scrollbar px-8 py-8 flex justify-center bg-[#fafafc]">
-        <article className="max-w-[860px] w-full bg-white border border-[#d4c0d5]/30 rounded-2xl p-10 shadow-sm space-y-8 my-auto">
-          {/* Document Header */}
-          <div className="border-b border-[#d4c0d5]/30 pb-6 space-y-3.5">
-            {/* Badges Row */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  Status: Approved
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full font-mono text-[10px] font-semibold bg-[#eeedf7] text-[#504252] border border-[#d4c0d5]/30">
-                  <span className="material-symbols-outlined text-[13px]">security</span>
-                  SOC2 Compliant Local Spec
-                </span>
-              </div>
-              <div className="flex items-center gap-1 text-[#837284]">
-                <button
-                  onClick={() => alert('Document bookmarked.')}
-                  className="p-1 rounded hover:bg-[#eeedf7] hover:text-[#1a1b22]"
-                >
-                  <span className="material-symbols-outlined text-[18px]">bookmark</span>
-                </button>
-                <button
-                  onClick={() => alert('Doc export options.')}
-                  className="p-1 rounded hover:bg-[#eeedf7] hover:text-[#1a1b22]"
-                >
-                  <span className="material-symbols-outlined text-[18px]">more_horiz</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Document Title */}
-            <h1 className="text-2xl font-bold text-[#1a1b22] tracking-tight">
-              Q4 Enterprise Deliverables &amp; SLA Blueprint
-            </h1>
-
-            {/* Meta Row */}
-            <div className="flex items-center gap-3 text-xs text-[#837284] flex-wrap">
-              <div className="flex items-center gap-1.5">
-                <div className="w-5 h-5 rounded-full bg-[#1a1b22] text-white text-[9px] font-mono flex items-center justify-center font-bold">
-                  AR
-                </div>
-                <span className="font-semibold text-[#1a1b22]">Alex Rivera (Lead Architect)</span>
-              </div>
-              <span>·</span>
-              <span>Oct 05, 2026</span>
-              <span>·</span>
-              <span className="flex items-center gap-1 font-mono text-[11px]">
-                <span className="material-symbols-outlined text-[14px]">timer</span>
-                <span>4 min read</span>
-              </span>
-              <span>·</span>
-              <span className="font-mono text-[10px] bg-[#f4f2fd] text-[#9900c2] px-2 py-0.5 rounded border border-[#d4c0d5]/40 font-semibold">
-                Cloud Node: node-eu-fra-01
-              </span>
-            </div>
+      <section className="flex-1 flex flex-col overflow-hidden bg-[#09090b]">
+        {/* Document Top Toolbar */}
+        <div className="h-11 px-6 bg-[#121214] border-b border-[#27272a] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] bg-orange-950/40 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-[6px] font-semibold">
+              DOC CANVAS
+            </span>
+            <span className="text-zinc-600">•</span>
+            <span className="font-mono text-[11px] text-zinc-400">Markdown Specification &amp; Notes</span>
           </div>
 
-          {/* Section 1: Executive Summary */}
-          <section className="space-y-3">
-            <h2 className="text-base font-bold text-[#1a1b22]">1. Executive Summary</h2>
-            <p className="text-xs text-[#504252] leading-relaxed">
-              This document defines the high-availability commitment and core execution milestones for Backnode&apos;s Q4 Enterprise Cluster rollouts. Designed explicitly for zero-latency, local-first workflow execution, our nodes maintain state synchronization via distributed WAL (Write-Ahead Logging) protocols without blocking user thread execution.
-            </p>
-            <p className="text-xs text-[#504252] leading-relaxed">
-              Client-side state remains immutable and verified by cryptographic hashes prior to replication upstream. All mission-critical queries—including pipeline forecasting, real-time board mutations, and rich documentation indexing—execute directly against in-memory local caches with guaranteed sub-10 millisecond read boundaries.
-            </p>
-          </section>
-
-          {/* Section 2: Architecture Directive Callout Box */}
-          <section>
-            <div className="bg-[#f4f2fd] border-l-4 border-[#9900c2] p-4 rounded-r-xl space-y-1.5">
-              <div className="flex items-center gap-2 text-[#9900c2] font-semibold text-xs">
-                <span className="material-symbols-outlined text-[18px]">bolt</span>
-                <span>Zero Cloud Dependency Mandate</span>
-              </div>
-              <p className="text-xs text-[#1a1b22] leading-relaxed">
-                All customer records, sales deals, and sprint tasks remain strictly local on device in high-performance local storage with instantaneous zero-latency reads. Network connectivity failures must never pause, degrade, or prompt the operator for confirmation.
-              </p>
-            </div>
-          </section>
-
-          {/* Section 3: Live Embedded Task Block */}
-          <section className="space-y-3.5">
-            <div className="border border-[#d4c0d5]/30 rounded-xl p-5 bg-white shadow-xs space-y-3.5">
-              <div className="flex items-center justify-between pb-3 border-b border-[#d4c0d5]/30">
-                <div className="flex items-center gap-2">
-                  <span className="material-symbols-outlined text-[#9900c2] text-[20px]">
-                    check_circle
-                  </span>
-                  <h3 className="font-semibold text-xs text-[#1a1b22]">
-                    Linked Action Items ({tasks.length})
-                  </h3>
-                  <span className="font-mono text-[10px] bg-[#eeedf7] px-2 py-0.5 rounded text-[#504252]">
-                    Sprint 14
-                  </span>
-                </div>
+          <div className="flex items-center gap-2">
+            {/* View Mode Toggle */}
+            <div className="flex items-center bg-[#18181b] rounded-[6px] p-0.5 border border-[#27272a]">
+              {(['edit', 'split', 'preview'] as const).map((mode) => (
                 <button
-                  onClick={onOpenCreateTask}
-                  className="bg-[#9900c2]/10 hover:bg-[#9900c2]/20 text-[#9900c2] px-3 py-1 rounded-full font-mono text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                  key={mode}
+                  type="button"
+                  onClick={() => setViewMode(mode)}
+                  className={`px-2.5 py-0.5 rounded-[4px] font-mono text-[10px] transition-colors capitalize cursor-pointer ${
+                    viewMode === mode
+                      ? 'bg-[#27272a] text-orange-400 font-bold shadow-xs'
+                      : 'text-zinc-400 hover:text-zinc-200'
+                  }`}
                 >
-                  <span className="material-symbols-outlined text-[14px]">add</span>
-                  <span>+ Add Task</span>
+                  {mode}
                 </button>
-              </div>
-
-              {/* Task Checklist Items */}
-              <div className="space-y-2">
-                {tasks.map((task) => (
-                  <div
-                    key={task.id}
-                    className={`flex items-center justify-between p-2.5 rounded-lg border transition-colors ${
-                      task.done
-                        ? 'bg-[#f4f2fd]/60 border-[#d4c0d5]/20'
-                        : 'bg-white border-[#d4c0d5]/30 hover:border-[#9900c2]/50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <input
-                        type="checkbox"
-                        checked={task.done}
-                        onChange={() => handleToggleTask(task.id)}
-                        className="w-4 h-4 rounded text-[#9900c2] focus:ring-[#9900c2] border-[#837284] cursor-pointer"
-                      />
-                      <span
-                        className={`text-xs ${
-                          task.done ? 'line-through text-[#837284]' : 'font-medium text-[#1a1b22]'
-                        }`}
-                      >
-                        {task.title}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-3 font-mono text-[10px]">
-                      {task.done ? (
-                        <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                          Completed
-                        </span>
-                      ) : (
-                        <span
-                          className={`px-2 py-0.5 rounded border ${
-                            task.priority === 'Urgent'
-                              ? 'bg-[#fbd7ff] text-[#330043] border-[#9900c2]/20 font-semibold'
-                              : 'bg-[#ffddba] text-[#835000] border-[#a56600]/20'
-                          }`}
-                        >
-                          Priority: {task.priority}
-                        </span>
-                      )}
-                      <span className="text-[#837284]">{task.due}</span>
-                      <div className="w-5 h-5 rounded-full bg-[#eeedf7] text-[#1b1b1e] text-[9px] flex items-center justify-center font-bold">
-                        {task.assignee}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          {/* Section 4: SLA Matrix Table */}
-          <section className="space-y-3">
-            <div className="space-y-0.5">
-              <h2 className="text-base font-bold text-[#1a1b22]">4. Enterprise SLA Tiers</h2>
-              <p className="text-xs text-[#837284]">
-                Contractual uptime obligations and failover escalation channels.
-              </p>
+              ))}
             </div>
 
-            <div className="border border-[#d4c0d5]/30 rounded-xl overflow-hidden bg-white text-xs">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-[#f4f2fd] border-b border-[#d4c0d5]/30 font-mono text-[10px] text-[#837284] uppercase">
-                    <th className="py-2.5 px-3.5 font-semibold">Tier Classification</th>
-                    <th className="py-2.5 px-3.5 font-semibold">Uptime Target</th>
-                    <th className="py-2.5 px-3.5 font-semibold">Support Response</th>
-                    <th className="py-2.5 px-3.5 font-semibold">Engine Mode</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-[#d4c0d5]/20">
-                  <tr className="hover:bg-[#f4f2fd]/40">
-                    <td className="py-2.5 px-3.5 font-medium text-[#1a1b22] flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#9900c2]"></span>
-                      Tier 1 Mission Critical
-                    </td>
-                    <td className="py-2.5 px-3.5 font-mono font-bold text-[#1a1b22]">99.999%</td>
-                    <td className="py-2.5 px-3.5 font-mono text-emerald-700 bg-emerald-50/50">&lt; 15 min</td>
-                    <td className="py-2.5 px-3.5 text-[#504252]">Active-Active Local Sync</td>
-                  </tr>
-                  <tr className="hover:bg-[#f4f2fd]/40">
-                    <td className="py-2.5 px-3.5 font-medium text-[#1a1b22] flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#5f5e61]"></span>
-                      Tier 2 Standard
-                    </td>
-                    <td className="py-2.5 px-3.5 font-mono font-bold text-[#1a1b22]">99.95%</td>
-                    <td className="py-2.5 px-3.5 font-mono text-[#504252]">&lt; 2 hr</td>
-                    <td className="py-2.5 px-3.5 text-[#504252]">Asynchronous Edge Replica</td>
-                  </tr>
-                  <tr className="hover:bg-[#f4f2fd]/40">
-                    <td className="py-2.5 px-3.5 font-medium text-[#1a1b22] flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-[#d4c0d5]"></span>
-                      Tier 3 Batch Sync
-                    </td>
-                    <td className="py-2.5 px-3.5 font-mono font-bold text-[#1a1b22]">99.5%</td>
-                    <td className="py-2.5 px-3.5 font-mono text-[#504252]">&lt; 12 hr</td>
-                    <td className="py-2.5 px-3.5 text-[#504252]">Interval Backup WAL</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </section>
+            <div className="h-4 w-px bg-[#27272a]"></div>
 
-          {/* Document Footer */}
-          <footer className="pt-4 border-t border-[#d4c0d5]/30 flex items-center justify-between text-xs text-[#837284]">
-            <div className="flex items-center gap-2 font-mono text-[11px]">
-              <span className="material-symbols-outlined text-[15px]">lock</span>
-              <span>Word count: 1,420 words · Revision #14 · Encrypted on disk (AES-256-GCM)</span>
-            </div>
-            <div className="flex items-center gap-1.5 font-mono text-[10px] text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full border border-emerald-200">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-              <span>Deterministic Peer Hash: 9f8e...3b12</span>
-            </div>
-          </footer>
-        </article>
-      </section>
+            <button
+              type="button"
+              onClick={handleClearDoc}
+              className="px-2.5 py-1 text-xs font-medium border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 rounded-[6px] text-zinc-300 hover:text-red-400 transition-colors cursor-pointer"
+              title="Clear canvas"
+            >
+              Clear
+            </button>
 
-      {/* 3. Right Quick Context Shelf (72px collapsed) */}
-      <aside className="w-[72px] shrink-0 border-l border-[#d4c0d5]/30 bg-white flex flex-col items-center py-4 space-y-3">
-        <button
-          onClick={() => setActiveRightPanel(activeRightPanel === 'contacts' ? null : 'contacts')}
-          className={`p-2 rounded-lg transition-colors ${
-            activeRightPanel === 'contacts'
-              ? 'bg-[#f4f2fd] text-[#9900c2]'
-              : 'text-[#837284] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
-          }`}
-          title="Linked CRM Contacts"
-        >
-          <span className="material-symbols-outlined text-[20px]">contacts</span>
-        </button>
-
-        <button
-          onClick={() => setActiveRightPanel(activeRightPanel === 'activity' ? null : 'activity')}
-          className={`p-2 rounded-lg transition-colors ${
-            activeRightPanel === 'activity'
-              ? 'bg-[#f4f2fd] text-[#9900c2]'
-              : 'text-[#837284] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
-          }`}
-          title="Activity Logs"
-        >
-          <span className="material-symbols-outlined text-[20px]">dataset</span>
-        </button>
-
-        <button
-          onClick={() => setActiveRightPanel(activeRightPanel === 'versions' ? null : 'versions')}
-          className={`p-2 rounded-lg transition-colors ${
-            activeRightPanel === 'versions'
-              ? 'bg-[#f4f2fd] text-[#9900c2]'
-              : 'text-[#837284] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
-          }`}
-          title="Versions & Diffs"
-        >
-          <span className="material-symbols-outlined text-[20px]">difference</span>
-        </button>
-
-        <div className="w-6 h-px bg-[#d4c0d5]/40"></div>
-
-        <button
-          onClick={() => setActiveRightPanel(activeRightPanel === 'comments' ? null : 'comments')}
-          className={`p-2 rounded-lg transition-colors ${
-            activeRightPanel === 'comments'
-              ? 'bg-[#f4f2fd] text-[#9900c2]'
-              : 'text-[#837284] hover:text-[#1a1b22] hover:bg-[#eeedf7]'
-          }`}
-          title="Comments"
-        >
-          <span className="material-symbols-outlined text-[20px]">chat_bubble_outline</span>
-        </button>
-
-        <div className="flex-1"></div>
-
-        <div className="flex flex-col items-center gap-1 font-mono text-[9px] text-[#837284]">
-          <span className="w-2 h-2 rounded-full bg-[#9900c2] animate-pulse"></span>
-          <span>SYNC</span>
+            <button
+              type="button"
+              onClick={onOpenCreateTask}
+              className="px-3 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-[6px] text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[15px]">add</span>
+              <span>New Task</span>
+            </button>
+          </div>
         </div>
-      </aside>
+
+        {/* Editor Body */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 flex justify-center">
+          <div className="max-w-[860px] w-full flex flex-col gap-4">
+            {/* Document Title Header Input */}
+            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 shadow-sm space-y-2">
+              <input
+                type="text"
+                value={docTitle}
+                onChange={(e) => setDocTitle(e.target.value)}
+                placeholder="Untitled Document / Architecture RFC..."
+                className="w-full text-xl md:text-2xl font-bold bg-transparent text-zinc-100 placeholder:text-zinc-600 outline-none font-headline"
+              />
+              <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono">
+                <span>Status: Draft</span>
+                <span>•</span>
+                <span>Storage: Local SQLite Cache</span>
+                <span>•</span>
+                <span className="text-emerald-400">{saveStatus}</span>
+              </div>
+            </div>
+
+            {/* Split / Edit / Preview Workspace */}
+            {viewMode === 'split' ? (
+              <div className="grid grid-cols-2 gap-4 flex-1">
+                {/* Editor Column */}
+                <textarea
+                  value={docContent}
+                  onChange={(e) => setDocContent(e.target.value)}
+                  placeholder="Type documentation, RFC specs, architecture notes, or task breakdowns here..."
+                  className="w-full min-h-[500px] bg-[#121214] border border-[#27272a] rounded-[6px] p-4 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-orange-500 resize-y leading-relaxed select-text"
+                />
+
+                {/* Live Preview Column */}
+                <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 min-h-[500px] overflow-y-auto custom-scrollbar">
+                  {renderMarkdownPreview(docContent)}
+                </div>
+              </div>
+            ) : viewMode === 'edit' ? (
+              <div className="flex-1 flex flex-col">
+                <textarea
+                  value={docContent}
+                  onChange={(e) => setDocContent(e.target.value)}
+                  placeholder="Type documentation, RFC specs, architecture notes, or task breakdowns here... (Markdown supported)"
+                  className="w-full min-h-[540px] bg-[#121214] border border-[#27272a] rounded-[6px] p-5 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-orange-500 resize-y leading-relaxed select-text"
+                />
+              </div>
+            ) : (
+              <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-8 min-h-[540px] shadow-sm">
+                {renderMarkdownPreview(docContent)}
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
     </div>
   );
 };

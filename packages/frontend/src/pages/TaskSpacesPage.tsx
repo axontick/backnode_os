@@ -42,6 +42,9 @@ export const TaskSpacesPage: React.FC = () => {
     handleUpdateStatuses,
     selectedTaskId,
     handleOpenAddTaskToColumn,
+    handleOpenCreateTask,
+    handleOpenAddListToFolder,
+    handleOpenEditTask,
     handleMoveTaskStatus,
     setTaskToDelete,
     selectedTask,
@@ -83,11 +86,8 @@ export const TaskSpacesPage: React.FC = () => {
             tasks={filteredTasks}
             onSelectSpace={handleSelectSpace}
             onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
-            onOpenCreateTask={() => {
-              setNewItemDefaultStatus('In Progress');
-              setNewItemType('task');
-              setIsNewItemModalOpen(true);
-            }}
+            onOpenAddListToFolder={handleOpenAddListToFolder}
+            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
             onNavigateToView={(v) => {
               setSelectedTaskId(null);
               setCurrentView(v);
@@ -119,6 +119,7 @@ export const TaskSpacesPage: React.FC = () => {
             onSelectTask={(t) => setSelectedTaskId(t.id)}
             onAddTaskToColumn={handleOpenAddTaskToColumn}
             onMoveTaskStatus={handleMoveTaskStatus}
+            onEditTask={handleOpenEditTask}
           />
         )}
 
@@ -128,11 +129,7 @@ export const TaskSpacesPage: React.FC = () => {
             selectedTaskId={selectedTaskId}
             onSelectTask={(t) => setSelectedTaskId(t.id)}
             onQuickStatusChange={(taskId, status) => handleMoveTaskStatus(taskId, status)}
-            onOpenCreateTask={() => {
-              setNewItemDefaultStatus('In Progress');
-              setNewItemType('task');
-              setIsNewItemModalOpen(true);
-            }}
+            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
           />
         )}
 
@@ -141,13 +138,10 @@ export const TaskSpacesPage: React.FC = () => {
             tasks={filteredTasks}
             selectedTaskId={selectedTaskId}
             onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onOpenCreateTask={() => {
-              setNewItemDefaultStatus('In Progress');
-              setNewItemType('task');
-              setIsNewItemModalOpen(true);
-            }}
+            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
             onRequestDeleteTask={(t) => setTaskToDelete(t)}
             onNavigateToView={(v) => setCurrentView(v)}
+            onEditTask={handleOpenEditTask}
           />
         )}
 
@@ -155,11 +149,7 @@ export const TaskSpacesPage: React.FC = () => {
           <GanttTimelineView
             tasks={filteredTasks}
             onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onOpenCreateTask={() => {
-              setNewItemDefaultStatus('In Progress');
-              setNewItemType('task');
-              setIsNewItemModalOpen(true);
-            }}
+            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
             onNavigateToView={(v) => setCurrentView(v)}
           />
         )}
@@ -168,11 +158,7 @@ export const TaskSpacesPage: React.FC = () => {
           <MonthlyCalendarView
             tasks={filteredTasks}
             onSelectTask={(t) => setSelectedTaskId(t.id)}
-            onOpenCreateTask={() => {
-              setNewItemDefaultStatus('In Progress');
-              setNewItemType('task');
-              setIsNewItemModalOpen(true);
-            }}
+            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
             onNavigateToView={(v) => setCurrentView(v)}
           />
         )}
@@ -180,11 +166,7 @@ export const TaskSpacesPage: React.FC = () => {
         {currentView === 'docs' && (
           <DocsCanvasView
             onNavigateToTasks={() => setCurrentView('board')}
-            onOpenCreateTask={() => {
-              setNewItemDefaultStatus('In Progress');
-              setNewItemType('task');
-              setIsNewItemModalOpen(true);
-            }}
+            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
           />
         )}
 
@@ -195,6 +177,7 @@ export const TaskSpacesPage: React.FC = () => {
             members={members}
             onClose={() => setSelectedTaskId(null)}
             onUpdateTask={handleUpdateTask}
+            onEditTask={handleOpenEditTask}
             onRequestDelete={(t) => setTaskToDelete(t)}
           />
         )}

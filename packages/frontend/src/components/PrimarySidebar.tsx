@@ -24,14 +24,11 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     userSpaces,
     activeUserSpace,
     handleSelectUserSpace,
-    handleCreateUserSpace,
     members,
+    setIsNewWorkspaceModalOpen,
   } = useWorkspace();
 
   const [isSpaceDropdownOpen, setIsSpaceDropdownOpen] = useState(false);
-  const [isCreatingSpace, setIsCreatingSpace] = useState(false);
-  const [newSpaceName, setNewSpaceName] = useState('');
-  const [newSpaceColor, setNewSpaceColor] = useState('#ea580c');
   const spaceDropdownRef = useRef<HTMLDivElement>(null);
 
   // Close workspace dropdown on outside click
@@ -39,7 +36,6 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     const handleOutsideClick = (e: MouseEvent) => {
       if (spaceDropdownRef.current && !spaceDropdownRef.current.contains(e.target as Node)) {
         setIsSpaceDropdownOpen(false);
-        setIsCreatingSpace(false);
       }
     };
     document.addEventListener('mousedown', handleOutsideClick);
@@ -53,7 +49,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const hubs = [
     { id: 'overview', label: 'Overview', icon: 'dashboard', description: 'System Overview & KPIs' },
     { id: 'task-spaces', label: 'Task Spaces', icon: 'folder_open', description: 'Execution Workspaces' },
-    { id: 'crm', label: 'CRM Pipelines', icon: 'view_kanban', description: 'Deals & Revenue Pipeline' },
+    { id: 'crm', label: 'CRM Pipelines', icon: 'leaderboard', description: 'Deals & Revenue Pipeline' },
     { id: 'contacts', label: 'Contacts', icon: 'group', description: 'Client & Partner Directory' },
     { id: 'team', label: 'Team & Access', icon: 'shield_person', description: 'Access Controls & Roles', count: members.length },
     { id: 'replication', label: 'Telemetry', icon: 'sync_saved_locally', description: 'Replication Telemetry' },
@@ -77,7 +73,11 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
               style={{ backgroundColor: activeUserSpace?.color || '#ea580c' }}
               title={`${activeUserSpace?.name || accountName} (Switch workspace)`}
             >
-              <span>{initialLetter}</span>
+              {activeUserSpace?.icon ? (
+                <span className="material-symbols-outlined text-[20px]">{activeUserSpace.icon}</span>
+              ) : (
+                <span>{initialLetter}</span>
+              )}
               <span className="sr-only">Switch Workspace</span>
             </button>
           ) : (
@@ -91,7 +91,11 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   className="w-7 h-7 rounded-[6px] flex items-center justify-center text-white font-semibold text-xs shadow-sm shrink-0 transition-transform group-hover:scale-105"
                   style={{ backgroundColor: activeUserSpace?.color || '#ea580c' }}
                 >
-                  {initialLetter}
+                  {activeUserSpace?.icon ? (
+                    <span className="material-symbols-outlined text-[16px]">{activeUserSpace.icon}</span>
+                  ) : (
+                    initialLetter
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <span className="font-semibold text-xs text-zinc-100 tracking-tight leading-tight truncate font-headline">
@@ -153,7 +157,11 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                           className="w-6 h-6 rounded-[6px] flex items-center justify-center text-white text-[11px] font-bold shrink-0 shadow-xs"
                           style={{ backgroundColor: space.color || '#ea580c' }}
                         >
-                          {space.name.charAt(0).toUpperCase()}
+                          {space.icon ? (
+                            <span className="material-symbols-outlined text-[14px]">{space.icon}</span>
+                          ) : (
+                            space.name.charAt(0).toUpperCase()
+                          )}
                         </div>
                         <div className="flex flex-col min-w-0 flex-1">
                           <span className={`text-xs font-semibold truncate ${isActive ? 'text-orange-400' : 'text-zinc-200'}`}>
@@ -176,82 +184,18 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
               <div className="h-px bg-[#27272a] my-0.5"></div>
 
-              {/* Create New Space Area */}
-              {!isCreatingSpace ? (
-                <button
-                  type="button"
-                  onClick={() => setIsCreatingSpace(true)}
-                  className="w-full flex items-center justify-center gap-1.5 py-1.5 px-2.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-orange-400 border border-dashed border-orange-500/40 font-semibold text-xs transition-colors cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[15px]">add_circle</span>
-                  <span>Create Workspace</span>
-                </button>
-              ) : (
-                <div className="p-2 rounded-[6px] bg-[#18181b] border border-[#27272a] flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-xs text-zinc-200">New Workspace</span>
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatingSpace(false)}
-                      className="text-zinc-400 hover:text-zinc-100 text-xs font-bold px-1 cursor-pointer"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    autoFocus
-                    value={newSpaceName}
-                    onChange={(e) => setNewSpaceName(e.target.value)}
-                    placeholder="Workspace Name"
-                    className="w-full px-2 py-1 text-xs bg-[#121214] border border-[#27272a] rounded-[6px] text-zinc-100 focus:outline-none focus:border-orange-500"
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' && newSpaceName.trim()) {
-                        handleCreateUserSpace({ name: newSpaceName, color: newSpaceColor });
-                        setNewSpaceName('');
-                        setIsCreatingSpace(false);
-                        setIsSpaceDropdownOpen(false);
-                      }
-                    }}
-                  />
-                  <div className="flex items-center justify-between px-0.5 pt-0.5">
-                    {['#ea580c', '#0284c7', '#10b981', '#f59e0b', '#ec4899', '#6366f1'].map((c) => (
-                      <button
-                        key={c}
-                        type="button"
-                        onClick={() => setNewSpaceColor(c)}
-                        className={`w-4 h-4 rounded-[6px] transition-transform ${
-                          newSpaceColor === c ? 'scale-125 ring-2 ring-orange-500' : 'opacity-80 hover:opacity-100'
-                        }`}
-                        style={{ backgroundColor: c }}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex items-center justify-end gap-1.5 pt-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (newSpaceName.trim()) {
-                          handleCreateUserSpace({ name: newSpaceName, color: newSpaceColor });
-                          setNewSpaceName('');
-                          setIsCreatingSpace(false);
-                          setIsSpaceDropdownOpen(false);
-                        }
-                      }}
-                      className="px-2 py-1 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold"
-                    >
-                      Create
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setIsCreatingSpace(false)}
-                      className="px-2 py-1 rounded-[6px] bg-[#121214] border border-[#27272a] text-zinc-400 hover:bg-zinc-800 text-xs font-medium"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              )}
+              {/* Trigger External New Workspace Modal */}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSpaceDropdownOpen(false);
+                  setIsNewWorkspaceModalOpen(true);
+                }}
+                className="w-full flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-[6px] bg-[#18181b] hover:bg-orange-950/40 text-orange-400 hover:text-orange-300 border border-dashed border-orange-500/40 hover:border-orange-500 font-semibold text-xs transition-all cursor-pointer shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[16px]">add_circle</span>
+                <span>Create Workspace</span>
+              </button>
             </div>
           )}
         </div>
@@ -360,17 +304,39 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             type="button"
             onClick={() => onSelectHub('settings')}
             title="Workspace Settings"
-            className="w-10 h-10 rounded-[6px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-colors cursor-pointer"
+            className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer ${
+              currentHub === 'settings'
+                ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
+            }`}
           >
-            <span className="material-symbols-outlined text-[19px]">settings</span>
+            <span
+              className="material-symbols-outlined text-[19px]"
+              style={{
+                fontVariationSettings: currentHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
+              }}
+            >
+              settings
+            </span>
           </button>
         ) : (
           <button
             type="button"
             onClick={() => onSelectHub('settings')}
-            className="w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 rounded-[6px] transition-colors cursor-pointer"
+            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer ${
+              currentHub === 'settings'
+                ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30 font-semibold'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
+            }`}
           >
-            <span className="material-symbols-outlined text-[18px]">settings</span>
+            <span
+              className="material-symbols-outlined text-[18px]"
+              style={{
+                fontVariationSettings: currentHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
+              }}
+            >
+              settings
+            </span>
             <span>Settings</span>
           </button>
         )}

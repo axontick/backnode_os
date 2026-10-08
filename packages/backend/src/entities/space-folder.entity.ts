@@ -27,6 +27,9 @@ export class SpaceFolder {
   @Column('jsonb', { default: [] })
   items: any;
 
+  @Column('jsonb', { default: [] })
+  subFolders?: any;
+
   @Index()
   @Column('varchar', { name: 'account_id', nullable: true })
   accountId?: string;

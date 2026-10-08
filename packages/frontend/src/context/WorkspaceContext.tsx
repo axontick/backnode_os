@@ -19,12 +19,16 @@ import {
   CrmPipelineSettings as CrmPipelineSettingsType,
   DirectoryContact,
   SpaceFolder,
+  SpaceSubFolder,
   CrmPipeline,
+  CrmPipelineSubFolder,
   StatusDefinition,
   ListSettings,
   TeamMember,
   UserSpace,
+  FolderChildItem,
 } from '../types';
+import { DeletionTarget } from '../components/DeleteConfirmationModal';
 import {
   tasksApi,
   dealsApi,
@@ -34,6 +38,19 @@ import {
   workspaceApi,
 } from '../services/api';
 import { useAuth } from './AuthContext';
+import {
+  getAllItemsFromFolder,
+  getAllItemsFromSubFolder,
+  addSubFolderRecursively,
+  updateSubFolderRecursively,
+  deleteSubFolderRecursively,
+  addListToSubFolderRecursively,
+  addPipelineSubFolderRecursively,
+  updatePipelineSubFolderRecursively,
+  deletePipelineSubFolderRecursively,
+  flattenSubFolders,
+  flattenPipelineSubFolders,
+} from '../utils/treeUtils';
 
 interface WorkspaceContextType {
   // Data
@@ -53,6 +70,8 @@ interface WorkspaceContextType {
   setPipelines: React.Dispatch<React.SetStateAction<CrmPipeline[]>>;
   activePipelineId: string;
   setActivePipelineId: (id: string) => void;
+  activePipelineSubFolderId: string | null;
+  setActivePipelineSubFolderId: (id: string | null) => void;
   deals: CrmDeal[];
   setDeals: React.Dispatch<React.SetStateAction<CrmDeal[]>>;
   crmStages: CrmStageDefinition[];
@@ -79,19 +98,12 @@ interface WorkspaceContextType {
   setSelectedTaskId: (id: string | null) => void;
   selectedDealId: string | null;
   setSelectedDealId: (id: string | null) => void;
+  taskToEdit: TaskItem | null;
+  setTaskToEdit: (task: TaskItem | null) => void;
+  dealToEdit: CrmDeal | null;
+  setDealToEdit: (deal: CrmDeal | null) => void;
   taskToDelete: TaskItem | null;
   setTaskToDelete: (task: TaskItem | null) => void;
-  folderToEdit: SpaceFolder | null;
-  setFolderToEdit: (folder: SpaceFolder | null) => void;
-  pipelineToEdit: CrmPipeline | null;
-  setPipelineToEdit: (pipeline: CrmPipeline | null) => void;
-  itemToDelete: { type: 'task' | 'folder' | 'pipeline'; item: any } | null;
-  setItemToDelete: (target: { type: 'task' | 'folder' | 'pipeline'; item: any } | null) => void;
-  handleUpdateFolder: (updatedFolder: SpaceFolder) => void;
-  handleDeleteFolder: (folderId: string) => void;
-  handleUpdatePipeline: (updatedPipeline: CrmPipeline) => void;
-  handleDeletePipeline: (pipelineId: string) => void;
-  handleConfirmDeleteItem: () => void;
 
   // Search & Filtering
   searchQuery: string;
@@ -117,10 +129,30 @@ interface WorkspaceContextType {
   setIsNewItemModalOpen: (open: boolean) => void;
   isNewFolderModalOpen: boolean;
   setIsNewFolderModalOpen: (open: boolean) => void;
+  isNewSubFolderModalOpen: boolean;
+  setIsNewSubFolderModalOpen: (open: boolean) => void;
+  targetFolderForNewSubFolder: SpaceFolder | null;
+  setTargetFolderForNewSubFolder: (folder: SpaceFolder | null) => void;
+  targetParentSubFolderIdForNewSubFolder: string | null;
+  setTargetParentSubFolderIdForNewSubFolder: (id: string | null) => void;
+  isNewListModalOpen: boolean;
+  setIsNewListModalOpen: (open: boolean) => void;
+  targetFolderForNewList: SpaceFolder | null;
+  setTargetFolderForNewList: (folder: SpaceFolder | null) => void;
+  targetSubFolderIdForNewList: string | null;
+  setTargetSubFolderIdForNewList: (id: string | null) => void;
   isNewContactModalOpen: boolean;
   setIsNewContactModalOpen: (open: boolean) => void;
   isNewPipelineModalOpen: boolean;
   setIsNewPipelineModalOpen: (open: boolean) => void;
+  isNewPipelineSubFolderModalOpen: boolean;
+  setIsNewPipelineSubFolderModalOpen: (open: boolean) => void;
+  targetPipelineForNewSubFolder: CrmPipeline | null;
+  setTargetPipelineForNewSubFolder: (pipeline: CrmPipeline | null) => void;
+  targetParentPipelineSubFolderId: string | null;
+  setTargetParentPipelineSubFolderId: (id: string | null) => void;
+  isNewWorkspaceModalOpen: boolean;
+  setIsNewWorkspaceModalOpen: (open: boolean) => void;
   isCommandPaletteOpen: boolean;
   setIsCommandPaletteOpen: (open: boolean) => void;
   newItemType: 'task' | 'deal';
@@ -131,6 +163,18 @@ interface WorkspaceContextType {
   setNewItemDefaultDealStage: (stage: CrmDeal['stage']) => void;
   toastMessage: string | null;
   showToast: (msg: string) => void;
+
+  // Inspector & Modal Targets
+  folderToEdit: SpaceFolder | null;
+  setFolderToEdit: (folder: SpaceFolder | null) => void;
+  subFolderToEdit: { folder: SpaceFolder; subFolder: SpaceSubFolder } | null;
+  setSubFolderToEdit: (val: { folder: SpaceFolder; subFolder: SpaceSubFolder } | null) => void;
+  pipelineToEdit: CrmPipeline | null;
+  setPipelineToEdit: (pipeline: CrmPipeline | null) => void;
+  pipelineSubFolderToEdit: { pipeline: CrmPipeline; subFolder: CrmPipelineSubFolder } | null;
+  setPipelineSubFolderToEdit: (val: { pipeline: CrmPipeline; subFolder: CrmPipelineSubFolder } | null) => void;
+  itemToDelete: DeletionTarget | null;
+  setItemToDelete: (target: DeletionTarget | null) => void;
 
   // Computed & Derived
   filteredTasks: TaskItem[];
@@ -143,6 +187,14 @@ interface WorkspaceContextType {
   handleSelectView: (view: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs') => void;
   handleOpenAddTaskToColumn: (status: TaskStatus) => void;
   handleOpenAddDealToStage: (stage?: CrmDeal['stage']) => void;
+  handleOpenAddListToFolder: (folder?: SpaceFolder, subFolderId?: string) => void;
+  handleOpenAddSubFolder: (folder?: SpaceFolder, parentSubFolderId?: string) => void;
+  handleOpenAddPipelineSubFolder: (pipeline?: CrmPipeline, parentSubFolderId?: string) => void;
+  handleAddListToFolder: (folderId: string, listName: string, status?: string, subFolderId?: string) => void;
+  handleOpenEditTask: (task: TaskItem) => void;
+  handleOpenEditDeal: (deal: CrmDeal) => void;
+  handleOpenCreateTask: (status?: TaskStatus) => void;
+  handleOpenCreateDeal: (stage?: CrmDeal['stage']) => void;
   handleUpdateTask: (task: TaskItem) => void;
   handleCreateTask: (task: Partial<TaskItem>) => void;
   handleDeleteTask: (taskId: string) => void;
@@ -156,7 +208,18 @@ interface WorkspaceContextType {
   handleUpdateCrmSettings: (newSettings: Partial<CrmPipelineSettingsType>) => void;
   handleUpdateCrmStages: (newStages: CrmStageDefinition[]) => void;
   handleCreateFolder: (folder: SpaceFolder) => void;
+  handleUpdateFolder: (folder: SpaceFolder) => void;
+  handleDeleteFolder: (folderId: string) => void;
+  handleCreateSubFolder: (folderId: string, newSubFolder: SpaceSubFolder) => void;
+  handleUpdateSubFolder: (folderId: string, updatedSubFolder: SpaceSubFolder) => void;
+  handleDeleteSubFolder: (folderId: string, subFolderId: string) => void;
   handleCreatePipeline: (pipeline: CrmPipeline) => void;
+  handleUpdatePipeline: (pipeline: CrmPipeline) => void;
+  handleDeletePipeline: (pipelineId: string) => void;
+  handleCreatePipelineSubFolder: (pipelineId: string, newSubFolder: CrmPipelineSubFolder) => void;
+  handleUpdatePipelineSubFolder: (pipelineId: string, updatedSubFolder: CrmPipelineSubFolder) => void;
+  handleDeletePipelineSubFolder: (pipelineId: string, subFolderId: string) => void;
+  handleConfirmDeleteItem: () => void;
   handleCreateContact: (contact: DirectoryContact) => void;
 
   // Top-left User Space Dropdown & Creation
@@ -165,6 +228,8 @@ interface WorkspaceContextType {
   activeUserSpace: UserSpace;
   handleSelectUserSpace: (spaceId: string) => void;
   handleCreateUserSpace: (space: { name: string; color?: string; icon?: string }) => void;
+  handleUpdateWorkspace: (workspaceId: string, updates: { name?: string; color?: string; icon?: string }) => Promise<void>;
+  handleDeleteWorkspace: (workspaceId: string) => Promise<void>;
 
   // Member & Access Control
   handleInviteMember: (data: {
@@ -197,7 +262,11 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   // CRM state
   const [pipelines, setPipelines] = useState<CrmPipeline[]>([]);
   const [activePipelineId, setActivePipelineId] = useState<string>('');
+  const [activePipelineSubFolderId, setActivePipelineSubFolderId] = useState<string | null>(null);
   const [isNewPipelineModalOpen, setIsNewPipelineModalOpen] = useState(false);
+  const [isNewPipelineSubFolderModalOpen, setIsNewPipelineSubFolderModalOpen] = useState(false);
+  const [targetPipelineForNewSubFolder, setTargetPipelineForNewSubFolder] = useState<CrmPipeline | null>(null);
+  const [targetParentPipelineSubFolderId, setTargetParentPipelineSubFolderId] = useState<string | null>(null);
   const [deals, setDeals] = useState<CrmDeal[]>([]);
   const [crmStages, setCrmStages] = useState<CrmStageDefinition[]>(initialCrmStages);
   const [crmSettings, setCrmSettings] = useState<CrmPipelineSettingsType>(initialCrmPipelineSettings);
@@ -215,13 +284,24 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Inspector & Modal states
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+  const [taskToEdit, setTaskToEdit] = useState<TaskItem | null>(null);
+  const [dealToEdit, setDealToEdit] = useState<CrmDeal | null>(null);
   const [taskToDelete, setTaskToDelete] = useState<TaskItem | null>(null);
   const [folderToEdit, setFolderToEdit] = useState<SpaceFolder | null>(null);
+  const [subFolderToEdit, setSubFolderToEdit] = useState<{ folder: SpaceFolder; subFolder: SpaceSubFolder } | null>(null);
   const [pipelineToEdit, setPipelineToEdit] = useState<CrmPipeline | null>(null);
-  const [itemToDelete, setItemToDelete] = useState<{ type: 'task' | 'folder' | 'pipeline'; item: any } | null>(null);
+  const [pipelineSubFolderToEdit, setPipelineSubFolderToEdit] = useState<{ pipeline: CrmPipeline; subFolder: CrmPipelineSubFolder } | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<DeletionTarget | null>(null);
   const [isNewItemModalOpen, setIsNewItemModalOpen] = useState(false);
   const [isNewFolderModalOpen, setIsNewFolderModalOpen] = useState(false);
+  const [isNewListModalOpen, setIsNewListModalOpen] = useState(false);
+  const [targetFolderForNewList, setTargetFolderForNewList] = useState<SpaceFolder | null>(null);
+  const [targetSubFolderIdForNewList, setTargetSubFolderIdForNewList] = useState<string | null>(null);
+  const [isNewSubFolderModalOpen, setIsNewSubFolderModalOpen] = useState(false);
+  const [targetFolderForNewSubFolder, setTargetFolderForNewSubFolder] = useState<SpaceFolder | null>(null);
+  const [targetParentSubFolderIdForNewSubFolder, setTargetParentSubFolderIdForNewSubFolder] = useState<string | null>(null);
   const [isNewContactModalOpen, setIsNewContactModalOpen] = useState(false);
+  const [isNewWorkspaceModalOpen, setIsNewWorkspaceModalOpen] = useState(false);
   const [newItemType, setNewItemType] = useState<'task' | 'deal'>('task');
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [newItemDefaultStatus, setNewItemDefaultStatus] = useState<TaskStatus>('Backlog');
@@ -258,7 +338,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     name: user?.account?.name || 'Workspace',
     slug: user?.account?.slug || 'workspace',
     role: (user?.role as string) || 'Owner',
-    color: '#9900c2',
+    color: '#ea580c',
     icon: 'deployed_code',
     memberCount: members.length || 1,
   });
@@ -287,15 +367,15 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   // Sync actual account workspace when user changes
   useEffect(() => {
     if (user?.account?.name) {
+      let nextSpaces: UserSpace[] = [];
       setUserSpaces((prev) => {
         const cleaned = filterRealWorkspaces(prev);
         const matchIndex = cleaned.findIndex(
           (s) => s.id === user.account!.id || s.name.toLowerCase() === user.account!.name.toLowerCase()
         );
 
-        let updated: UserSpace[];
         if (matchIndex >= 0) {
-          updated = cleaned.map((s, idx) =>
+          nextSpaces = cleaned.map((s, idx) =>
             idx === matchIndex
               ? {
                   ...s,
@@ -308,30 +388,37 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
               : s
           );
         } else {
-          updated = [
+          nextSpaces = [
             {
               id: user.account!.id,
               name: user.account!.name,
               slug: user.account!.slug,
               role: (user.role as string) || 'Owner',
-              color: '#9900c2',
+              color: '#ea580c',
               icon: 'deployed_code',
               memberCount: members.length || 1,
             },
             ...cleaned,
           ];
         }
-        localStorage.setItem('backnode_user_spaces', JSON.stringify(updated));
-        return updated;
+        localStorage.setItem('backnode_user_spaces', JSON.stringify(nextSpaces));
+        return nextSpaces;
       });
 
       setActiveUserSpaceId((curr) => {
+        const savedId = localStorage.getItem('backnode_active_user_space_id');
+        if (savedId && nextSpaces.some((s) => s.id === savedId)) {
+          return savedId;
+        }
+        if (curr && nextSpaces.some((s) => s.id === curr)) {
+          return curr;
+        }
         const targetId = user.account!.id;
         localStorage.setItem('backnode_active_user_space_id', targetId);
         return targetId;
       });
     }
-  }, [user?.account?.id, user?.account?.name, members.length]);
+  }, [user?.account?.id, user?.account?.name]);
 
   const activeUserSpace =
     userSpaces.find((s) => s.id === activeUserSpaceId) || userSpaces[0] || getInitialSpace();
@@ -352,7 +439,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       const createdSpace = await workspaceApi.createWorkspace({
         name: space.name.trim(),
-        color: space.color || '#9900c2',
+        color: space.color || '#ea580c',
+        icon: space.icon || 'workspaces',
       });
       const updated = [...filterRealWorkspaces(userSpaces), createdSpace];
       setUserSpaces(updated);
@@ -370,7 +458,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         name: space.name.trim(),
         slug: space.name.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-'),
         role: 'Owner',
-        color: space.color || '#9900c2',
+        color: space.color || '#ea580c',
         icon: space.icon || 'workspaces',
         memberCount: 1,
       };
@@ -380,6 +468,68 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       localStorage.setItem('backnode_user_spaces', JSON.stringify(updated));
       localStorage.setItem('backnode_active_user_space_id', createdSpace.id);
       showToast(`Workspace "${createdSpace.name}" created!`);
+    }
+  };
+
+  const handleUpdateWorkspace = async (
+    workspaceId: string,
+    updates: { name?: string; color?: string; icon?: string },
+  ) => {
+    try {
+      const updated = await workspaceApi.updateWorkspace(workspaceId, updates);
+      setUserSpaces((prev) => {
+        const next = prev.map((s) => (s.id === workspaceId ? { ...s, ...updated } : s));
+        localStorage.setItem('backnode_user_spaces', JSON.stringify(next));
+        return next;
+      });
+    } catch (err) {
+      console.warn('Backend workspace update failed, applying locally:', err);
+      setUserSpaces((prev) => {
+        const next = prev.map((s) => (s.id === workspaceId ? { ...s, ...updates } : s));
+        localStorage.setItem('backnode_user_spaces', JSON.stringify(next));
+        return next;
+      });
+    }
+    showToast('Workspace settings saved');
+  };
+
+  const handleDeleteWorkspace = async (workspaceId: string) => {
+    try {
+      await workspaceApi.deleteWorkspace(workspaceId);
+    } catch (err) {
+      console.warn('Backend workspace delete failed, removing locally:', err);
+    }
+
+    const currentSpaces = [...userSpaces];
+    const targetSpace = currentSpaces.find((s) => s.id === workspaceId);
+    let remaining = currentSpaces.filter((s) => s.id !== workspaceId);
+
+    if (remaining.length === 0) {
+      const fallbackSpace: UserSpace = {
+        id: `space-${Date.now()}`,
+        name: 'Personal Workspace',
+        slug: 'personal-workspace',
+        role: 'Owner',
+        color: '#ea580c',
+        icon: 'workspaces',
+        memberCount: 1,
+      };
+      remaining = [fallbackSpace];
+    }
+
+    setUserSpaces(remaining);
+    localStorage.setItem('backnode_user_spaces', JSON.stringify(remaining));
+
+    if (activeUserSpaceId === workspaceId) {
+      const nextSpace = remaining[0];
+      setActiveUserSpaceId(nextSpace.id);
+      localStorage.setItem('backnode_active_user_space_id', nextSpace.id);
+      showToast(`Workspace "${targetSpace?.name || 'Workspace'}" deleted. Switched to ${nextSpace.name}`);
+      setTimeout(() => {
+        loadData();
+      }, 0);
+    } else {
+      showToast(`Workspace "${targetSpace?.name || 'Workspace'}" deleted`);
     }
   };
 
@@ -402,7 +552,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       department: (data.department as any) || 'Engineering',
       activeTasks: 0,
       capacityStatus: (data.capacityStatus as any) || 'Available',
-      avatarBg: '#9900c2',
+      avatarBg: '#27272a',
       avatarColor: '#ffffff',
       invitedAt: new Date().toISOString(),
     };
@@ -539,7 +689,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       setFolders(fetchedFolders || []);
       if (fetchedFolders && fetchedFolders.length > 0) {
         setActiveSpace((curr) => {
-          const allItems = fetchedFolders.flatMap((f) => f.items || []);
+          const allItems = fetchedFolders.flatMap((f) => getAllItemsFromFolder(f));
           if (!curr || !allItems.some((i) => i.id === curr)) {
             return allItems[0]?.id || fetchedFolders[0].id;
           }
@@ -613,16 +763,116 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setSelectedTaskId(null);
   };
 
-  const handleOpenAddTaskToColumn = (status: TaskStatus) => {
+  const handleOpenCreateTask = (status: TaskStatus = 'Backlog') => {
+    setTaskToEdit(null);
+    setDealToEdit(null);
     setNewItemType('task');
     setNewItemDefaultStatus(status);
     setIsNewItemModalOpen(true);
   };
 
-  const handleOpenAddDealToStage = (stage: CrmDeal['stage'] = 'Proposal Submitted') => {
+  const handleOpenCreateDeal = (stage: CrmDeal['stage'] = 'Proposal Submitted') => {
+    setTaskToEdit(null);
+    setDealToEdit(null);
     setNewItemType('deal');
     setNewItemDefaultDealStage(stage);
     setIsNewItemModalOpen(true);
+  };
+
+  const handleOpenEditTask = (task: TaskItem) => {
+    setTaskToEdit(task);
+    setDealToEdit(null);
+    setNewItemType('task');
+    setIsNewItemModalOpen(true);
+  };
+
+  const handleOpenEditDeal = (deal: CrmDeal) => {
+    setDealToEdit(deal);
+    setTaskToEdit(null);
+    setNewItemType('deal');
+    setIsNewItemModalOpen(true);
+  };
+
+  const handleOpenAddTaskToColumn = (status: TaskStatus) => {
+    handleOpenCreateTask(status);
+  };
+
+  const handleOpenAddDealToStage = (stage: CrmDeal['stage'] = 'Proposal Submitted') => {
+    handleOpenCreateDeal(stage);
+  };
+
+  const handleOpenAddListToFolder = (folder?: SpaceFolder, subFolderId?: string) => {
+    setTargetFolderForNewList(folder || folders[0] || null);
+    setTargetSubFolderIdForNewList(subFolderId || null);
+    setIsNewListModalOpen(true);
+  };
+
+  const handleOpenAddSubFolder = (folder?: SpaceFolder, parentSubFolderId?: string) => {
+    setTargetFolderForNewSubFolder(folder || folders[0] || null);
+    setTargetParentSubFolderIdForNewSubFolder(parentSubFolderId || null);
+    setIsNewSubFolderModalOpen(true);
+  };
+
+  const handleOpenAddPipelineSubFolder = (pipeline?: CrmPipeline, parentSubFolderId?: string) => {
+    setTargetPipelineForNewSubFolder(pipeline || pipelines[0] || null);
+    setTargetParentPipelineSubFolderId(parentSubFolderId || null);
+    setIsNewPipelineSubFolderModalOpen(true);
+  };
+
+  const handleAddListToFolder = (
+    folderId: string,
+    listName: string,
+    status: string = 'Active',
+    subFolderId?: string,
+  ) => {
+    const trimmed = listName.trim();
+    if (!trimmed) return;
+    const target = folders.find((f) => f.id === folderId);
+    if (!target) return;
+
+    const newList: FolderChildItem = {
+      id: `list-${trimmed.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now().toString().slice(-4)}`,
+      name: trimmed,
+      taskCount: 0,
+      status: status,
+      active: true,
+    };
+
+    let updatedTarget: SpaceFolder;
+    if (subFolderId) {
+      const { updated, added } = addListToSubFolderRecursively(target.subFolders, subFolderId, newList);
+      if (added) {
+        updatedTarget = {
+          ...target,
+          subFolders: updated,
+        };
+      } else {
+        updatedTarget = {
+          ...target,
+          items: [...(target.items || []), newList],
+        };
+      }
+    } else {
+      updatedTarget = {
+        ...target,
+        items: [...(target.items || []), newList],
+      };
+    }
+
+    const updatedFolders = folders.map((f) => (f.id === folderId ? updatedTarget : f));
+    setFolders(updatedFolders);
+
+    workspaceApi.updateFolder(folderId, updatedTarget).catch((err) => {
+      console.error('Failed to add list to folder in DB:', err);
+    });
+
+    setActiveSpace(newList.id);
+    setCurrentHub('task-spaces');
+    setCurrentView('board');
+    showToast(`List "${trimmed}" added to ${target.name}`);
+    setIsNewListModalOpen(false);
+    setTargetFolderForNewList(null);
+    setTargetSubFolderIdForNewList(null);
   };
 
   const handleUpdateTask = (updatedTask: TaskItem) => {
@@ -642,7 +892,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       department: 'Engineering',
       activeTasks: 1,
       capacityStatus: 'Available',
-      avatarBg: '#9900c2',
+      avatarBg: '#27272a',
       avatarColor: '#ffffff',
     };
     const created: TaskItem = {
@@ -822,14 +1072,98 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     const deletedFolder = folders.find((f) => f.id === folderId);
     const remaining = folders.filter((f) => f.id !== folderId);
     setFolders(remaining);
-    if (deletedFolder?.items?.some((i) => i.id === activeSpace)) {
-      const nextSpace = remaining[0]?.items?.[0]?.id || 'sprint-14';
+    const deletedItems = deletedFolder ? getAllItemsFromFolder(deletedFolder) : [];
+    const isContained = deletedItems.some((i) => i.id === activeSpace);
+    if (isContained) {
+      const remainingItems = remaining.flatMap((f) => getAllItemsFromFolder(f));
+      const nextSpace = remainingItems[0]?.id || 'sprint-14';
       setActiveSpace(nextSpace);
     }
     workspaceApi.deleteFolder(folderId).catch((err) => {
       console.error('Failed to delete folder in DB:', err);
     });
     showToast('Folder deleted');
+  };
+
+  const handleCreateSubFolder = (folderId: string, newSubFolder: SpaceSubFolder) => {
+    const target = folders.find((f) => f.id === folderId);
+    if (!target) return;
+
+    let updatedTarget: SpaceFolder;
+    if (newSubFolder.parentId === folderId) {
+      updatedTarget = {
+        ...target,
+        subFolders: [...(target.subFolders || []), newSubFolder],
+      };
+    } else {
+      const { updated, added } = addSubFolderRecursively(target.subFolders, newSubFolder.parentId, newSubFolder);
+      if (added) {
+        updatedTarget = {
+          ...target,
+          subFolders: updated,
+        };
+      } else {
+        updatedTarget = {
+          ...target,
+          subFolders: [...(target.subFolders || []), newSubFolder],
+        };
+      }
+    }
+
+    const updatedFolders = folders.map((f) => (f.id === folderId ? updatedTarget : f));
+    setFolders(updatedFolders);
+    workspaceApi.updateFolder(folderId, updatedTarget).catch((err) => {
+      console.error('Failed to create sub-folder in DB:', err);
+    });
+    showToast(`Sub-folder "${newSubFolder.name}" created`);
+    setIsNewSubFolderModalOpen(false);
+    setTargetFolderForNewSubFolder(null);
+    setTargetParentSubFolderIdForNewSubFolder(null);
+  };
+
+  const handleUpdateSubFolder = (folderId: string, updatedSubFolder: SpaceSubFolder) => {
+    const target = folders.find((f) => f.id === folderId);
+    if (!target) return;
+
+    const updatedSubFolders = updateSubFolderRecursively(target.subFolders, updatedSubFolder);
+    const updatedTarget: SpaceFolder = {
+      ...target,
+      subFolders: updatedSubFolders,
+    };
+    const updatedFolders = folders.map((f) => (f.id === folderId ? updatedTarget : f));
+    setFolders(updatedFolders);
+    workspaceApi.updateFolder(folderId, updatedTarget).catch((err) => {
+      console.error('Failed to update sub-folder in DB:', err);
+    });
+    showToast(`Sub-folder "${updatedSubFolder.name}" updated`);
+    setSubFolderToEdit(null);
+  };
+
+  const handleDeleteSubFolder = (folderId: string, subFolderId: string) => {
+    const target = folders.find((f) => f.id === folderId);
+    if (!target) return;
+
+    const { updated, deleted } = deleteSubFolderRecursively(target.subFolders, subFolderId);
+    const updatedTarget: SpaceFolder = {
+      ...target,
+      subFolders: updated,
+    };
+    const updatedFolders = folders.map((f) => (f.id === folderId ? updatedTarget : f));
+    setFolders(updatedFolders);
+
+    if (deleted) {
+      const deletedItems = getAllItemsFromSubFolder(deleted);
+      if (deletedItems.some((i) => i.id === activeSpace)) {
+        const remainingItems = updatedFolders.flatMap((f) => getAllItemsFromFolder(f));
+        const nextSpace = remainingItems[0]?.id || 'sprint-14';
+        setActiveSpace(nextSpace);
+      }
+    }
+
+    workspaceApi.updateFolder(folderId, updatedTarget).catch((err) => {
+      console.error('Failed to delete sub-folder in DB:', err);
+    });
+    showToast('Sub-folder deleted');
   };
 
   const handleCreatePipeline = (newPipeline: CrmPipeline) => {
@@ -863,6 +1197,82 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     showToast('Pipeline deleted');
   };
 
+  const handleCreatePipelineSubFolder = (pipelineId: string, newSubFolder: CrmPipelineSubFolder) => {
+    const target = pipelines.find((p) => p.id === pipelineId);
+    if (!target) return;
+
+    let updatedTarget: CrmPipeline;
+    if (!newSubFolder.parentId || newSubFolder.parentId === pipelineId) {
+      updatedTarget = {
+        ...target,
+        subFolders: [...(target.subFolders || []), newSubFolder],
+      };
+    } else {
+      const { updated, added } = addPipelineSubFolderRecursively(target.subFolders, newSubFolder.parentId, newSubFolder);
+      if (added) {
+        updatedTarget = {
+          ...target,
+          subFolders: updated,
+        };
+      } else {
+        updatedTarget = {
+          ...target,
+          subFolders: [...(target.subFolders || []), newSubFolder],
+        };
+      }
+    }
+
+    const updatedPipelines = pipelines.map((p) => (p.id === pipelineId ? updatedTarget : p));
+    setPipelines(updatedPipelines);
+    pipelinesApi.update(pipelineId, updatedTarget).catch((err) => {
+      console.error('Failed to create pipeline sub-folder in DB:', err);
+    });
+    showToast(`Pipeline sub-folder "${newSubFolder.name}" created`);
+    setIsNewPipelineSubFolderModalOpen(false);
+    setTargetPipelineForNewSubFolder(null);
+    setTargetParentPipelineSubFolderId(null);
+  };
+
+  const handleUpdatePipelineSubFolder = (pipelineId: string, updatedSubFolder: CrmPipelineSubFolder) => {
+    const target = pipelines.find((p) => p.id === pipelineId);
+    if (!target) return;
+
+    const updatedSubFolders = updatePipelineSubFolderRecursively(target.subFolders, updatedSubFolder);
+    const updatedTarget: CrmPipeline = {
+      ...target,
+      subFolders: updatedSubFolders,
+    };
+    const updatedPipelines = pipelines.map((p) => (p.id === pipelineId ? updatedTarget : p));
+    setPipelines(updatedPipelines);
+    pipelinesApi.update(pipelineId, updatedTarget).catch((err) => {
+      console.error('Failed to update pipeline sub-folder in DB:', err);
+    });
+    showToast(`Pipeline sub-folder "${updatedSubFolder.name}" updated`);
+    setPipelineSubFolderToEdit(null);
+  };
+
+  const handleDeletePipelineSubFolder = (pipelineId: string, subFolderId: string) => {
+    const target = pipelines.find((p) => p.id === pipelineId);
+    if (!target) return;
+
+    const { updated } = deletePipelineSubFolderRecursively(target.subFolders, subFolderId);
+    const updatedTarget: CrmPipeline = {
+      ...target,
+      subFolders: updated,
+    };
+    const updatedPipelines = pipelines.map((p) => (p.id === pipelineId ? updatedTarget : p));
+    setPipelines(updatedPipelines);
+
+    if (activePipelineSubFolderId === subFolderId) {
+      setActivePipelineSubFolderId(null);
+    }
+
+    pipelinesApi.update(pipelineId, updatedTarget).catch((err) => {
+      console.error('Failed to delete pipeline sub-folder in DB:', err);
+    });
+    showToast('Pipeline sub-folder deleted');
+  };
+
   const handleConfirmDeleteItem = () => {
     if (!itemToDelete?.item?.id) return;
     if (itemToDelete.type === 'task') {
@@ -871,6 +1281,24 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       handleDeleteFolder(itemToDelete.item.id);
     } else if (itemToDelete.type === 'pipeline') {
       handleDeletePipeline(itemToDelete.item.id);
+    } else if (itemToDelete.type === 'subfolder') {
+      const rootFolder = folders.find(
+        (f) =>
+          f.id === itemToDelete.folderId ||
+          flattenSubFolders(f.subFolders).some((s) => s.subFolder.id === itemToDelete.item.id)
+      );
+      if (rootFolder) {
+        handleDeleteSubFolder(rootFolder.id, itemToDelete.item.id);
+      }
+    } else if (itemToDelete.type === 'pipeline-subfolder') {
+      const rootPipe = pipelines.find(
+        (p) =>
+          p.id === itemToDelete.pipelineId ||
+          flattenPipelineSubFolders(p.subFolders).some((s) => s.subFolder.id === itemToDelete.item.id)
+      );
+      if (rootPipe) {
+        handleDeletePipelineSubFolder(rootPipe.id, itemToDelete.item.id);
+      }
     }
     setItemToDelete(null);
   };
@@ -903,6 +1331,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setPipelines,
         activePipelineId,
         setActivePipelineId,
+        activePipelineSubFolderId,
+        setActivePipelineSubFolderId,
         deals,
         setDeals,
         crmStages,
@@ -925,12 +1355,20 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setSelectedTaskId,
         selectedDealId,
         setSelectedDealId,
+        taskToEdit,
+        setTaskToEdit,
+        dealToEdit,
+        setDealToEdit,
         taskToDelete,
         setTaskToDelete,
         folderToEdit,
         setFolderToEdit,
+        subFolderToEdit,
+        setSubFolderToEdit,
         pipelineToEdit,
         setPipelineToEdit,
+        pipelineSubFolderToEdit,
+        setPipelineSubFolderToEdit,
         itemToDelete,
         setItemToDelete,
         searchQuery,
@@ -954,10 +1392,30 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setIsNewItemModalOpen,
         isNewFolderModalOpen,
         setIsNewFolderModalOpen,
+        isNewSubFolderModalOpen,
+        setIsNewSubFolderModalOpen,
+        targetFolderForNewSubFolder,
+        setTargetFolderForNewSubFolder,
+        targetParentSubFolderIdForNewSubFolder,
+        setTargetParentSubFolderIdForNewSubFolder,
+        isNewListModalOpen,
+        setIsNewListModalOpen,
+        targetFolderForNewList,
+        setTargetFolderForNewList,
+        targetSubFolderIdForNewList,
+        setTargetSubFolderIdForNewList,
         isNewContactModalOpen,
         setIsNewContactModalOpen,
         isNewPipelineModalOpen,
         setIsNewPipelineModalOpen,
+        isNewPipelineSubFolderModalOpen,
+        setIsNewPipelineSubFolderModalOpen,
+        targetPipelineForNewSubFolder,
+        setTargetPipelineForNewSubFolder,
+        targetParentPipelineSubFolderId,
+        setTargetParentPipelineSubFolderId,
+        isNewWorkspaceModalOpen,
+        setIsNewWorkspaceModalOpen,
         isCommandPaletteOpen,
         setIsCommandPaletteOpen,
         newItemType,
@@ -976,6 +1434,14 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleSelectView,
         handleOpenAddTaskToColumn,
         handleOpenAddDealToStage,
+        handleOpenAddListToFolder,
+        handleOpenAddSubFolder,
+        handleOpenAddPipelineSubFolder,
+        handleAddListToFolder,
+        handleOpenEditTask,
+        handleOpenEditDeal,
+        handleOpenCreateTask,
+        handleOpenCreateDeal,
         handleUpdateTask,
         handleCreateTask,
         handleDeleteTask,
@@ -991,9 +1457,15 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleCreateFolder,
         handleUpdateFolder,
         handleDeleteFolder,
+        handleCreateSubFolder,
+        handleUpdateSubFolder,
+        handleDeleteSubFolder,
         handleCreatePipeline,
         handleUpdatePipeline,
         handleDeletePipeline,
+        handleCreatePipelineSubFolder,
+        handleUpdatePipelineSubFolder,
+        handleDeletePipelineSubFolder,
         handleConfirmDeleteItem,
         handleCreateContact,
         userSpaces,
@@ -1001,6 +1473,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         activeUserSpace,
         handleSelectUserSpace,
         handleCreateUserSpace,
+        handleUpdateWorkspace,
+        handleDeleteWorkspace,
         handleInviteMember,
         handleUpdateMemberAccess,
         handleRemoveMember,

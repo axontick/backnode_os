@@ -9,6 +9,7 @@ interface CommandPaletteProps {
   onSelectView: (view: 'board' | 'list' | 'settings') => void;
   onSelectHub: (hub: string) => void;
   onOpenCreateTask: () => void;
+  onOpenCreateWorkspace?: () => void;
 }
 
 export const CommandPalette: React.FC<CommandPaletteProps> = ({
@@ -19,6 +20,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onSelectView,
   onSelectHub,
   onOpenCreateTask,
+  onOpenCreateWorkspace,
 }) => {
   const [query, setQuery] = useState('');
 
@@ -33,33 +35,33 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
 
   return (
     <div
-      className="fixed inset-0 bg-[#1a1b22]/40 backdrop-blur-[2px] z-50 flex items-start justify-center pt-24 select-none animate-in fade-in duration-150"
+      className="fixed inset-0 bg-black/75 backdrop-blur-xs z-50 flex items-start justify-center pt-24 select-none animate-in fade-in duration-150"
       onClick={onClose}
     >
       <div
-        className="w-[580px] bg-white border border-[#d4c0d5]/60 rounded-2xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+        className="w-[580px] bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-zinc-100"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search Input */}
-        <div className="p-3.5 border-b border-[#d4c0d5]/30 flex items-center gap-2.5">
-          <span className="material-symbols-outlined text-[20px] text-[#9900c2]">search</span>
+        <div className="p-3.5 border-b border-[#27272a] flex items-center gap-2.5 bg-[#121214]">
+          <span className="material-symbols-outlined text-[20px] text-orange-400">search</span>
           <input
             autoFocus
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search tasks, operators, views, commands... (Esc to dismiss)"
-            className="w-full text-xs text-[#1a1b22] placeholder:text-[#837284] focus:outline-none"
+            className="w-full text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none bg-transparent"
           />
-          <kbd className="font-mono text-[10px] text-[#837284] bg-[#eeedf7] px-1.5 py-0.5 rounded border border-[#d4c0d5]/40">
+          <kbd className="font-mono text-[10px] text-zinc-400 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a]">
             ESC
           </kbd>
         </div>
 
         {/* Commands List */}
-        <div className="max-h-[380px] overflow-y-auto p-2 custom-scrollbar flex flex-col gap-1 text-xs">
+        <div className="max-h-[380px] overflow-y-auto p-2 custom-scrollbar flex flex-col gap-1 text-xs bg-[#121214]">
           {/* Quick Actions Group */}
-          <div className="px-2 py-1 font-mono text-[10px] text-[#837284] uppercase font-semibold">
+          <div className="px-2 py-1 font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Workspace Actions
           </div>
 
@@ -68,23 +70,37 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               onOpenCreateTask();
               onClose();
             }}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#f4f2fd] text-left text-[#1a1b22] hover:text-[#9900c2] transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#9900c2]">add_circle</span>
+            <span className="material-symbols-outlined text-[16px] text-orange-400">add_circle</span>
             <span className="font-medium">Create New Task</span>
-            <kbd className="ml-auto font-mono text-[10px] text-[#837284]">N</kbd>
+            <kbd className="ml-auto font-mono text-[10px] text-zinc-500">N</kbd>
           </button>
+
+          {onOpenCreateWorkspace && (
+            <button
+              onClick={() => {
+                onOpenCreateWorkspace();
+                onClose();
+              }}
+              className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px] text-orange-400">domain_add</span>
+              <span className="font-medium">Create New Workspace</span>
+              <kbd className="ml-auto font-mono text-[10px] text-zinc-500">W</kbd>
+            </button>
+          )}
 
           <button
             onClick={() => {
               onSelectView('board');
               onClose();
             }}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#f4f2fd] text-left text-[#1a1b22] hover:text-[#9900c2] transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#9900c2]">view_kanban</span>
+            <span className="material-symbols-outlined text-[16px] text-orange-400">view_kanban</span>
             <span className="font-medium">Switch to Kanban Board</span>
-            <kbd className="ml-auto font-mono text-[10px] text-[#837284]">1</kbd>
+            <kbd className="ml-auto font-mono text-[10px] text-zinc-500">1</kbd>
           </button>
 
           <button
@@ -92,11 +108,11 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               onSelectView('list');
               onClose();
             }}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#f4f2fd] text-left text-[#1a1b22] hover:text-[#9900c2] transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#9900c2]">format_list_bulleted</span>
+            <span className="material-symbols-outlined text-[16px] text-orange-400">format_list_bulleted</span>
             <span className="font-medium">Switch to List View</span>
-            <kbd className="ml-auto font-mono text-[10px] text-[#837284]">2</kbd>
+            <kbd className="ml-auto font-mono text-[10px] text-zinc-500">2</kbd>
           </button>
 
           <button
@@ -104,11 +120,23 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               onSelectView('settings');
               onClose();
             }}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#f4f2fd] text-left text-[#1a1b22] hover:text-[#9900c2] transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#9900c2]">tune</span>
+            <span className="material-symbols-outlined text-[16px] text-orange-400">tune</span>
             <span className="font-medium">Open Task Space Settings</span>
-            <kbd className="ml-auto font-mono text-[10px] text-[#837284]">S</kbd>
+            <kbd className="ml-auto font-mono text-[10px] text-zinc-500">S</kbd>
+          </button>
+
+          <button
+            onClick={() => {
+              onSelectHub('settings');
+              onClose();
+            }}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px] text-orange-400">settings</span>
+            <span className="font-medium">Open Workspace Settings</span>
+            <kbd className="ml-auto font-mono text-[10px] text-zinc-500">⌘,</kbd>
           </button>
 
           <button
@@ -116,15 +144,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
               onSelectHub('crm');
               onClose();
             }}
-            className="flex items-center gap-2.5 px-3 py-2 rounded-lg hover:bg-[#f4f2fd] text-left text-[#1a1b22] hover:text-[#9900c2] transition-colors"
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors"
           >
-            <span className="material-symbols-outlined text-[16px] text-[#9900c2]">view_kanban</span>
+            <span className="material-symbols-outlined text-[16px] text-orange-400">leaderboard</span>
             <span className="font-medium">Open Pipeline CRM Deals</span>
-            <kbd className="ml-auto font-mono text-[10px] text-[#837284]">3</kbd>
+            <kbd className="ml-auto font-mono text-[10px] text-zinc-500">3</kbd>
           </button>
 
           {/* Tasks Group */}
-          <div className="px-2 py-1 mt-2 font-mono text-[10px] text-[#837284] uppercase font-semibold">
+          <div className="px-2 py-1 mt-2 font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Matching Tasks ({filteredTasks.length})
           </div>
 
@@ -135,15 +163,15 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
                 onSelectTask(t);
                 onClose();
               }}
-              className="flex items-center justify-between px-3 py-2 rounded-lg hover:bg-[#f4f2fd] text-left text-[#1a1b22] group transition-colors"
+              className="flex items-center justify-between px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 group transition-colors"
             >
               <div className="flex items-center gap-2 min-w-0">
-                <span className="font-mono text-[11px] text-[#9900c2] font-semibold shrink-0">
+                <span className="font-mono text-[11px] text-orange-400 font-semibold shrink-0">
                   {t.id}
                 </span>
-                <span className="truncate group-hover:text-[#9900c2]">{t.title}</span>
+                <span className="truncate group-hover:text-orange-400">{t.title}</span>
               </div>
-              <span className="font-mono text-[10px] text-[#837284] shrink-0 ml-2">
+              <span className="font-mono text-[10px] text-zinc-500 shrink-0 ml-2">
                 {t.status}
               </span>
             </button>
@@ -151,9 +179,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-2.5 bg-[#f4f2fd]/60 border-t border-[#d4c0d5]/30 flex items-center justify-between text-[11px] text-[#837284]">
+        <div className="p-2.5 bg-[#0c0a09] border-t border-[#27272a] flex items-center justify-between text-[11px] text-zinc-400">
           <span>Tip: Press ⌘K anywhere in Backnode OS</span>
-          <span className="font-mono">Navigation Engine v2.4</span>
+          <span className="font-mono text-zinc-500">Navigation Engine v2.4</span>
         </div>
       </div>
     </div>

@@ -32,16 +32,16 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       label: 'Backlog',
       subtitle: 'Tasks waiting for sprint triage',
       badge: 'Stage 1',
-      dotColor: 'bg-zinc-400',
-      ringColor: 'ring-zinc-200',
+      dotColor: 'bg-zinc-500',
+      ringColor: 'ring-zinc-700',
     },
     {
       name: 'In Progress',
       label: 'In Progress',
       subtitle: 'Active implementation in branch',
       badge: 'Active Now',
-      dotColor: 'bg-[#9900c2]',
-      ringColor: 'ring-[#fbd7ff]',
+      dotColor: 'bg-orange-500',
+      ringColor: 'ring-orange-500/30',
     },
     {
       name: 'In Review',
@@ -49,7 +49,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       subtitle: 'Requires 1 technical review sign-off',
       badge: 'Target',
       dotColor: 'bg-amber-500',
-      ringColor: 'ring-amber-200',
+      ringColor: 'ring-amber-500/30',
     },
     {
       name: 'Blocked',
@@ -57,7 +57,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       subtitle: 'Dependencies or external blocker',
       badge: 'Gate',
       dotColor: 'bg-rose-500',
-      ringColor: 'ring-rose-200',
+      ringColor: 'ring-rose-500/30',
     },
     {
       name: 'Done',
@@ -65,7 +65,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       subtitle: 'Closed and delivered',
       badge: 'Terminal',
       dotColor: 'bg-emerald-500',
-      ringColor: 'ring-emerald-200',
+      ringColor: 'ring-emerald-500/30',
     },
   ];
 
@@ -78,25 +78,25 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
 
   return (
     <div
-      className="absolute top-[170px] left-[16px] w-[370px] bg-white border border-[#d4c0d5]/60 shadow-2xl z-50 overflow-hidden rounded-lg animate-in fade-in zoom-in-95 duration-150"
+      className="absolute top-[170px] left-[16px] w-[370px] bg-[#121214] border border-[#27272a] shadow-2xl z-50 overflow-hidden rounded-[6px] text-zinc-100 animate-in fade-in zoom-in-95 duration-150"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Popover Header: Current Active State & Stage Timer */}
-      <div className="p-3 bg-[#f4f2fd] border-b border-[#d4c0d5]/30 flex items-center justify-between">
+      <div className="p-3 bg-[#18181b] border-b border-[#27272a] flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#9900c2] ring-4 ring-[#9900c2]/20"></span>
+          <span className="w-2.5 h-2.5 rounded-full bg-orange-500 ring-4 ring-orange-500/20"></span>
           <div>
-            <div className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+            <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
               Active Lifecycle State
             </div>
-            <div className="text-sm font-bold text-[#9900c2] leading-tight">
+            <div className="text-sm font-bold text-orange-400 leading-tight font-headline">
               {currentStatus}
             </div>
           </div>
         </div>
 
-        {/* Purple highlight pill with stage timer */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#fbd7ff] text-[#330043] border border-[#9900c2]/20 font-mono text-[10px] font-semibold rounded">
+        {/* Orange highlight pill with stage timer */}
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-950/40 text-orange-400 border border-orange-500/30 font-mono text-[10px] font-semibold rounded-[4px]">
           <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             timer
           </span>
@@ -105,8 +105,8 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       </div>
 
       {/* Workflow Stage Pipeline Options */}
-      <div className="p-2 space-y-1">
-        <div className="px-2 py-1 font-mono text-[10px] text-[#837284] font-semibold uppercase tracking-wider">
+      <div className="p-2 space-y-1 bg-[#121214]">
+        <div className="px-2 py-1 font-mono text-[10px] text-zinc-400 font-semibold uppercase tracking-wider">
           Select Workflow Target
         </div>
 
@@ -118,10 +118,10 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
             <div
               key={stage.name}
               onClick={() => setSelectedTarget(stage.name)}
-              className={`flex items-start gap-2.5 p-2 rounded transition-colors cursor-pointer group ${
+              className={`flex items-start gap-2.5 p-2 rounded-[6px] transition-colors cursor-pointer group ${
                 isSelectedTarget
-                  ? 'bg-[#f4f2fd] border border-[#9900c2]/40'
-                  : 'hover:bg-[#eeedf7]'
+                  ? 'bg-orange-950/40 border border-orange-500/40'
+                  : 'hover:bg-[#18181b]'
               }`}
             >
               <div className="mt-1">
@@ -135,29 +135,29 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
                   <span
                     className={`text-xs font-semibold ${
                       isSelectedTarget
-                        ? 'text-[#9900c2]'
-                        : 'text-[#1a1b22] group-hover:text-[#9900c2]'
+                        ? 'text-orange-400'
+                        : 'text-zinc-100 group-hover:text-orange-400'
                     }`}
                   >
                     {stage.label}
                   </span>
                   <span
-                    className={`font-mono text-[10px] px-1.5 py-0.2 rounded font-medium ${
+                    className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[4px] font-medium ${
                       isCurrent
-                        ? 'bg-[#fbd7ff] text-[#330043]'
+                        ? 'bg-orange-950/40 text-orange-400 border border-orange-500/20'
                         : isSelectedTarget
-                        ? 'bg-[#9900c2]/10 text-[#9900c2]'
-                        : 'text-[#837284]'
+                        ? 'bg-orange-950/40 text-orange-400 border border-orange-500/20'
+                        : 'text-zinc-400 bg-[#18181b] border border-[#27272a]'
                     }`}
                   >
                     {isCurrent ? 'Active Now' : stage.badge}
                   </span>
                 </div>
-                <p className="text-[11px] text-[#837284]">{stage.subtitle}</p>
+                <p className="text-[11px] text-zinc-400">{stage.subtitle}</p>
               </div>
 
               {isSelectedTarget && (
-                <span className="material-symbols-outlined text-[#9900c2] text-[16px] mt-0.5">
+                <span className="material-symbols-outlined text-orange-400 text-[16px] mt-0.5">
                   check
                 </span>
               )}
@@ -167,13 +167,13 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       </div>
 
       {/* Transition Gates Checklist Box */}
-      <div className="m-2 p-2.5 bg-[#f4f2fd]/60 border border-[#d4c0d5]/40 space-y-2 rounded">
+      <div className="m-2 p-2.5 bg-[#18181b] border border-[#27272a] space-y-2 rounded-[6px]">
         <div className="flex items-center justify-between">
-          <span className="font-mono text-[10px] font-semibold text-[#1a1b22] uppercase tracking-wider flex items-center gap-1.5">
-            <span className="material-symbols-outlined text-[14px] text-[#9900c2]">verified</span>
+          <span className="font-mono text-[10px] font-semibold text-zinc-200 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[14px] text-orange-400">verified</span>
             Transition Gates Checklist
           </span>
-          <span className="font-mono text-[10px] bg-[#fbd7ff] text-[#330043] px-1.5 py-0.2 rounded font-medium">
+          <span className="font-mono text-[10px] bg-orange-950/40 text-orange-400 border border-orange-500/20 px-1.5 py-0.2 rounded-[4px] font-medium">
             {readyGatesCount} of 3 Ready
           </span>
         </div>
@@ -185,11 +185,11 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
               type="checkbox"
               checked={gate1}
               onChange={(e) => setGate1(e.target.checked)}
-              className="w-4 h-4 rounded text-[#9900c2] focus:ring-[#9900c2] border-[#837284] cursor-pointer"
+              className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
             />
             <span
               className={`text-xs ${
-                gate1 ? 'text-[#837284] line-through' : 'text-[#1a1b22]'
+                gate1 ? 'text-zinc-500 line-through' : 'text-zinc-200'
               }`}
             >
               All 5 acceptance criteria validated
@@ -201,13 +201,13 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
               type="checkbox"
               checked={gate2}
               onChange={(e) => setGate2(e.target.checked)}
-              className="w-4 h-4 rounded text-[#9900c2] focus:ring-[#9900c2] border-[#837284] cursor-pointer"
+              className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
             />
-            <span className="text-xs text-[#1a1b22] font-medium">
+            <span className="text-xs text-zinc-200 font-medium">
               Peer code review approved
             </span>
             {!gate2 && (
-              <span className="font-mono text-[9px] text-[#835000] ml-auto bg-[#ffddba] px-1 rounded">
+              <span className="font-mono text-[9px] text-amber-400 ml-auto bg-amber-950/40 border border-amber-500/20 px-1 rounded-[3px]">
                 Required
               </span>
             )}
@@ -218,11 +218,11 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
               type="checkbox"
               checked={gate3}
               onChange={(e) => setGate3(e.target.checked)}
-              className="w-4 h-4 rounded text-[#9900c2] focus:ring-[#9900c2] border-[#837284] cursor-pointer"
+              className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
             />
             <span
               className={`text-xs ${
-                gate3 ? 'text-[#837284] line-through' : 'text-[#1a1b22]'
+                gate3 ? 'text-zinc-500 line-through' : 'text-zinc-200'
               }`}
             >
               Automated tests passing
@@ -232,24 +232,24 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       </div>
 
       {/* Popover Actions & Commit Execution */}
-      <div className="p-2.5 bg-white border-t border-[#d4c0d5]/30 flex flex-col gap-1.5">
+      <div className="p-2.5 bg-[#121214] border-t border-[#27272a] flex flex-col gap-1.5">
         <button
           onClick={handleApply}
-          className="w-full h-8 bg-[#9900c2] hover:bg-[#b731e0] text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] rounded"
+          className="w-full h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] rounded-[6px]"
         >
           <span>Update Status &amp; Notify Sprint</span>
-          <span className="font-mono text-[10px] opacity-80 font-normal bg-black/15 px-1.5 py-0.5 rounded">
+          <span className="font-mono text-[10px] opacity-80 font-normal bg-black/20 px-1.5 py-0.5 rounded-[4px]">
             ⌘Enter
           </span>
         </button>
 
-        <div className="flex items-center justify-between px-1 text-[#837284] text-[11px]">
+        <div className="flex items-center justify-between px-1 text-zinc-400 text-[11px]">
           <span>
-            Press <kbd className="font-mono bg-[#f4f2fd] px-1 rounded">Esc</kbd> to dismiss
+            Press <kbd className="font-mono bg-[#18181b] border border-[#27272a] px-1 rounded-[3px] text-zinc-300">Esc</kbd> to dismiss
           </span>
           <button
             onClick={() => alert('Lifecycle policy: Stages require verified gates or lead override.')}
-            className="text-[#9900c2] hover:underline font-medium"
+            className="text-orange-400 hover:underline font-medium"
           >
             Lifecycle rules
           </button>

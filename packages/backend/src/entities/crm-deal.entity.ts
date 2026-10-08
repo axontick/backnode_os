@@ -61,6 +61,10 @@ export class CrmDeal {
   @Column('varchar', { name: 'pipeline_id', nullable: true })
   pipelineId?: string;
 
+  @Index()
+  @Column('varchar', { name: 'sub_folder_id', nullable: true })
+  subFolderId?: string;
+
   @ManyToOne(() => CrmPipeline, (pipeline) => pipeline.deals, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'pipeline_id' })
   pipeline?: CrmPipeline;

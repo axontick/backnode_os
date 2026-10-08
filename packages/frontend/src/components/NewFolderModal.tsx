@@ -19,21 +19,19 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   const [folderName, setFolderName] = useState('');
   const [description, setDescription] = useState('');
   const [selectedIcon, setSelectedIcon] = useState('folder');
-  const [selectedColor, setSelectedColor] = useState('#9900c2');
-  const [initialListName, setInitialListName] = useState('Sprint 1 - Initial Backlog');
+  const [selectedColor, setSelectedColor] = useState('#ea580c');
 
   useEffect(() => {
     if (folderToEdit) {
       setFolderName(folderToEdit.name);
       setDescription(folderToEdit.description || '');
       setSelectedIcon(folderToEdit.icon || 'folder');
-      setSelectedColor(folderToEdit.color || '#9900c2');
+      setSelectedColor(folderToEdit.color || '#ea580c');
     } else {
       setFolderName('');
       setDescription('');
       setSelectedIcon('folder');
-      setSelectedColor('#9900c2');
-      setInitialListName('Sprint 1 - Initial Backlog');
+      setSelectedColor('#ea580c');
     }
   }, [isOpen, folderToEdit]);
 
@@ -53,13 +51,13 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   ];
 
   const colors = [
-    { hex: '#9900c2', name: 'Electric Violet' },
-    { hex: '#3B82F6', name: 'Sapphire Blue' },
-    { hex: '#EF4444', name: 'Rose Red' },
-    { hex: '#10B981', name: 'Emerald Green' },
-    { hex: '#EC4899', name: 'Neon Pink' },
-    { hex: '#F59E0B', name: 'Amber Gold' },
-    { hex: '#6366F1', name: 'Indigo' },
+    { hex: '#ea580c', name: 'Electric Orange' },
+    { hex: '#f59e0b', name: 'Amber Gold' },
+    { hex: '#10b981', name: 'Emerald Green' },
+    { hex: '#06b6d4', name: 'Cyan' },
+    { hex: '#3b82f6', name: 'Sapphire Blue' },
+    { hex: '#ef4444', name: 'Rose Red' },
+    { hex: '#64748b', name: 'Slate Gray' },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -75,23 +73,14 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
         color: selectedColor,
       });
     } else {
+      // Empty folder with no default list as strictly required
       const newFolder: SpaceFolder = {
         id: `fld-${folderName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`,
         name: folderName.trim(),
         icon: selectedIcon,
         color: selectedColor,
-        description: description.trim() || 'Custom workspace folder with deliverables.',
-        items: initialListName.trim()
-          ? [
-              {
-                id: `list-${Date.now()}`,
-                name: initialListName.trim(),
-                taskCount: 0,
-                status: 'Active',
-                active: true,
-              },
-            ]
-          : [],
+        description: description.trim() || 'Workspace folder with deliverables.',
+        items: [],
       };
 
       onCreateFolder?.(newFolder);
@@ -103,138 +92,134 @@ export const NewFolderModal: React.FC<NewFolderModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#18181b]/40 backdrop-blur-[4px] transition-all duration-200 select-none animate-in fade-in">
-      <div className="w-[500px] max-w-full bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="p-5 pb-4 border-b border-zinc-100 flex items-center justify-between bg-white">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs transition-all duration-200 select-none animate-in fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-[500px] max-w-full max-h-[90vh] bg-[#121214] rounded-[6px] border border-[#27272a] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-zinc-100"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header - Sticky */}
+        <div className="shrink-0 p-5 pb-4 border-b border-[#27272a] flex items-center justify-between bg-[#121214]">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
+              className="w-10 h-10 rounded-[6px] flex items-center justify-center text-white shadow-sm shrink-0"
               style={{ backgroundColor: selectedColor }}
             >
               <span className="material-symbols-outlined text-[20px]">{selectedIcon}</span>
             </div>
             <div>
-              <h2 className="text-[17px] font-bold text-zinc-900 leading-tight">
+              <h2 className="text-[17px] font-bold text-zinc-100 leading-tight font-headline">
                 {folderToEdit ? 'Edit Task Folder' : 'Add Task Folder'}
               </h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
+              <p className="text-xs text-zinc-400 mt-0.5">
                 Organize sprint cycles, deliverables, and engineering domains.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+            className="w-7 h-7 rounded-[4px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
-          <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Folder Name <span className="text-[#9900c2]">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              autoFocus
-              value={folderName}
-              onChange={(e) => setFolderName(e.target.value)}
-              placeholder="e.g. Mobile Engine Runtime, DevOps & CI/CD"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 focus:border-[#9900c2] focus:ring-1 focus:ring-[#9900c2]/30 text-sm font-medium focus:outline-none transition-all"
-            />
-          </div>
-
-          <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Description / Scope
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Brief note on deliverables housed inside this space..."
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 focus:border-[#9900c2] text-xs focus:outline-none"
-            />
-          </div>
-
-          {/* Icon Selector */}
-          <div className="space-y-1.5">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Folder Icon Identifier
-            </label>
-            <div className="grid grid-cols-5 gap-2">
-              {icons.map((ic) => (
-                <button
-                  key={ic}
-                  type="button"
-                  onClick={() => setSelectedIcon(ic)}
-                  className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
-                    selectedIcon === ic
-                      ? 'border-[#9900c2] bg-purple-50 text-[#9900c2] font-bold shadow-xs'
-                      : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[20px]">{ic}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Color Selector */}
-          <div className="space-y-1.5">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Color Accent Swatch
-            </label>
-            <div className="flex items-center gap-2">
-              {colors.map((c) => (
-                <button
-                  key={c.hex}
-                  type="button"
-                  onClick={() => setSelectedColor(c.hex)}
-                  style={{ backgroundColor: c.hex }}
-                  className={`w-7 h-7 rounded-full transition-transform ${
-                    selectedColor === c.hex
-                      ? 'ring-2 ring-offset-2 ring-zinc-900 scale-110 shadow-sm'
-                      : 'hover:scale-105 opacity-80 hover:opacity-100'
-                  }`}
-                  title={c.name}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Initial List inside Folder */}
-          {!folderToEdit && (
-            <div className="space-y-1 pt-1 border-t border-zinc-100">
-              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-                Initial Sub-List / Deliverable Cycle
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4 text-xs bg-[#121214]">
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400 flex items-center gap-1">
+                <span>Folder Name</span>
+                <span className="text-orange-500">*</span>
               </label>
               <input
                 type="text"
-                value={initialListName}
-                onChange={(e) => setInitialListName(e.target.value)}
-                placeholder="e.g. Sprint 1, Phase Alpha"
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs focus:outline-none focus:border-[#9900c2]"
+                required
+                autoFocus
+                value={folderName}
+                onChange={(e) => setFolderName(e.target.value)}
+                placeholder="e.g. Mobile Engine Runtime, DevOps & CI/CD"
+                className="w-full px-3.5 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 placeholder:text-zinc-500 focus:border-orange-500 text-sm font-medium focus:outline-none transition-all"
               />
             </div>
-          )}
 
-          {/* Footer Actions */}
-          <div className="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2.5">
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400">
+                Description / Scope
+              </label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief note on deliverables housed inside this space..."
+                className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 placeholder:text-zinc-500 focus:border-orange-500 text-xs focus:outline-none"
+              />
+            </div>
+
+            {/* Icon Selector */}
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400">
+                Folder Icon Identifier
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {icons.map((ic) => (
+                  <button
+                    key={ic}
+                    type="button"
+                    onClick={() => setSelectedIcon(ic)}
+                    className={`p-2 rounded-[6px] border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                      selectedIcon === ic
+                        ? 'border-orange-500 bg-orange-950/40 text-orange-400 font-bold shadow-xs'
+                        : 'border-[#27272a] bg-[#18181b] text-zinc-400 hover:text-zinc-100 hover:border-zinc-700'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">{ic}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Selector */}
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400">
+                Color Accent Swatch
+              </label>
+              <div className="flex items-center gap-2">
+                {colors.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    onClick={() => setSelectedColor(c.hex)}
+                    style={{ backgroundColor: c.hex }}
+                    className={`w-7 h-7 rounded-[4px] transition-transform cursor-pointer ${
+                      selectedColor === c.hex
+                        ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-[#121214] scale-105 shadow-sm'
+                        : 'hover:scale-105 opacity-80 hover:opacity-100'
+                    }`}
+                    title={c.name}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Sticky Footer Actions */}
+          <div className="shrink-0 p-4 border-t border-[#27272a] bg-[#121214] flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+              className="px-4 py-2 rounded-[6px] text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] border border-[#27272a] transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] active:scale-[0.98] text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+              disabled={!folderName.trim()}
+              className="px-5 py-2 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">
                 {folderToEdit ? 'save' : 'create_new_folder'}

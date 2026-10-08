@@ -7,6 +7,7 @@ interface TaskSpaceDashboardViewProps {
   tasks: TaskItem[];
   onSelectSpace: (spaceId: string) => void;
   onOpenAddFolder: () => void;
+  onOpenAddListToFolder?: (folder: SpaceFolder) => void;
   onOpenCreateTask: () => void;
   onNavigateToView: (view: 'board' | 'list' | 'table' | 'timeline' | 'calendar') => void;
   onEditFolder?: (folder: SpaceFolder) => void;
@@ -18,6 +19,7 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
   tasks,
   onSelectSpace,
   onOpenAddFolder,
+  onOpenAddListToFolder,
   onOpenCreateTask,
   onNavigateToView,
   onEditFolder,
@@ -25,7 +27,6 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
 }) => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  // Local state to track which folder cards have their item drawer expanded on the dashboard
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
     'fld-engineering': true,
     'fld-client-deliverables': true,
@@ -45,193 +46,234 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
   const totalHours = tasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#fafafc] overflow-y-auto select-none p-6 text-xs custom-scrollbar">
-      {/* 1. Dashboard Header Banner */}
-      <div className="bg-white rounded-2xl border border-[#d4c0d5]/40 shadow-xs p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="font-mono text-[10px] uppercase font-bold tracking-wider text-[#9900c2] bg-[#fbd7ff]/40 px-2 py-0.5 rounded-full border border-[#9900c2]/20">
-              Workspace Overview
-            </span>
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            <span className="font-mono text-[10px] text-[#5f5e61]">Local-First Synchronization</span>
+    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#09090b] text-zinc-100 select-none">
+      <div className="max-w-7xl mx-auto flex flex-col gap-6">
+        {/* 1. Dashboard Header Banner (Matched to OverviewView) */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-[#27272a] pb-5 gap-4">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-[10px] bg-orange-950/40 text-orange-400 border border-orange-500/30 px-2 py-0.5 rounded-[6px] font-semibold flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse"></span>
+                WORKSPACE HUBS: ACTIVE
+              </span>
+              <span className="text-zinc-600">•</span>
+              <span className="font-mono text-[11px] text-zinc-400">Local-First Synchronization</span>
+            </div>
+            <h1 className="text-2xl font-bold text-zinc-100 tracking-tight font-headline">
+              Task Spaces &amp; Engineering Hub
+            </h1>
+            <p className="text-xs text-zinc-400 font-body">
+              Multi-folder workspaces, sprint deliverables, test gates, and engineering pipeline execution.
+            </p>
           </div>
-          <h1 className="text-xl md:text-2xl font-bold text-[#1a1b22] tracking-tight">
-            Task Spaces &amp; Engineering Hub
-          </h1>
-          <p className="text-xs text-[#504252] mt-1 max-w-2xl leading-relaxed">
-            Multi-folder workspaces, sprint deliverables, test gates, and engineering pipeline execution.
-          </p>
+
+          {/* Action Controls Cluster */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={onOpenAddFolder}
+              className="px-3.5 py-1.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-200 border border-[#27272a] text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+            >
+              <span className="material-symbols-outlined text-[16px] text-orange-400">
+                create_new_folder
+              </span>
+              <span>Add Folder</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={onOpenCreateTask}
+              className="px-3.5 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span>New Deliverable</span>
+            </button>
+          </div>
         </div>
 
-        {/* Action Controls Cluster with Smooth Transitions */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Add Folder Button */}
-          <button
-            onClick={onOpenAddFolder}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#d4c0d5]/50 bg-white hover:bg-[#f4f2fd] hover:border-[#9900c2]/40 text-[#1a1b22] font-semibold text-xs transition-all active:scale-[0.98] shadow-xs"
-          >
-            <span className="material-symbols-outlined text-[17px] text-[#9900c2]">
-              create_new_folder
-            </span>
-            <span>+ Add Folder</span>
-          </button>
-
-          {/* New Deliverable Primary CTA */}
-          <button
-            onClick={onOpenCreateTask}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] active:scale-[0.98] text-white font-semibold text-xs transition-all shadow-sm shadow-[#9900c2]/25"
-          >
-            <span className="material-symbols-outlined text-[17px]">add</span>
-            <span>+ New Deliverable</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Bento KPI Metric Cards Ribbon */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        {/* Card 1: Deliverables Overview */}
-        <div className="bg-white p-4 rounded-xl border border-[#d4c0d5]/40 shadow-xs flex flex-col justify-between hover:border-[#9900c2]/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-[#837284] uppercase tracking-wider font-semibold">
-              Total Deliverables
-            </span>
-            <span className="w-6 h-6 rounded-lg bg-purple-50 text-[#9900c2] flex items-center justify-center">
-              <span className="material-symbols-outlined text-[15px]">task_alt</span>
-            </span>
+        {/* 2. Bento KPI Metric Cards Ribbon (Matched to OverviewView font sizes) */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Card 1: Deliverables Overview */}
+          <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+                Total Deliverables
+              </span>
+              <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/30 px-1.5 py-0.5 rounded-[6px] font-bold">
+                Volume
+              </span>
+            </div>
+            <div className="my-3 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">{totalTasks}</span>
+              <span className="text-xs text-zinc-400">items logged</span>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 text-xs text-zinc-400">
+                <span className="text-orange-400 font-medium">{inProgressTasks.length} In Progress</span>
+                <span className="text-zinc-600">•</span>
+                <span className="text-emerald-400 font-medium">{doneTasks.length} Done</span>
+              </div>
+              <span className="block font-mono text-[10px] text-zinc-500 mt-2">
+                Active sprint deliverables
+              </span>
+            </div>
           </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-[#1a1b22] font-mono">{totalTasks} tasks</div>
-            <div className="flex items-center gap-2 mt-1 text-[11px] text-[#504252]">
-              <span className="text-[#9900c2] font-semibold">{inProgressTasks.length} In Progress</span>
-              <span>•</span>
-              <span className="text-emerald-700 font-semibold">{doneTasks.length} Done</span>
+
+          {/* Card 2: Completion Velocity */}
+          <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+                Cycle Completion
+              </span>
+              <span className="font-mono text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.5 rounded-[6px] font-bold">
+                {completionRate}%
+              </span>
+            </div>
+            <div className="my-3 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">{completionRate}%</span>
+              <span className="text-xs text-zinc-400">{doneTasks.length} of {totalTasks} closed</span>
+            </div>
+            <div>
+              <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-emerald-500 h-full rounded-full transition-all duration-500"
+                  style={{ width: `${completionRate}%` }}
+                ></div>
+              </div>
+              <span className="block font-mono text-[10px] text-zinc-500 mt-2">
+                Cycle velocity index
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Active Task Folders */}
+          <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+                Organized Folders
+              </span>
+              <span className="font-mono text-[10px] text-blue-400 bg-blue-950/40 border border-blue-500/30 px-1.5 py-0.5 rounded-[6px] font-bold">
+                {folders.length} Spaces
+              </span>
+            </div>
+            <div className="my-3 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">{folders.length}</span>
+              <span className="text-xs text-zinc-400">workspace domains</span>
+            </div>
+            <div>
+              <span className="text-xs text-zinc-400 block truncate">
+                Engineering, triage &amp; client scopes
+              </span>
+              <span className="block font-mono text-[10px] text-zinc-500 mt-2">
+                Segregated project folders
+              </span>
+            </div>
+          </div>
+
+          {/* Card 4: Story Points & Workload */}
+          <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+                Workload &amp; Hours
+              </span>
+              <span className="font-mono text-[10px] text-amber-400 bg-amber-950/40 border border-amber-500/30 px-1.5 py-0.5 rounded-[6px] font-bold">
+                Sprint 14
+              </span>
+            </div>
+            <div className="my-3 flex items-baseline gap-2">
+              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">{totalHours}h</span>
+              <span className="text-xs text-zinc-400">estimated effort</span>
+            </div>
+            <div>
+              <span className="text-xs text-zinc-400 block truncate">
+                Across all active deliverables
+              </span>
+              <span className="block font-mono text-[10px] text-zinc-500 mt-2">
+                Commitment capacity
+              </span>
             </div>
           </div>
         </div>
 
-        {/* Card 2: Completion Velocity */}
-        <div className="bg-white p-4 rounded-xl border border-[#d4c0d5]/40 shadow-xs flex flex-col justify-between hover:border-[#9900c2]/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-[#837284] uppercase tracking-wider font-semibold">
-              Cycle Completion
-            </span>
-            <span className="font-mono text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold border border-emerald-200">
-              {completionRate}%
-            </span>
-          </div>
-          <div className="mt-2 space-y-1.5">
-            <div className="text-2xl font-bold text-[#1a1b22] font-mono">{completionRate}% Completed</div>
-            <div className="w-full h-1.5 bg-[#eeedf7] rounded-full overflow-hidden">
-              <div
-                className="h-full bg-emerald-500 rounded-full transition-all duration-500"
-                style={{ width: `${completionRate}%` }}
-              ></div>
+        {/* 3. Interactive Task Folders Directory */}
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between border-b border-[#27272a] pb-3">
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-orange-400 text-[18px]">folder_open</span>
+              <h2 className="text-sm font-semibold text-zinc-100 font-headline">Workspace Folders &amp; Cycles</h2>
+              <span className="font-mono text-[10px] bg-zinc-800 text-zinc-400 px-2 py-0.5 rounded-[6px] font-semibold">
+                {folders.length} active
+              </span>
             </div>
-          </div>
-        </div>
 
-        {/* Card 3: Active Task Folders */}
-        <div className="bg-white p-4 rounded-xl border border-[#d4c0d5]/40 shadow-xs flex flex-col justify-between hover:border-[#9900c2]/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-[#837284] uppercase tracking-wider font-semibold">
-              Organized Folders
-            </span>
-            <span className="w-6 h-6 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[15px]">folder_copy</span>
-            </span>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-[#1a1b22] font-mono">{folders.length} Spaces</div>
-            <div className="text-[11px] text-[#504252] mt-1">
-              Across engineering, triage &amp; operations
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Story Points & Velocity */}
-        <div className="bg-white p-4 rounded-xl border border-[#d4c0d5]/40 shadow-xs flex flex-col justify-between hover:border-[#9900c2]/30 transition-all">
-          <div className="flex items-center justify-between">
-            <span className="font-mono text-[10px] text-[#837284] uppercase tracking-wider font-semibold">
-              Workload &amp; Hours
-            </span>
-            <span className="w-6 h-6 rounded-lg bg-amber-50 text-amber-700 flex items-center justify-center">
-              <span className="material-symbols-outlined text-[15px]">schedule</span>
-            </span>
-          </div>
-          <div className="mt-2">
-            <div className="text-2xl font-bold text-[#1a1b22] font-mono">{totalHours} hrs est.</div>
-            <div className="text-[11px] text-[#504252] mt-1">Sprint 14 deliverable commitment</div>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Interactive Task Folders Directory (Expandable Cards Grid) */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-3 px-1">
-          <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[#9900c2] text-[18px]">folder_open</span>
-            <h2 className="font-bold text-sm text-[#1a1b22]">Workspace Folders &amp; Cycles</h2>
-            <span className="font-mono text-[10px] bg-[#eeedf7] text-[#504252] px-2 py-0.5 rounded-full font-semibold">
-              {folders.length} active
-            </span>
+            <button
+              type="button"
+              onClick={onOpenAddFolder}
+              className="flex items-center gap-1 text-xs font-semibold text-orange-400 hover:text-orange-300 transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">add</span>
+              <span>Add Folder</span>
+            </button>
           </div>
 
-          <button
-            onClick={onOpenAddFolder}
-            className="flex items-center gap-1 text-xs font-semibold text-[#9900c2] hover:underline transition-all"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            <span>Add Folder</span>
-          </button>
-        </div>
+          {/* Folder Bento Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {folders.map((folder) => {
+              const hasItems = folder.items && folder.items.length > 0;
+              const isExpanded = !!expandedFolderIds[folder.id];
+              const folderTaskTotal = folder.items?.reduce((sum, item) => sum + (item.taskCount || 0), 0) || 0;
+              const folderColor = folder.color && folder.color !== '#9900c2' ? folder.color : '#ea580c';
 
-        {/* Folder Bento Cards Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {folders.map((folder) => {
-            const hasItems = folder.items && folder.items.length > 0;
-            const isExpanded = !!expandedFolderIds[folder.id];
-            const folderTaskTotal = folder.items.reduce((sum, item) => sum + item.taskCount, 0);
-
-            return (
-              <div
-                key={folder.id}
-                className={`bg-white rounded-xl border border-[#d4c0d5]/40 shadow-xs transition-all duration-200 hover:shadow-md hover:border-[#9900c2]/40 flex flex-col ${
-                  activeMenuId === folder.id ? 'overflow-visible z-20' : 'overflow-hidden'
-                }`}
-              >
-                {/* Folder Card Header */}
-                <div className="p-4 flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm transition-transform group-hover:scale-105"
-                      style={{ backgroundColor: folder.color }}
-                    >
-                      <span className="material-symbols-outlined text-[20px]">{folder.icon}</span>
-                    </div>
-
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-bold text-sm text-[#1a1b22] tracking-tight">
-                          {folder.name}
-                        </h3>
-                        <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-[#eeedf7] text-[#504252] font-semibold">
-                          {folder.items.length} {folder.items.length === 1 ? 'list' : 'lists'}
-                        </span>
+              return (
+                <div
+                  key={folder.id}
+                  className={`bg-[#121214] rounded-[6px] border border-[#27272a] shadow-sm transition-all duration-200 hover:border-orange-500/50 flex flex-col ${
+                    activeMenuId === folder.id ? 'overflow-visible z-20' : 'overflow-hidden'
+                  }`}
+                >
+                  {/* Folder Card Header */}
+                  <div className="p-4 flex items-start justify-between gap-3">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <div
+                        className="w-10 h-10 rounded-[6px] flex items-center justify-center text-white shrink-0 shadow-sm"
+                        style={{ backgroundColor: folderColor }}
+                      >
+                        <span className="material-symbols-outlined text-[20px]">{folder.icon || 'folder'}</span>
                       </div>
-                      <p className="text-xs text-[#504252] mt-0.5 line-clamp-1">
-                        {folder.description || 'Workspace folder for deliverables.'}
-                      </p>
-                    </div>
-                  </div>
 
-                  {/* Right side controls: Expand / Collapse + 3-dots actions */}
-                  <div className="flex items-center gap-1 shrink-0">
-                    {/* Expand / Collapse Action Button */}
-                    {hasItems ? (
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-bold text-sm text-zinc-100 tracking-tight font-headline truncate">
+                            {folder.name}
+                          </h3>
+                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-[4px] bg-zinc-800 text-zinc-400 font-semibold shrink-0">
+                            {folder.items?.length || 0} {folder.items?.length === 1 ? 'list' : 'lists'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-zinc-400 mt-0.5 line-clamp-1">
+                          {folder.description || 'Workspace folder for deliverables.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Right side controls: + Add List, Expand / Collapse + 3-dots actions */}
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      {onOpenAddListToFolder && (
+                        <button
+                          type="button"
+                          onClick={() => onOpenAddListToFolder(folder)}
+                          className="px-2 py-1 rounded-[6px] bg-[#18181b] hover:bg-orange-950/40 text-zinc-300 hover:text-orange-400 border border-[#27272a] text-xs font-medium flex items-center gap-1 transition-all cursor-pointer"
+                          title="Add list under this folder"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">add</span>
+                          <span className="hidden sm:inline">Add List</span>
+                        </button>
+                      )}
+
                       <button
+                        type="button"
                         onClick={() => toggleFolderExpand(folder.id)}
-                        className="p-1.5 rounded-lg hover:bg-[#eeedf7] text-[#504252] hover:text-[#1a1b22] transition-all flex items-center gap-1 text-xs font-mono"
+                        className="p-1.5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 transition-all flex items-center gap-1 text-xs font-mono cursor-pointer"
                         title={isExpanded ? 'Collapse folder items' : 'Expand folder items'}
                       >
                         <span className="text-[10px] hidden sm:inline">
@@ -239,170 +281,121 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
                         </span>
                         <span
                           className={`material-symbols-outlined text-[18px] transition-transform duration-200 ${
-                            isExpanded ? 'rotate-180 text-[#9900c2]' : 'rotate-0'
+                            isExpanded ? 'rotate-180 text-orange-400' : 'rotate-0'
                           }`}
                         >
                           expand_more
                         </span>
                       </button>
-                    ) : (
-                      <span className="font-mono text-[10px] text-[#837284] italic">Empty</span>
-                    )}
 
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onMouseDown={(e) => e.stopPropagation()}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setActiveMenuId(activeMenuId === folder.id ? null : folder.id);
-                        }}
-                        aria-haspopup="menu"
-                        aria-expanded={activeMenuId === folder.id}
-                        aria-label="Folder actions"
-                        className={`w-7 h-7 rounded-lg hover:bg-zinc-100 flex items-center justify-center transition-colors cursor-pointer focus:outline-none focus-visible:ring-1 focus-visible:ring-[#9900c2] ${
-                          activeMenuId === folder.id ? 'text-[#9900c2] bg-purple-50' : 'text-zinc-400 hover:text-zinc-700'
-                        }`}
-                        title="Folder actions"
-                      >
-                        <span className="material-symbols-outlined text-[18px]" aria-hidden="true">more_vert</span>
-                      </button>
-                      <ActionContextMenu
-                        isOpen={activeMenuId === folder.id}
-                        onClose={() => setActiveMenuId(null)}
-                        onEdit={() => onEditFolder?.(folder)}
-                        onDelete={() => onDeleteFolder?.(folder)}
-                        editLabel="Edit Folder"
-                        deleteLabel="Delete Folder"
-                      />
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onMouseDown={(e) => e.stopPropagation()}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveMenuId(activeMenuId === folder.id ? null : folder.id);
+                          }}
+                          aria-haspopup="menu"
+                          aria-expanded={activeMenuId === folder.id}
+                          aria-label="Folder actions"
+                          className={`w-7 h-7 rounded-[6px] hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer focus:outline-none ${
+                            activeMenuId === folder.id ? 'text-orange-400 bg-orange-950/40' : 'text-zinc-400 hover:text-zinc-100'
+                          }`}
+                          title="Folder actions"
+                        >
+                          <span className="material-symbols-outlined text-[18px]" aria-hidden="true">more_vert</span>
+                        </button>
+                        <ActionContextMenu
+                          isOpen={activeMenuId === folder.id}
+                          onClose={() => setActiveMenuId(null)}
+                          onEdit={() => onEditFolder?.(folder)}
+                          onDelete={() => onDeleteFolder?.(folder)}
+                          onAddChild={onOpenAddListToFolder ? () => onOpenAddListToFolder(folder) : undefined}
+                          addChildLabel="Add List"
+                          addChildIcon="playlist_add"
+                          editLabel="Edit Folder"
+                          deleteLabel="Delete Folder"
+                        />
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Expandable Sub-Items Drawer with Smooth Transition */}
-                {hasItems && (
+                  {/* Expandable Sub-Items Drawer */}
                   <div
-                    className={`transition-all duration-300 ease-in-out border-t border-[#d4c0d5]/20 bg-[#fafafc] ${
+                    className={`transition-all duration-300 ease-in-out border-t border-[#27272a] bg-[#18181b] ${
                       isExpanded ? 'max-h-96 opacity-100 p-3' : 'max-h-0 opacity-0 p-0 overflow-hidden border-t-0'
                     }`}
                   >
                     <div className="space-y-1.5">
-                      <div className="font-mono text-[10px] uppercase font-semibold text-[#837284] px-1">
-                        Contains {folder.items.length} Lists ({folderTaskTotal} Tasks)
+                      <div className="flex items-center justify-between font-mono text-[10px] uppercase font-semibold text-zinc-500 px-1">
+                        <span>Contains {folder.items?.length || 0} Lists ({folderTaskTotal} Tasks)</span>
+                        {onOpenAddListToFolder && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenAddListToFolder(folder)}
+                            className="text-orange-400 hover:text-orange-300 hover:underline cursor-pointer flex items-center gap-0.5 lowercase font-sans text-xs"
+                          >
+                            <span className="material-symbols-outlined text-[12px]">add</span>
+                            <span>new list</span>
+                          </button>
+                        )}
                       </div>
 
-                      {folder.items.map((subItem) => (
-                        <div
-                          key={subItem.id}
-                          className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#d4c0d5]/30 hover:border-[#9900c2]/50 hover:bg-[#f4f2fd]/40 transition-all group cursor-pointer"
-                          onClick={() => onSelectSpace(subItem.id)}
-                        >
-                          <div className="flex items-center gap-2 truncate">
-                            <span
-                              className={`w-2 h-2 rounded-full ${
-                                subItem.active ? 'bg-[#9900c2] animate-pulse' : 'bg-zinc-400'
-                              }`}
-                            />
-                            <span className="font-medium text-xs text-[#1a1b22] truncate group-hover:text-[#9900c2] transition-colors">
-                              {subItem.name}
-                            </span>
-                            {subItem.status && (
-                              <span className="font-mono text-[9px] px-1.5 py-0.2 rounded bg-purple-50 text-[#9900c2] font-semibold border border-purple-200">
-                                {subItem.status}
+                      {hasItems ? (
+                        folder.items.map((subItem) => (
+                          <div
+                            key={subItem.id}
+                            className="flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] hover:border-orange-500/50 hover:bg-[#1f1f23] transition-all group cursor-pointer"
+                            onClick={() => onSelectSpace(subItem.id)}
+                          >
+                            <div className="flex items-center gap-2 truncate">
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                  subItem.active ? 'bg-orange-500 animate-pulse' : 'bg-zinc-500'
+                                }`}
+                              />
+                              <span className="font-medium text-xs text-zinc-200 truncate group-hover:text-orange-400 transition-colors">
+                                {subItem.name}
                               </span>
-                            )}
-                          </div>
+                              {subItem.status && (
+                                <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-[4px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/20">
+                                  {subItem.status}
+                                </span>
+                              )}
+                            </div>
 
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="font-mono text-[10px] text-[#504252] bg-[#eeedf7] px-1.5 py-0.5 rounded">
-                              {subItem.taskCount} tasks
-                            </span>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onSelectSpace(subItem.id);
-                              }}
-                              className="px-2 py-1 rounded bg-[#9900c2]/10 hover:bg-[#9900c2] hover:text-white text-[#9900c2] font-semibold text-[11px] transition-all flex items-center gap-1"
-                            >
-                              <span>Open List</span>
-                              <span className="material-symbols-outlined text-[13px]">
-                                arrow_forward
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="font-mono text-[10px] text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded-[4px]">
+                                {subItem.taskCount} tasks
                               </span>
-                            </button>
+                              <span className="material-symbols-outlined text-[16px] text-zinc-500 group-hover:text-orange-400 transition-colors">
+                                chevron_right
+                              </span>
+                            </div>
                           </div>
+                        ))
+                      ) : (
+                        <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] text-center flex flex-col items-center justify-center gap-2">
+                          <span className="text-xs text-zinc-500 italic">No deliverable lists in this folder yet</span>
+                          {onOpenAddListToFolder && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenAddListToFolder(folder)}
+                              className="px-3 py-1 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center gap-1 shadow-sm transition-all cursor-pointer"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">add</span>
+                              <span>Create First List</span>
+                            </button>
+                          )}
                         </div>
-                      ))}
+                      )}
                     </div>
                   </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 4. Active Sprint 14 Focus Stream & Quick Views */}
-      <div className="bg-white rounded-2xl border border-[#d4c0d5]/40 shadow-xs p-5">
-        <div className="flex items-center justify-between pb-3 border-b border-[#d4c0d5]/20 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-[#9900c2] animate-pulse"></span>
-            <h3 className="font-bold text-xs uppercase tracking-wider text-[#1a1b22]">
-              Active Sprint 14 Deliverables Snapshot
-            </h3>
-          </div>
-
-          <div className="flex items-center gap-2 font-mono text-xs">
-            <button
-              onClick={() => onNavigateToView('board')}
-              className="px-2.5 py-1 rounded-md bg-[#eeedf7] hover:bg-[#9900c2] hover:text-white text-[#504252] transition-all"
-            >
-              Kanban Board
-            </button>
-            <button
-              onClick={() => onNavigateToView('table')}
-              className="px-2.5 py-1 rounded-md bg-[#eeedf7] hover:bg-[#9900c2] hover:text-white text-[#504252] transition-all"
-            >
-              Table View
-            </button>
-            <button
-              onClick={() => onNavigateToView('timeline')}
-              className="px-2.5 py-1 rounded-md bg-[#eeedf7] hover:bg-[#9900c2] hover:text-white text-[#504252] transition-all"
-            >
-              Timeline
-            </button>
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          {tasks.slice(0, 4).map((task) => (
-            <div
-              key={task.id}
-              className="flex items-center justify-between p-2.5 rounded-xl border border-[#d4c0d5]/30 hover:bg-[#f4f2fd]/50 transition-colors"
-            >
-              <div className="flex items-center gap-3 truncate">
-                <span className="font-mono text-[11px] font-bold text-[#5f5e61]">{task.id}</span>
-                <span className="font-semibold text-xs text-[#1a1b22] truncate">{task.title}</span>
-              </div>
-
-              <div className="flex items-center gap-3 shrink-0 font-mono text-[10px]">
-                <span
-                  className={`px-2 py-0.5 rounded-full font-semibold ${
-                    task.status === 'In Progress'
-                      ? 'bg-purple-50 text-[#9900c2] border border-purple-200'
-                      : task.status === 'Done'
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      : 'bg-zinc-100 text-zinc-700 border border-zinc-200'
-                  }`}
-                >
-                  {task.status}
-                </span>
-                <span className="text-[#5f5e61]">{task.dueDate || 'Oct 24'}</span>
-                <div className="w-5 h-5 rounded-full bg-zinc-800 text-white flex items-center justify-center font-bold text-[9px]">
-                  {task.assignee.initials}
                 </div>
-              </div>
-            </div>
-          ))}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

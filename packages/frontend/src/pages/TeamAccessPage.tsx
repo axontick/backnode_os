@@ -110,35 +110,35 @@ export const TeamAccessPage: React.FC = () => {
   const getAccessBadgeStyle = (level?: string) => {
     switch ((level || 'MEMBER').toUpperCase()) {
       case 'OWNER':
-        return 'bg-[#fbd7ff] text-[#670085] border-[#9900c2]/30';
+        return 'bg-orange-950/40 text-orange-400 border-orange-500/30';
       case 'ADMIN':
-        return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+        return 'bg-indigo-950/40 text-indigo-400 border-indigo-500/30';
       case 'VIEWER':
-        return 'bg-zinc-100 text-zinc-700 border-zinc-200';
+        return 'bg-zinc-900 text-zinc-400 border-zinc-700';
       case 'MEMBER':
       default:
-        return 'bg-emerald-50 text-emerald-700 border-emerald-200';
+        return 'bg-emerald-950/40 text-emerald-400 border-emerald-500/30';
     }
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#fafafc] overflow-y-auto custom-scrollbar select-none">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto custom-scrollbar select-none text-zinc-100">
       {/* 1. Header Toolbar */}
-      <div className="px-8 pt-8 pb-6 border-b border-[#d4c0d5]/30 bg-white shrink-0">
+      <div className="px-8 pt-8 pb-6 border-b border-[#27272a] bg-[#0c0a09] shrink-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-[#9900c2] to-[#670085] flex items-center justify-center text-white shadow-sm shadow-[#9900c2]/20">
+              <div className="w-8 h-8 rounded-[6px] bg-orange-600 flex items-center justify-center text-white shadow-sm shadow-orange-600/20">
                 <span className="material-symbols-outlined text-[18px]">shield_person</span>
               </div>
-              <h1 className="text-xl font-bold text-[#1a1b22] tracking-tight">
+              <h1 className="text-xl font-bold text-zinc-100 tracking-tight font-headline">
                 Team &amp; Access Control
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[11px] font-mono font-semibold bg-[#f4f2fd] text-[#9900c2] border border-[#d4c0d5]/40">
+              <span className="px-2 py-0.5 rounded-[6px] text-[11px] font-mono font-semibold bg-orange-950/40 text-orange-400 border border-orange-500/30">
                 {activeUserSpace?.name || 'Current Space'}
               </span>
             </div>
-            <p className="text-xs text-[#504252] pl-10.5">
+            <p className="text-xs text-zinc-400 pl-10.5">
               Manage operators, grant role-based permissions, and invite collaborators into this workspace.
             </p>
           </div>
@@ -146,16 +146,16 @@ export const TeamAccessPage: React.FC = () => {
           <div className="flex items-center gap-2.5">
             <button
               onClick={handleCopyInviteLink}
-              className="px-3.5 py-2 rounded-xl bg-white border border-[#d4c0d5]/50 hover:bg-[#f4f2fd] text-[#1a1b22] text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
+              className="h-8 px-3.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:bg-zinc-800 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-xs"
               title="Copy shareable workspace join link"
             >
-              <span className="material-symbols-outlined text-[16px] text-[#9900c2]">link</span>
+              <span className="material-symbols-outlined text-[16px] text-orange-400">link</span>
               <span>Copy Invite Link</span>
             </button>
 
             <button
               onClick={() => setIsInviteModalOpen(true)}
-              className="px-4 py-2 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98]"
+              className="h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98]"
             >
               <span className="material-symbols-outlined text-[18px]">person_add</span>
               <span>Invite Team Member</span>
@@ -163,45 +163,45 @@ export const TeamAccessPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Quick Stats Ribbon */}
+        {/* Quick Stats Ribbon (Bento KPI Style) */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
-          <div className="p-3.5 rounded-xl bg-[#fafafc] border border-[#d4c0d5]/30 flex flex-col gap-1">
-            <span className="text-[11px] font-mono text-[#837284] uppercase tracking-wider">
+          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
               Total Roster
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-[#1a1b22] font-mono">{totalCount}</span>
-              <span className="text-[11px] text-[#504252]">operators</span>
+              <span className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">{totalCount}</span>
+              <span className="text-[11px] text-zinc-400">operators</span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#fafafc] border border-[#d4c0d5]/30 flex flex-col gap-1">
-            <span className="text-[11px] font-mono text-[#837284] uppercase tracking-wider">
+          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
               Owners &amp; Admins
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-[#9900c2] font-mono">{adminCount}</span>
-              <span className="text-[11px] text-[#504252]">with elevated roles</span>
+              <span className="text-2xl md:text-3xl font-bold text-orange-400 font-mono">{adminCount}</span>
+              <span className="text-[11px] text-zinc-400">with elevated roles</span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#fafafc] border border-[#d4c0d5]/30 flex flex-col gap-1">
-            <span className="text-[11px] font-mono text-[#837284] uppercase tracking-wider">
+          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
               Active Operators
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-emerald-600 font-mono">{activeCount}</span>
-              <span className="text-[11px] text-[#504252]">authorized</span>
+              <span className="text-2xl md:text-3xl font-bold text-emerald-400 font-mono">{activeCount}</span>
+              <span className="text-[11px] text-zinc-400">authorized</span>
             </div>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-[#fafafc] border border-[#d4c0d5]/30 flex flex-col gap-1">
-            <span className="text-[11px] font-mono text-[#837284] uppercase tracking-wider">
+          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
               Pending Invites
             </span>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-amber-600 font-mono">{invitedCount}</span>
-              <span className="text-[11px] text-[#504252]">awaiting sign-on</span>
+              <span className="text-2xl md:text-3xl font-bold text-amber-400 font-mono">{invitedCount}</span>
+              <span className="text-[11px] text-zinc-400">awaiting sign-on</span>
             </div>
           </div>
         </div>
@@ -210,9 +210,9 @@ export const TeamAccessPage: React.FC = () => {
       {/* 2. Main Body Content */}
       <div className="p-8 flex flex-col gap-6 max-w-7xl w-full mx-auto">
         {/* Search & Filters Filter Bar */}
-        <div className="bg-white p-3.5 rounded-2xl border border-[#d4c0d5]/30 shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
+        <div className="bg-[#121214] p-3.5 rounded-[6px] border border-[#27272a] shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
           <div className="relative w-full md:w-80">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-[#837284]">
+            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-zinc-500">
               search
             </span>
             <input
@@ -220,13 +220,13 @@ export const TeamAccessPage: React.FC = () => {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search member by name, email, or title..."
-              className="w-full bg-[#f4f2fd]/50 border border-[#d4c0d5]/40 rounded-xl pl-9 pr-4 py-2 text-xs text-[#1a1b22] placeholder-[#837284] focus:outline-none focus:border-[#9900c2]"
+              className="w-full h-[34px] bg-[#18181b] border border-[#27272a] rounded-[6px] pl-9 pr-4 text-[13px] text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
             />
           </div>
 
           <div className="flex items-center gap-2 w-full md:w-auto overflow-x-auto pb-1 md:pb-0">
             {/* Role Filter Tabs */}
-            <div className="flex items-center p-0.5 rounded-xl bg-[#f4f2fd]/70 border border-[#d4c0d5]/40 text-xs font-medium shrink-0">
+            <div className="flex items-center p-0.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-xs font-medium shrink-0">
               {[
                 { key: 'ALL', label: 'All Roles' },
                 { key: 'OWNER', label: 'Owners' },
@@ -238,10 +238,10 @@ export const TeamAccessPage: React.FC = () => {
                 <button
                   key={tab.key}
                   onClick={() => setSelectedRoleFilter(tab.key)}
-                  className={`px-3 py-1.5 rounded-lg transition-all ${
+                  className={`px-3 py-1 rounded-[6px] transition-all text-xs font-medium ${
                     selectedRoleFilter === tab.key
-                      ? 'bg-white text-[#9900c2] font-semibold shadow-xs'
-                      : 'text-[#504252] hover:text-[#1a1b22]'
+                      ? 'bg-orange-600 text-white font-semibold shadow-xs'
+                      : 'text-zinc-400 hover:text-zinc-200'
                   }`}
                 >
                   {tab.label}
@@ -253,7 +253,7 @@ export const TeamAccessPage: React.FC = () => {
             <select
               value={selectedDeptFilter}
               onChange={(e) => setSelectedDeptFilter(e.target.value)}
-              className="bg-white border border-[#d4c0d5]/40 rounded-xl px-3 py-1.5 text-xs text-[#1a1b22] focus:outline-none focus:border-[#9900c2] font-medium"
+              className="h-[34px] bg-[#18181b] border border-[#27272a] rounded-[6px] px-3 text-xs text-zinc-200 focus:outline-none focus:border-orange-500 font-medium transition-colors"
             >
               <option value="ALL">All Departments</option>
               <option value="Engineering">Engineering</option>
@@ -266,13 +266,13 @@ export const TeamAccessPage: React.FC = () => {
         </div>
 
         {/* 3. Team Members Table */}
-        <div className="bg-white rounded-2xl border border-[#d4c0d5]/30 shadow-xs overflow-hidden">
-          <div className="px-6 py-4 border-b border-[#d4c0d5]/30 flex items-center justify-between">
+        <div className="bg-[#121214] rounded-[6px] border border-[#27272a] shadow-xs overflow-hidden">
+          <div className="px-6 py-4 border-b border-[#27272a] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm text-[#1a1b22]">Workspace Members</span>
-              <span className="font-mono text-xs text-[#837284]">({filteredMembers.length})</span>
+              <span className="font-semibold text-sm text-zinc-100">Workspace Members</span>
+              <span className="font-mono text-xs text-zinc-400">({filteredMembers.length})</span>
             </div>
-            <span className="text-[11px] font-mono text-[#837284]">
+            <span className="text-[11px] font-mono text-zinc-400">
               Click on any role badge to modify member access
             </span>
           </div>
@@ -280,7 +280,7 @@ export const TeamAccessPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#d4c0d5]/25 bg-[#fafafc]/70 text-[#837284] font-mono uppercase text-[10px] tracking-wider">
+                <tr className="border-b border-[#27272a] bg-[#18181b]/70 text-zinc-400 font-mono uppercase text-[10px] tracking-wider">
                   <th className="py-3 px-6">Member / Operator</th>
                   <th className="py-3 px-4">Role &amp; Access Level</th>
                   <th className="py-3 px-4">Department</th>
@@ -289,22 +289,22 @@ export const TeamAccessPage: React.FC = () => {
                   <th className="py-3 px-6 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d4c0d5]/20">
+              <tbody className="divide-y divide-[#27272a]">
                 {filteredMembers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-[#837284]">
+                    <td colSpan={6} className="py-12 text-center text-zinc-500">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <span className="material-symbols-outlined text-[36px] text-[#837284]/50">
+                        <span className="material-symbols-outlined text-[36px] text-zinc-600">
                           group_off
                         </span>
-                        <p className="font-medium text-xs">No team members match your filters</p>
+                        <p className="font-medium text-xs text-zinc-400">No team members match your filters</p>
                         <button
                           onClick={() => {
                             setSearchQuery('');
                             setSelectedRoleFilter('ALL');
                             setSelectedDeptFilter('ALL');
                           }}
-                          className="text-xs text-[#9900c2] font-semibold hover:underline"
+                          className="text-xs text-orange-400 font-semibold hover:underline"
                         >
                           Reset filters
                         </button>
@@ -323,22 +323,22 @@ export const TeamAccessPage: React.FC = () => {
                     return (
                       <tr
                         key={member.id}
-                        className="hover:bg-[#f4f2fd]/30 transition-colors group"
+                        className="hover:bg-zinc-800/40 transition-colors group"
                       >
                         {/* Member / Operator */}
                         <td className="py-3.5 px-6">
                           <div className="flex items-center gap-3">
                             <div
-                              className="w-9 h-9 rounded-xl flex items-center justify-center font-bold text-xs shadow-xs text-white shrink-0"
-                              style={{ backgroundColor: member.avatarBg || '#9900c2' }}
+                              className="w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs shadow-xs text-white shrink-0"
+                              style={{ backgroundColor: member.avatarBg && member.avatarBg !== '#9900c2' ? member.avatarBg : '#27272a' }}
                             >
                               {member.initials || member.name.slice(0, 2).toUpperCase()}
                             </div>
                             <div className="flex flex-col min-w-0">
-                              <span className="font-semibold text-[#1a1b22] text-xs truncate">
+                              <span className="font-semibold text-zinc-100 text-xs truncate">
                                 {member.name}
                               </span>
-                              <span className="text-[11px] text-[#71677c] font-mono truncate">
+                              <span className="text-[11px] text-zinc-400 font-mono truncate">
                                 {member.email || `${member.name.toLowerCase().replace(/\s+/g, '.')}@backnode.io`}
                               </span>
                             </div>
@@ -353,7 +353,7 @@ export const TeamAccessPage: React.FC = () => {
                               onClick={() =>
                                 setOpenRoleDropdownId(isDropdownOpen ? null : member.id)
                               }
-                              className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono font-semibold flex items-center gap-1.5 transition-all hover:scale-105 ${getAccessBadgeStyle(
+                              className={`px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-semibold flex items-center gap-1.5 transition-all hover:border-orange-500/50 ${getAccessBadgeStyle(
                                 accessLevel
                               )}`}
                               title="Click to change access level"
@@ -367,10 +367,10 @@ export const TeamAccessPage: React.FC = () => {
                             {/* Role Dropdown Menu */}
                             {isDropdownOpen && (
                               <div
-                                className="absolute left-0 top-full mt-1.5 w-60 bg-white border border-[#d4c0d5]/70 rounded-2xl shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100"
+                                className="absolute left-0 top-full mt-1.5 w-60 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100"
                                 onClick={(e) => e.stopPropagation()}
                               >
-                                <span className="px-2 py-1 text-[10px] font-mono uppercase text-[#837284] font-bold">
+                                <span className="px-2 py-1 text-[10px] font-mono uppercase text-zinc-400 font-bold">
                                   Assign Access Role
                                 </span>
                                 {[
@@ -399,23 +399,23 @@ export const TeamAccessPage: React.FC = () => {
                                     key={r.lvl}
                                     type="button"
                                     onClick={() => handleRoleChange(member.id, r.lvl as any)}
-                                    className={`flex flex-col text-left p-2 rounded-xl transition-colors ${
+                                    className={`flex flex-col text-left p-2 rounded-[6px] transition-colors ${
                                       accessLevel === r.lvl
-                                        ? 'bg-[#f4f2fd] border border-[#9900c2]/30'
-                                        : 'hover:bg-[#fafafc] border border-transparent'
+                                        ? 'bg-orange-950/40 border border-orange-500/30'
+                                        : 'hover:bg-[#18181b] border border-transparent'
                                     }`}
                                   >
                                     <div className="flex items-center justify-between">
-                                      <span className="font-semibold text-xs text-[#1a1b22]">
+                                      <span className={`font-semibold text-xs ${accessLevel === r.lvl ? 'text-orange-400' : 'text-zinc-200'}`}>
                                         {r.title}
                                       </span>
                                       {accessLevel === r.lvl && (
-                                        <span className="material-symbols-outlined text-[14px] text-[#9900c2]">
+                                        <span className="material-symbols-outlined text-[14px] text-orange-400">
                                           check
                                         </span>
                                       )}
                                     </div>
-                                    <span className="text-[10px] text-[#837284]">{r.desc}</span>
+                                    <span className="text-[10px] text-zinc-400">{r.desc}</span>
                                   </button>
                                 ))}
                               </div>
@@ -424,23 +424,23 @@ export const TeamAccessPage: React.FC = () => {
                         </td>
 
                         {/* Department */}
-                        <td className="py-3.5 px-4 font-mono text-[11px] text-[#504252]">
+                        <td className="py-3.5 px-4 font-mono text-[11px] text-zinc-400">
                           {member.department}
                         </td>
 
                         {/* Workload */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-semibold text-[#1a1b22]">
+                            <span className="font-mono text-xs font-semibold text-zinc-200">
                               {member.activeTasks}
                             </span>
                             <span
-                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${
+                              className={`px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono ${
                                 member.capacityStatus === 'Overloaded'
-                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  ? 'bg-rose-950/40 text-rose-400 border border-rose-500/30'
                                   : member.capacityStatus === 'Near capacity'
-                                  ? 'bg-amber-50 text-amber-700 border border-amber-200'
-                                  : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  ? 'bg-amber-950/40 text-amber-400 border border-amber-500/30'
+                                  : 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
                               }`}
                             >
                               {member.capacityStatus || 'Available'}
@@ -451,13 +451,13 @@ export const TeamAccessPage: React.FC = () => {
                         {/* Status */}
                         <td className="py-3.5 px-4">
                           {member.status === 'Invited' ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-mono bg-amber-50 text-amber-800 border border-amber-200 font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] text-[10.5px] font-mono bg-amber-950/40 text-amber-400 border border-amber-500/30 font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
                               <span>Invited</span>
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-mono bg-emerald-50 text-emerald-800 border border-emerald-200 font-semibold">
-                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] text-[10.5px] font-mono bg-emerald-950/40 text-emerald-400 border border-emerald-500/30 font-semibold">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
                               <span>Active</span>
                             </span>
                           )}
@@ -471,7 +471,7 @@ export const TeamAccessPage: React.FC = () => {
                                 onClick={() => {
                                   showToast(`Invite resent to ${member.email || member.name}`);
                                 }}
-                                className="px-2 py-1 rounded-lg border border-[#d4c0d5]/40 hover:bg-[#f4f2fd] text-[#9900c2] text-[11px] font-medium transition-colors"
+                                className="px-2 py-1 rounded-[6px] border border-[#27272a] hover:bg-zinc-800 text-orange-400 text-[11px] font-medium transition-colors"
                                 title="Resend invitation email"
                               >
                                 Resend
@@ -479,7 +479,7 @@ export const TeamAccessPage: React.FC = () => {
                             )}
                             <button
                               onClick={() => setMemberToRemove(member)}
-                              className="w-7 h-7 rounded-lg hover:bg-rose-50 text-[#837284] hover:text-rose-600 flex items-center justify-center transition-colors"
+                              className="w-7 h-7 rounded-[6px] hover:bg-rose-950/40 text-zinc-400 hover:text-rose-400 flex items-center justify-center transition-colors"
                               title="Revoke access & remove operator"
                             >
                               <span className="material-symbols-outlined text-[16px]">
@@ -498,23 +498,23 @@ export const TeamAccessPage: React.FC = () => {
         </div>
 
         {/* 4. Role-Based Permissions Matrix Guide */}
-        <div className="bg-white rounded-2xl border border-[#d4c0d5]/30 p-6 shadow-xs flex flex-col gap-4">
+        <div className="bg-[#121214] rounded-[6px] border border-[#27272a] p-6 shadow-xs flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <span className="material-symbols-outlined text-[20px] text-[#9900c2]">
+            <span className="material-symbols-outlined text-[20px] text-orange-400">
               admin_panel_settings
             </span>
-            <h2 className="font-semibold text-sm text-[#1a1b22]">
+            <h2 className="font-semibold text-sm text-zinc-100 font-headline">
               Workspace Role Permissions Matrix
             </h2>
           </div>
-          <p className="text-xs text-[#504252]">
+          <p className="text-xs text-zinc-400">
             Backnode OS implements strict multi-tenant role enforcement. The capabilities below detail the authorization level granted to each operator role.
           </p>
 
           <div className="overflow-x-auto pt-2">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
-                <tr className="border-b border-[#d4c0d5]/30 text-[#837284] font-mono uppercase text-[10px] tracking-wider">
+                <tr className="border-b border-[#27272a] text-zinc-400 font-mono uppercase text-[10px] tracking-wider">
                   <th className="py-2.5 px-4">Permission Area</th>
                   <th className="py-2.5 px-4 text-center">Owner</th>
                   <th className="py-2.5 px-4 text-center">Admin</th>
@@ -522,51 +522,51 @@ export const TeamAccessPage: React.FC = () => {
                   <th className="py-2.5 px-4 text-center">Viewer</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d4c0d5]/20 text-[11px]">
+              <tbody className="divide-y divide-[#27272a] text-[11px]">
                 <tr>
-                  <td className="py-2.5 px-4 font-medium text-[#1a1b22]">
+                  <td className="py-2.5 px-4 font-medium text-zinc-200">
                     Workspace Ownership &amp; Billing Control
                   </td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-zinc-300">—</td>
-                  <td className="py-2.5 px-4 text-center text-zinc-300">—</td>
-                  <td className="py-2.5 px-4 text-center text-zinc-300">—</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-zinc-600">—</td>
+                  <td className="py-2.5 px-4 text-center text-zinc-600">—</td>
+                  <td className="py-2.5 px-4 text-center text-zinc-600">—</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-4 font-medium text-[#1a1b22]">
+                  <td className="py-2.5 px-4 font-medium text-zinc-200">
                     Invite, Re-assign &amp; Revoke Member Access
                   </td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-zinc-300">—</td>
-                  <td className="py-2.5 px-4 text-center text-zinc-300">—</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-zinc-600">—</td>
+                  <td className="py-2.5 px-4 text-center text-zinc-600">—</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-4 font-medium text-[#1a1b22]">
+                  <td className="py-2.5 px-4 font-medium text-zinc-200">
                     Configure Task Spaces, Folders &amp; CRM Stages
                   </td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-zinc-300">—</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-zinc-600">—</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-4 font-medium text-[#1a1b22]">
+                  <td className="py-2.5 px-4 font-medium text-zinc-200">
                     Create, Triage &amp; Update Tasks &amp; CRM Deals
                   </td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-zinc-300">—</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-zinc-600">—</td>
                 </tr>
                 <tr>
-                  <td className="py-2.5 px-4 font-medium text-[#1a1b22]">
+                  <td className="py-2.5 px-4 font-medium text-zinc-200">
                     Read-Only Kanban Boards, Calendar &amp; Reports
                   </td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
-                  <td className="py-2.5 px-4 text-center text-emerald-600 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
+                  <td className="py-2.5 px-4 text-center text-emerald-400 font-bold">✓</td>
                 </tr>
               </tbody>
             </table>
@@ -577,28 +577,28 @@ export const TeamAccessPage: React.FC = () => {
       {/* 5. Invite Team Member Modal */}
       {isInviteModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
           onClick={() => setIsInviteModalOpen(false)}
         >
           <div
-            className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-[#d4c0d5]/60 overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
+            className="w-full max-w-lg bg-[#121214] rounded-[6px] shadow-2xl border border-[#27272a] overflow-hidden flex flex-col animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-6 py-5 border-b border-[#d4c0d5]/30 flex items-center justify-between bg-[#fafafc]">
+            <div className="px-6 py-5 border-b border-[#27272a] flex items-center justify-between bg-[#18181b]">
               <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-xl bg-[#9900c2] text-white flex items-center justify-center shadow-xs">
+                <div className="w-8 h-8 rounded-[6px] bg-orange-600 text-white flex items-center justify-center shadow-xs">
                   <span className="material-symbols-outlined text-[18px]">person_add</span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-sm text-[#1a1b22]">Invite Team Member</h3>
-                  <p className="text-[11px] text-[#71677c]">
+                  <h3 className="font-semibold text-sm text-zinc-100 font-headline">Invite Team Member</h3>
+                  <p className="text-[11px] text-zinc-400">
                     Add an operator to {activeUserSpace?.name || 'this workspace'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={() => setIsInviteModalOpen(false)}
-                className="w-7 h-7 rounded-full flex items-center justify-center hover:bg-[#eeedf7] text-[#837284]"
+                className="w-7 h-7 rounded-[6px] flex items-center justify-center hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 transition-colors"
               >
                 ✕
               </button>
@@ -607,7 +607,7 @@ export const TeamAccessPage: React.FC = () => {
             <form onSubmit={handleSendInvite} className="p-6 flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-mono text-[#837284] uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                     Full Name *
                   </label>
                   <input
@@ -616,12 +616,12 @@ export const TeamAccessPage: React.FC = () => {
                     value={inviteName}
                     onChange={(e) => setInviteName(e.target.value)}
                     placeholder="e.g. Jordan Miller"
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-[#d4c0d5]/60 rounded-xl focus:outline-none focus:border-[#9900c2]"
+                    className="w-full h-[34px] px-3 text-[13px] bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-mono text-[#837284] uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                     Work Email *
                   </label>
                   <input
@@ -630,14 +630,14 @@ export const TeamAccessPage: React.FC = () => {
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="jordan@company.com"
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-[#d4c0d5]/60 rounded-xl focus:outline-none focus:border-[#9900c2]"
+                    className="w-full h-[34px] px-3 text-[13px] bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-mono text-[#837284] uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                     Job Title / Role
                   </label>
                   <input
@@ -645,18 +645,18 @@ export const TeamAccessPage: React.FC = () => {
                     value={inviteRole}
                     onChange={(e) => setInviteRole(e.target.value)}
                     placeholder="e.g. Staff Backend Engineer"
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-[#d4c0d5]/60 rounded-xl focus:outline-none focus:border-[#9900c2]"
+                    className="w-full h-[34px] px-3 text-[13px] bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-mono text-[#837284] uppercase tracking-wider mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
                     Department
                   </label>
                   <select
                     value={inviteDept}
                     onChange={(e) => setInviteDept(e.target.value as any)}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-[#d4c0d5]/60 rounded-xl focus:outline-none focus:border-[#9900c2]"
+                    className="w-full h-[34px] px-3 text-xs bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-200 focus:outline-none focus:border-orange-500 font-medium transition-colors"
                   >
                     <option value="Engineering">Engineering</option>
                     <option value="Product">Product</option>
@@ -669,7 +669,7 @@ export const TeamAccessPage: React.FC = () => {
 
               {/* Role Selection Cards */}
               <div>
-                <label className="block text-[11px] font-mono text-[#837284] uppercase tracking-wider mb-1.5">
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
                   Select Access Level
                 </label>
                 <div className="grid grid-cols-2 gap-2">
@@ -698,38 +698,38 @@ export const TeamAccessPage: React.FC = () => {
                     <div
                       key={r.lvl}
                       onClick={() => setInviteAccessLevel(r.lvl as any)}
-                      className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                      className={`p-2.5 rounded-[6px] border cursor-pointer transition-all ${
                         inviteAccessLevel === r.lvl
-                          ? 'border-[#9900c2] bg-[#f4f2fd]/60 ring-1 ring-[#9900c2]/30'
-                          : 'border-[#d4c0d5]/40 hover:bg-[#fafafc]'
+                          ? 'border-orange-500 bg-orange-950/40 ring-1 ring-orange-500/30'
+                          : 'border-[#27272a] bg-[#18181b] hover:border-zinc-700'
                       }`}
                     >
                       <div className="flex items-center justify-between">
-                        <span className="font-semibold text-xs text-[#1a1b22]">
+                        <span className={`font-semibold text-xs ${inviteAccessLevel === r.lvl ? 'text-orange-400' : 'text-zinc-200'}`}>
                           {r.title}
                         </span>
                         {inviteAccessLevel === r.lvl && (
-                          <span className="w-2 h-2 rounded-full bg-[#9900c2]"></span>
+                          <span className="w-2 h-2 rounded-full bg-orange-500"></span>
                         )}
                       </div>
-                      <p className="text-[10px] text-[#837284] mt-0.5">{r.desc}</p>
+                      <p className="text-[10px] text-zinc-400 mt-0.5">{r.desc}</p>
                     </div>
                   ))}
                 </div>
               </div>
 
-              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#d4c0d5]/30">
+              <div className="pt-2 flex items-center justify-end gap-2 border-t border-[#27272a]">
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(false)}
-                  className="px-4 py-2 rounded-xl border border-[#d4c0d5]/50 text-xs font-semibold text-[#504252] hover:bg-[#fafafc]"
+                  className="h-8 px-4 rounded-[6px] border border-[#27272a] text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="px-5 py-2 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center gap-1.5"
+                  className="h-8 px-5 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center gap-1.5"
                 >
                   <span className="material-symbols-outlined text-[16px]">send</span>
                   <span>{isSubmitting ? 'Sending...' : 'Send Invitation'}</span>
@@ -743,34 +743,34 @@ export const TeamAccessPage: React.FC = () => {
       {/* 6. Revoke / Remove Confirmation Modal */}
       {memberToRemove && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150"
           onClick={() => setMemberToRemove(null)}
         >
           <div
-            className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-rose-200 overflow-hidden p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-150"
+            className="w-full max-w-sm bg-[#121214] rounded-[6px] shadow-2xl border border-rose-900/50 overflow-hidden p-6 flex flex-col gap-4 animate-in zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-[6px] bg-rose-950/40 text-rose-400 flex items-center justify-center border border-rose-500/30">
               <span className="material-symbols-outlined text-[22px]">person_remove</span>
             </div>
             <div>
-              <h3 className="font-semibold text-sm text-[#1a1b22]">
+              <h3 className="font-semibold text-sm text-zinc-100 font-headline">
                 Revoke Operator Access?
               </h3>
-              <p className="text-xs text-[#504252] mt-1">
-                Are you sure you want to remove <strong>{memberToRemove.name}</strong> from {activeUserSpace?.name || 'this workspace'}? They will immediately lose access to task boards and pipelines.
+              <p className="text-xs text-zinc-400 mt-1">
+                Are you sure you want to remove <strong className="text-zinc-200">{memberToRemove.name}</strong> from {activeUserSpace?.name || 'this workspace'}? They will immediately lose access to task boards and pipelines.
               </p>
             </div>
-            <div className="flex items-center justify-end gap-2 pt-2">
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#27272a]">
               <button
                 onClick={() => setMemberToRemove(null)}
-                className="px-3.5 py-1.5 rounded-lg border border-[#d4c0d5]/50 text-xs font-semibold text-[#504252] hover:bg-[#fafafc]"
+                className="h-8 px-3.5 rounded-[6px] border border-[#27272a] text-xs font-semibold text-zinc-300 hover:bg-zinc-800 transition-colors"
               >
                 Keep Member
               </button>
               <button
                 onClick={confirmRemove}
-                className="px-3.5 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-xs"
+                className="h-8 px-3.5 rounded-[6px] bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-xs transition-colors"
               >
                 Revoke Access
               </button>

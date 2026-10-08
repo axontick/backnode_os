@@ -8,6 +8,7 @@ import {
 import { initialCrmPipelineSettings, initialCrmStages } from '../mockData';
 import { PipelineWinLossView } from './PipelineWinLossView';
 import { CrmPipelineSettings } from './CrmPipelineSettings';
+import { findPipelineSubFolder } from '../utils/treeUtils';
 
 interface PipelineCrmViewProps {
   deals: CrmDeal[];
@@ -30,6 +31,8 @@ interface PipelineCrmViewProps {
   globalStageFilter?: string | null;
   globalOwnerFilter?: string | null;
   onClearGlobalFilters?: () => void;
+  activePipelineSubFolderId?: string | null;
+  onClearSubFolderFilter?: () => void;
 }
 
 export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
@@ -53,6 +56,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   globalStageFilter,
   globalOwnerFilter,
   onClearGlobalFilters,
+  activePipelineSubFolderId,
+  onClearSubFolderFilter,
 }) => {
   const [isPipelinePickerOpen, setIsPipelinePickerOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
@@ -71,8 +76,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     id: 'pipe-enterprise',
     name: 'Enterprise Deals 2026',
     description: 'High ARR strategic software licenses and cloud migration contracts.',
-    icon: 'business',
-    color: '#9900c2',
+    icon: 'leaderboard',
+    color: '#ea580c',
     dealCount: deals.length,
     totalValue: deals.reduce((sum, d) => sum + d.value, 0),
   };
@@ -87,7 +92,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     {
       name: 'Qualified Lead',
       title: 'Qualified Lead',
-      dotColor: 'bg-[#5f5e61]',
+      dotColor: 'bg-zinc-500',
       totalFormatted: '$85k',
     },
     {
@@ -99,7 +104,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     {
       name: 'Proposal Submitted',
       title: 'Proposal Submitted',
-      dotColor: 'bg-[#9900c2]',
+      dotColor: 'bg-orange-500',
       totalFormatted: '$160k',
       isHighlighted: true,
     },
@@ -128,6 +133,12 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   // Unique owners for owner filter and owner grouping
   const allOwners = Array.from(new Set(pipelineDeals.map((d) => d.owner)));
 
+  // Active CRM Sub-folder if filtered (recursively resolved at any depth)
+  const activePipelineSubFolder = findPipelineSubFolder(
+    activePipeline.subFolders,
+    activePipelineSubFolderId
+  );
+
   // Filter deals
   const filteredDeals = pipelineDeals.filter((d) => {
     // Search query: checks internal search or top bar global search
@@ -150,6 +161,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     // Owner filter: checks internal owner filter or top bar global owner filter
     const activeOwner = ownerFilter || globalOwnerFilter || null;
     if (activeOwner && d.owner !== activeOwner) return false;
+
+    // Sub-folder filter
+    if (activePipelineSubFolderId && d.subFolderId !== activePipelineSubFolderId) return false;
 
     // Quick action filter
     if (quickActionFilter === 'high-value' && d.value < 100000) return false;
@@ -184,7 +198,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     stageFilter ||
     globalStageFilter ||
     ownerFilter ||
-    globalOwnerFilter
+    globalOwnerFilter ||
+    activePipelineSubFolderId
   );
 
   const handleClearCrmFilters = () => {
@@ -192,6 +207,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     setQuickActionFilter(null);
     setStageFilter(null);
     setOwnerFilter(null);
+    if (onClearSubFolderFilter) {
+      onClearSubFolderFilter();
+    }
     if (onClearGlobalFilters) {
       onClearGlobalFilters();
     }
@@ -205,7 +223,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           title: ownerName,
           dotColor:
             idx === 0
-              ? 'bg-[#9900c2]'
+              ? 'bg-orange-500'
               : idx === 1
               ? 'bg-blue-500'
               : idx === 2
@@ -228,7 +246,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {
             key: 'strong-prob',
             title: 'Strong Opp (60-79%)',
-            dotColor: 'bg-[#9900c2]',
+            dotColor: 'bg-orange-500',
             isHighlighted: false,
             filterDeals: (d: CrmDeal) => d.probability >= 60 && d.probability < 80,
             defaultStage: 'Proposal Submitted' as CrmDeal['stage'],
@@ -244,7 +262,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {
             key: 'early-prob',
             title: 'Early Stage (<40%)',
-            dotColor: 'bg-[#5f5e61]',
+            dotColor: 'bg-zinc-500',
             isHighlighted: false,
             filterDeals: (d: CrmDeal) => d.probability < 40,
             defaultStage: 'Qualified Lead' as CrmDeal['stage'],
@@ -262,17 +280,17 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   // When viewing Win/Loss Analytics for this specific pipeline
   if (currentView === 'analytics') {
     return (
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fafafc]">
+      <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100">
         {/* Navigation Sub-Bar */}
-        <div className="px-6 bg-white border-b border-[#d4c0d5]/30 flex items-center justify-between shrink-0 h-11 text-xs">
+        <div className="px-6 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11 text-xs">
           <div className="flex items-center gap-4 h-full">
             {/* Active Pipeline Identifier */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#f4f2fd] border border-[#d4c0d5]/50 text-xs font-semibold text-[#1a1b22]">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-[#18181b] border border-[#27272a] text-xs font-semibold text-zinc-100">
               <span
                 className="material-symbols-outlined text-[15px]"
-                style={{ color: activePipeline.color || '#9900c2' }}
+                style={{ color: activePipeline.color && activePipeline.color !== '#9900c2' ? activePipeline.color : '#ea580c' }}
               >
-                {activePipeline.icon || 'trending_up'}
+                {activePipeline.icon || 'leaderboard'}
               </span>
               <span className="truncate max-w-[140px]">{activePipeline.name}</span>
             </div>
@@ -281,7 +299,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               <button
                 type="button"
                 onClick={onOpenAddPipeline}
-                className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#9900c2] hover:bg-[#b731e0] text-white text-[11px] font-semibold transition-all shadow-xs"
+                className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-semibold transition-all shadow-xs"
                 title="Create new sales pipeline"
               >
                 <span className="material-symbols-outlined text-[14px]">add</span>
@@ -289,25 +307,25 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               </button>
             )}
 
-            <div className="h-4 w-px bg-[#d4c0d5]/40 my-auto"></div>
+            <div className="h-4 w-px bg-[#27272a] my-auto"></div>
 
             <button
               onClick={() => onSelectView?.('board')}
-              className="py-2.5 flex items-center gap-1.5 text-[#504252] hover:text-[#1a1b22] transition-colors h-full"
+              className="py-2.5 flex items-center gap-1.5 text-zinc-400 hover:text-zinc-100 transition-colors h-full"
             >
               <span className="material-symbols-outlined text-[16px]">view_kanban</span>
               <span>Board</span>
             </button>
             <button
               onClick={() => onSelectView?.('analytics')}
-              className="py-2.5 flex items-center gap-1.5 border-b-2 border-[#9900c2] text-[#9900c2] font-semibold transition-colors h-full"
+              className="py-2.5 flex items-center gap-1.5 border-b-2 border-orange-500 text-orange-400 font-semibold transition-colors h-full"
             >
-              <span className="material-symbols-outlined text-[16px] text-emerald-600">leaderboard</span>
+              <span className="material-symbols-outlined text-[16px] text-emerald-400">leaderboard</span>
               <span>Win/Loss Analytics</span>
             </button>
             <button
               onClick={() => onSelectView?.('settings')}
-              className="py-2.5 flex items-center gap-1.5 text-[#504252] hover:text-[#9900c2] transition-colors h-full"
+              className="py-2.5 flex items-center gap-1.5 text-zinc-400 hover:text-orange-400 transition-colors h-full"
             >
               <span className="material-symbols-outlined text-[16px]">tune</span>
               <span>Pipeline Settings</span>
@@ -343,9 +361,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#fafafc] select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] select-none text-zinc-100">
       {/* Internal Navigation Sub-Bar */}
-      <div className="px-6 bg-white border-b border-[#d4c0d5]/30 flex items-center justify-between shrink-0 h-11 text-xs">
+      <div className="px-6 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11 text-xs">
         {/* Left Side: Pipeline Selector & Add Pipeline CTA + View Tabs */}
         <div className="flex items-center gap-4 h-full">
           {/* Active Pipeline Selector & Dropdown */}
@@ -353,29 +371,30 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             <button
               type="button"
               onClick={() => setIsPipelinePickerOpen(!isPipelinePickerOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-[#f4f2fd] border border-[#d4c0d5]/50 hover:border-[#9900c2] text-xs font-semibold text-[#1a1b22] transition-all"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-orange-500/50 text-xs font-semibold text-zinc-100 transition-all"
               title="Current Pipeline (Click to switch)"
             >
               <span
                 className="material-symbols-outlined text-[15px]"
-                style={{ color: activePipeline.color || '#9900c2' }}
+                style={{ color: activePipeline.color && activePipeline.color !== '#9900c2' ? activePipeline.color : '#ea580c' }}
               >
-                {activePipeline.icon || 'trending_up'}
+                {activePipeline.icon || 'leaderboard'}
               </span>
               <span className="truncate max-w-[130px]">{activePipeline.name}</span>
-              <span className="material-symbols-outlined text-[13px] text-[#837284]">
+              <span className="material-symbols-outlined text-[13px] text-zinc-400">
                 {isPipelinePickerOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
 
             {/* Pipeline Picker Dropdown Menu */}
             {isPipelinePickerOpen && pipelines.length > 0 && (
-              <div className="absolute left-0 top-full mt-1.5 w-60 bg-white border border-[#d4c0d5]/50 rounded-xl shadow-lg z-50 py-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-3 py-1 text-[10px] font-mono uppercase text-[#837284] font-semibold tracking-wider">
+              <div className="absolute left-0 top-full mt-1.5 w-60 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-150">
+                <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold tracking-wider">
                   Select Pipeline ({pipelines.length})
                 </div>
                 {pipelines.map((p) => {
                   const isCurrent = p.id === activePipeline.id;
+                  const pColor = p.color && p.color !== '#9900c2' ? p.color : '#ea580c';
                   return (
                     <button
                       key={p.id}
@@ -384,20 +403,20 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                         setIsPipelinePickerOpen(false);
                         if (onSelectPipeline) onSelectPipeline(p.id);
                       }}
-                      className={`px-3 py-2 flex items-center justify-between text-left text-xs transition-colors hover:bg-[#f4f2fd] ${
-                        isCurrent ? 'bg-[#eeedf7] font-semibold text-[#9900c2]' : 'text-[#1a1b22]'
+                      className={`px-3 py-2 flex items-center justify-between text-left text-xs transition-colors hover:bg-[#18181b] ${
+                        isCurrent ? 'bg-orange-950/40 font-semibold text-orange-400' : 'text-zinc-200'
                       }`}
                     >
                       <div className="flex items-center gap-2 truncate">
                         <span
                           className="material-symbols-outlined text-[15px] shrink-0"
-                          style={{ color: p.color || '#9900c2' }}
+                          style={{ color: pColor }}
                         >
-                          {p.icon || 'trending_up'}
+                          {p.icon || 'leaderboard'}
                         </span>
                         <span className="truncate">{p.name}</span>
                       </div>
-                      <span className="text-[10px] font-mono text-[#837284] shrink-0">
+                      <span className="text-[10px] font-mono text-zinc-400 shrink-0">
                         {p.dealCount}
                       </span>
                     </button>
@@ -412,7 +431,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             <button
               type="button"
               onClick={onOpenAddPipeline}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#9900c2] hover:bg-[#b731e0] text-white text-[11px] font-semibold transition-all shadow-xs shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-semibold transition-all shadow-xs shrink-0"
               title="Create new sales pipeline"
             >
               <span className="material-symbols-outlined text-[14px]">add</span>
@@ -420,7 +439,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             </button>
           )}
 
-          <div className="h-4 w-px bg-[#d4c0d5]/40 my-auto"></div>
+          <div className="h-4 w-px bg-[#27272a] my-auto"></div>
 
           {/* Segmented View Tabs */}
           <div className="flex items-center gap-5 h-full">
@@ -428,8 +447,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               onClick={() => onSelectView && onSelectView('board')}
               className={`py-2.5 flex items-center gap-1.5 transition-colors h-full ${
                 currentView === 'board'
-                  ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                  : 'text-[#504252] hover:text-[#1a1b22]'
+                  ? 'border-b-2 border-orange-500 text-orange-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">view_kanban</span>
@@ -439,8 +458,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               onClick={() => onSelectView && onSelectView('list')}
               className={`py-2.5 flex items-center gap-1.5 transition-colors h-full ${
                 currentView === 'list'
-                  ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                  : 'text-[#504252] hover:text-[#1a1b22]'
+                  ? 'border-b-2 border-orange-500 text-orange-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
@@ -450,8 +469,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               onClick={() => onSelectView && onSelectView('table')}
               className={`py-2.5 flex items-center gap-1.5 transition-colors h-full ${
                 currentView === 'table'
-                  ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                  : 'text-[#504252] hover:text-[#1a1b22]'
+                  ? 'border-b-2 border-orange-500 text-orange-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-100'
               }`}
             >
               <span className="material-symbols-outlined text-[16px]">table_chart</span>
@@ -459,9 +478,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             </button>
             <button
               onClick={() => onSelectView && onSelectView('analytics')}
-              className="py-2.5 flex items-center gap-1.5 text-[#504252] hover:text-[#1a1b22] transition-colors h-full"
+              className="py-2.5 flex items-center gap-1.5 text-zinc-400 hover:text-zinc-100 transition-colors h-full"
             >
-              <span className="material-symbols-outlined text-[16px] text-emerald-600">leaderboard</span>
+              <span className="material-symbols-outlined text-[16px] text-emerald-400">leaderboard</span>
               <span>Win/Loss Analytics</span>
             </button>
             <button
@@ -469,7 +488,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                 if (onSelectView) onSelectView('settings');
                 else if (onOpenSettings) onOpenSettings('general');
               }}
-              className="py-2.5 flex items-center gap-1.5 text-[#504252] hover:text-[#9900c2] transition-colors h-full"
+              className="py-2.5 flex items-center gap-1.5 text-zinc-400 hover:text-orange-400 transition-colors h-full"
             >
               <span className="material-symbols-outlined text-[16px]">tune</span>
               <span>Pipeline Settings</span>
@@ -478,24 +497,24 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
         </div>
 
         {/* Sub-controls Right Side with Interactive Dropdowns */}
-        <div className="flex items-center gap-2 font-mono text-[11px] text-[#504252]">
+        <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-400">
           {/* Group By Dropdown */}
           <div className="relative">
             <button
               onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
-              className="px-2 py-0.5 rounded bg-[#f4f2fd] border border-[#d4c0d5]/40 text-[#1a1b22] font-semibold flex items-center gap-1 hover:border-[#9900c2]/40 transition-colors"
+              className="h-7 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-200 font-semibold flex items-center gap-1 hover:border-orange-500/40 transition-colors cursor-pointer"
               title="Group deals"
             >
-              <span className="text-[#837284]">Group by:</span>
-              <span className="capitalize">{groupBy}</span>
-              <span className="material-symbols-outlined text-[12px] opacity-70">
+              <span className="text-zinc-400 leading-none">Group by:</span>
+              <span className="capitalize leading-none">{groupBy}</span>
+              <span className="material-symbols-outlined text-[12px] opacity-70 leading-none shrink-0">
                 {isGroupDropdownOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
 
             {isGroupDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
-                <div className="px-3 py-1 text-[10px] font-mono uppercase text-[#837284] font-semibold">
+              <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
+                <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Group Deals By
                 </div>
                 {[
@@ -509,8 +528,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                       setGroupBy(item.id);
                       setIsGroupDropdownOpen(false);
                     }}
-                    className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#f4f2fd] transition-colors ${
-                      groupBy === item.id ? 'text-[#9900c2] font-bold bg-[#eeedf7]' : 'text-[#1a1b22]'
+                    className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#18181b] transition-colors ${
+                      groupBy === item.id ? 'text-orange-400 font-bold bg-orange-950/40' : 'text-zinc-200'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -527,11 +546,11 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
-              className="px-2 py-0.5 rounded bg-[#f4f2fd] border border-[#d4c0d5]/40 text-[#1a1b22] font-semibold flex items-center gap-1 hover:border-[#9900c2]/40 transition-colors"
+              className="h-7 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-200 font-semibold flex items-center gap-1 hover:border-orange-500/40 transition-colors cursor-pointer"
               title="Sort deals"
             >
-              <span className="text-[#837284]">Sort:</span>
-              <span>
+              <span className="text-zinc-400 leading-none">Sort:</span>
+              <span className="leading-none">
                 {sortBy === 'value-desc'
                   ? 'Value ↓'
                   : sortBy === 'value-asc'
@@ -542,14 +561,14 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                   ? 'Close Date'
                   : 'Account'}
               </span>
-              <span className="material-symbols-outlined text-[12px] opacity-70">
+              <span className="material-symbols-outlined text-[12px] opacity-70 leading-none shrink-0">
                 {isSortDropdownOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
 
             {isSortDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-52 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
-                <div className="px-3 py-1 text-[10px] font-mono uppercase text-[#837284] font-semibold">
+              <div className="absolute right-0 top-full mt-1.5 w-52 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
+                <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Sort Order
                 </div>
                 {[
@@ -565,8 +584,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                       setSortBy(item.id);
                       setIsSortDropdownOpen(false);
                     }}
-                    className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#f4f2fd] transition-colors ${
-                      sortBy === item.id ? 'text-[#9900c2] font-bold bg-[#eeedf7]' : 'text-[#1a1b22]'
+                    className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#18181b] transition-colors ${
+                      sortBy === item.id ? 'text-orange-400 font-bold bg-orange-950/40' : 'text-zinc-200'
                     }`}
                   >
                     <span>{item.label}</span>
@@ -584,7 +603,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               if (onSelectView) onSelectView('settings');
               else if (onOpenSettings) onOpenSettings('stages');
             }}
-            className="px-2 py-0.5 rounded bg-[#eeedf7] border border-[#d4c0d5]/30 text-[#9900c2] font-semibold hover:bg-[#fbd7ff]/40 transition-colors ml-1"
+            className="h-7 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-orange-400 font-semibold hover:bg-zinc-800 transition-colors ml-1 cursor-pointer flex items-center leading-none"
           >
             Edit Stages
           </button>
@@ -592,40 +611,58 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
       </div>
 
       {/* CRM Filter & Quick Actions Bar */}
-      <div className="px-6 py-2 bg-white border-b border-[#d4c0d5]/30 flex flex-wrap items-center justify-between gap-3 text-xs shrink-0 select-none">
+      <div className="px-6 min-h-[40px] py-1.5 bg-[#121214] border-b border-[#27272a] flex flex-wrap items-center justify-between gap-2.5 text-xs shrink-0 select-none">
         {/* Left: Quick Actions Filter Pills */}
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-[10px] uppercase font-semibold text-[#837284] shrink-0 mr-1 flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px] text-[#9900c2]">tune</span>
-            <span>Filters:</span>
+          <span className="font-mono text-[10px] uppercase font-semibold text-zinc-400 shrink-0 mr-1 flex items-center gap-1.5 h-7">
+            <span className="material-symbols-outlined text-[14px] text-orange-400 leading-none shrink-0">tune</span>
+            <span className="leading-none">Filters:</span>
           </span>
 
           {/* All Deals Pill */}
           <button
             onClick={handleClearCrmFilters}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+            className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
               !hasActiveCrmFilters
-                ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-                : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+                ? 'bg-orange-600 text-white border-orange-600 font-semibold shadow-xs'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
           >
-            <span>All Deals</span>
-            <span className="font-mono text-[10px] opacity-80">({pipelineDeals.length})</span>
+            <span className="leading-none">All Deals</span>
+            <span className="font-mono text-[10px] opacity-80 leading-none">({pipelineDeals.length})</span>
           </button>
+
+          {/* Active Sub-Folder Pill */}
+          {activePipelineSubFolder && (
+            <div className="h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-semibold bg-orange-950/50 text-orange-400 border border-orange-500/40 shadow-xs">
+              <span className="material-symbols-outlined text-[13px] leading-none shrink-0">{activePipelineSubFolder.icon || 'folder'}</span>
+              <span className="leading-none">Sub-folder: {activePipelineSubFolder.name}</span>
+              {onClearSubFolderFilter && (
+                <button
+                  type="button"
+                  onClick={onClearSubFolderFilter}
+                  className="text-orange-400/80 hover:text-orange-200 ml-0.5 cursor-pointer leading-none text-xs"
+                  title="Remove sub-folder filter"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          )}
 
           {/* High Value (>$100k) */}
           <button
             onClick={() => {
               setQuickActionFilter(quickActionFilter === 'high-value' ? null : 'high-value');
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+            className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
               quickActionFilter === 'high-value'
-                ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-                : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+                ? 'bg-orange-600 text-white border-orange-600 font-semibold shadow-xs'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
           >
-            <span className="material-symbols-outlined text-[13px] text-amber-500">payments</span>
-            <span>High Value (&gt;$100k)</span>
+            <span className="material-symbols-outlined text-[13px] text-amber-400 leading-none shrink-0">payments</span>
+            <span className="leading-none">High Value (&gt;$100k)</span>
           </button>
 
           {/* Proposal / Demo */}
@@ -633,14 +670,14 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             onClick={() => {
               setQuickActionFilter(quickActionFilter === 'proposal' ? null : 'proposal');
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+            className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
               quickActionFilter === 'proposal'
-                ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-                : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+                ? 'bg-orange-600 text-white border-orange-600 font-semibold shadow-xs'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
           >
-            <span className="material-symbols-outlined text-[13px] text-blue-500">present_to_all</span>
-            <span>Proposal & Demo</span>
+            <span className="material-symbols-outlined text-[13px] text-blue-400 leading-none shrink-0">present_to_all</span>
+            <span className="leading-none">Proposal & Demo</span>
           </button>
 
           {/* Closing Soon */}
@@ -648,14 +685,14 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             onClick={() => {
               setQuickActionFilter(quickActionFilter === 'closing-soon' ? null : 'closing-soon');
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+            className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
               quickActionFilter === 'closing-soon'
-                ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-                : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+                ? 'bg-orange-600 text-white border-orange-600 font-semibold shadow-xs'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
           >
-            <span className="material-symbols-outlined text-[13px]">alarm</span>
-            <span>Closing Soon</span>
+            <span className="material-symbols-outlined text-[13px] text-amber-400 leading-none shrink-0">alarm</span>
+            <span className="leading-none">Closing Soon</span>
           </button>
 
           {/* Closed Won */}
@@ -663,35 +700,35 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             onClick={() => {
               setQuickActionFilter(quickActionFilter === 'won' ? null : 'won');
             }}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium border transition-colors ${
+            className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
               quickActionFilter === 'won'
-                ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-                : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+                ? 'bg-orange-600 text-white border-orange-600 font-semibold shadow-xs'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
           >
-            <span className="material-symbols-outlined text-[13px] text-emerald-500">verified</span>
-            <span>Closed Won</span>
+            <span className="material-symbols-outlined text-[13px] text-emerald-400 leading-none shrink-0">verified</span>
+            <span className="leading-none">Closed Won</span>
           </button>
 
           {/* Filter by Stage Dropdown */}
           <div className="relative">
             <button
               onClick={() => setIsStageFilterOpen(!isStageFilterOpen)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+              className={`h-7 flex items-center gap-1 px-2.5 rounded-[6px] text-[11px] border transition-colors cursor-pointer ${
                 stageFilter
-                  ? 'bg-[#fbd7ff]/40 border-[#9900c2] text-[#9900c2] font-semibold'
-                  : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd]'
+                  ? 'bg-orange-950/40 border-orange-500/30 text-orange-400 font-semibold'
+                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
               }`}
             >
-              <span>{stageFilter ? `Stage: ${stageFilter}` : 'Stage: All'}</span>
-              <span className="material-symbols-outlined text-[12px] opacity-70">
+              <span className="leading-none">{stageFilter ? `Stage: ${stageFilter}` : 'Stage: All'}</span>
+              <span className="material-symbols-outlined text-[12px] opacity-70 leading-none shrink-0">
                 {isStageFilterOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
 
             {isStageFilterOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-52 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1 text-[10px] font-mono uppercase text-[#837284] font-semibold">
+              <div className="absolute left-0 top-full mt-1.5 w-52 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Filter by Stage
                 </div>
                 {['All', 'Qualified Lead', 'Discovery & Demo', 'Proposal Submitted', 'Contract & Legal', 'Closed Won'].map((stg) => {
@@ -703,8 +740,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                         setStageFilter(stg === 'All' ? null : stg);
                         setIsStageFilterOpen(false);
                       }}
-                      className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#f4f2fd] transition-colors ${
-                        isSelected ? 'text-[#9900c2] font-bold bg-[#eeedf7]' : 'text-[#1a1b22]'
+                      className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#18181b] transition-colors ${
+                        isSelected ? 'text-orange-400 font-bold bg-orange-950/40' : 'text-zinc-200'
                       }`}
                     >
                       <span>{stg}</span>
@@ -722,21 +759,21 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           <div className="relative">
             <button
               onClick={() => setIsOwnerFilterOpen(!isOwnerFilterOpen)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] border transition-colors ${
+              className={`h-7 flex items-center gap-1 px-2.5 rounded-[6px] text-[11px] border transition-colors cursor-pointer ${
                 ownerFilter
-                  ? 'bg-[#fbd7ff]/40 border-[#9900c2] text-[#9900c2] font-semibold'
-                  : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd]'
+                  ? 'bg-orange-950/40 border-orange-500/30 text-orange-400 font-semibold'
+                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
               }`}
             >
-              <span>{ownerFilter ? `Owner: ${ownerFilter}` : 'Owner: All'}</span>
-              <span className="material-symbols-outlined text-[12px] opacity-70">
+              <span className="leading-none">{ownerFilter ? `Owner: ${ownerFilter}` : 'Owner: All'}</span>
+              <span className="material-symbols-outlined text-[12px] opacity-70 leading-none shrink-0">
                 {isOwnerFilterOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
 
             {isOwnerFilterOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-48 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1 text-[10px] font-mono uppercase text-[#837284] font-semibold">
+              <div className="absolute left-0 top-full mt-1.5 w-48 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Filter by Owner
                 </div>
                 {['All', ...allOwners].map((ow) => {
@@ -748,8 +785,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                         setOwnerFilter(ow === 'All' ? null : ow);
                         setIsOwnerFilterOpen(false);
                       }}
-                      className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#f4f2fd] transition-colors ${
-                        isSelected ? 'text-[#9900c2] font-bold bg-[#eeedf7]' : 'text-[#1a1b22]'
+                      className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#18181b] transition-colors ${
+                        isSelected ? 'text-orange-400 font-bold bg-orange-950/40' : 'text-zinc-200'
                       }`}
                     >
                       <span>{ow}</span>
@@ -767,11 +804,11 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {hasActiveCrmFilters && (
             <button
               onClick={handleClearCrmFilters}
-              className="flex items-center gap-1 text-[11px] font-mono text-[#9900c2] hover:underline px-2 py-0.5"
+              className="h-7 flex items-center gap-1 text-[11px] font-mono text-orange-400 hover:underline px-2 cursor-pointer"
               title="Reset all filters"
             >
-              <span className="material-symbols-outlined text-[14px]">filter_alt_off</span>
-              <span>Reset</span>
+              <span className="material-symbols-outlined text-[14px] leading-none shrink-0">filter_alt_off</span>
+              <span className="leading-none">Reset</span>
             </button>
           )}
         </div>
@@ -780,7 +817,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
         <div className="flex items-center gap-3">
           {/* CRM Deal Search Bar */}
           <div className="relative w-60">
-            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px] text-[#837284]">
+            <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[15px] text-zinc-400 leading-none shrink-0">
               search
             </span>
             <input
@@ -788,82 +825,83 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               value={searchFilter}
               onChange={(e) => setSearchFilter(e.target.value)}
               placeholder="Search deals, accounts, owners..."
-              className="w-full bg-[#f4f2fd]/70 border border-[#d4c0d5]/40 rounded-full pl-8 pr-7 py-1 text-xs text-[#1a1b22] placeholder:text-[#837284] focus:outline-none focus:border-[#9900c2] focus:ring-1 focus:ring-[#9900c2]/20"
+              className="w-full h-7 bg-[#18181b] border border-[#27272a] rounded-[6px] pl-8 pr-7 text-xs text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500/20 transition-colors"
             />
             {searchFilter && (
               <button
                 onClick={() => setSearchFilter('')}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[#837284] hover:text-[#1a1b22] p-0.5"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-200 text-xs"
               >
-                <span className="material-symbols-outlined text-[13px]">cancel</span>
+                ✕
               </button>
             )}
           </div>
 
+          {/* Add Deal Primary CTA Button */}
           <button
-            onClick={() => onOpenNewDeal()}
-            className="flex items-center gap-1 px-3 py-1 rounded-full bg-[#9900c2] hover:bg-[#b731e0] text-white font-semibold text-xs shadow-xs transition-colors shrink-0"
+            onClick={() => onOpenNewDeal('Proposal Submitted')}
+            className="h-7 flex items-center gap-1.5 px-3 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs shadow-xs transition-colors shrink-0 cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[15px]">add</span>
-            <span>New Deal</span>
+            <span className="material-symbols-outlined text-[15px] leading-none shrink-0">add</span>
+            <span className="leading-none">Deal</span>
           </button>
         </div>
       </div>
 
-      {/* Metric Ribbon / KPI Strip (CSS selector 1: wraps cleanly, NO horizontal scrollbar) */}
-      <section className="px-6 py-2.5 bg-[#f4f2fd]/60 border-b border-[#d4c0d5]/30 flex flex-wrap items-center gap-x-6 gap-y-2.5 shrink-0 overflow-x-hidden text-xs w-full max-w-full">
+      {/* Metric Ribbon / KPI Strip */}
+      <section className="px-6 py-2.5 bg-[#121214] border-b border-[#27272a] flex flex-wrap items-center gap-x-6 gap-y-2.5 shrink-0 overflow-x-hidden text-xs w-full max-w-full">
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+          <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Total Pipeline
           </div>
-          <div className="font-mono text-base font-bold text-[#1a1b22]">
+          <div className="font-mono text-base font-bold text-zinc-100">
             ${totalPipeline.toLocaleString()}
           </div>
         </div>
 
-        <div className="hidden lg:block h-4 w-px bg-[#d4c0d5]/40 shrink-0"></div>
+        <div className="hidden lg:block h-4 w-px bg-[#27272a] shrink-0"></div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+          <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Weighted Forecast
           </div>
-          <div className="font-mono text-base font-bold text-[#9900c2]">
+          <div className="font-mono text-base font-bold text-orange-400">
             ${weightedForecast.toLocaleString()}
           </div>
         </div>
 
-        <div className="hidden lg:block h-4 w-px bg-[#d4c0d5]/40 shrink-0"></div>
+        <div className="hidden lg:block h-4 w-px bg-[#27272a] shrink-0"></div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+          <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Active Deals
           </div>
-          <div className="font-mono text-base font-bold text-[#1a1b22]">
+          <div className="font-mono text-base font-bold text-zinc-100">
             {displayedDeals.length} of {pipelineDeals.length} deals
           </div>
         </div>
 
-        <div className="hidden lg:block h-4 w-px bg-[#d4c0d5]/40 shrink-0"></div>
+        <div className="hidden lg:block h-4 w-px bg-[#27272a] shrink-0"></div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+          <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Win Rate
           </div>
-          <div className="font-mono text-base font-bold text-emerald-600">{winRate}%</div>
+          <div className="font-mono text-base font-bold text-emerald-400">{winRate}%</div>
         </div>
 
-        <div className="hidden lg:block h-4 w-px bg-[#d4c0d5]/40 shrink-0"></div>
+        <div className="hidden lg:block h-4 w-px bg-[#27272a] shrink-0"></div>
 
         <div className="flex items-center gap-2.5 shrink-0">
-          <div className="font-mono text-[10px] text-[#837284] uppercase font-semibold">
+          <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Avg Cycle
           </div>
-          <div className="font-mono text-base font-bold text-[#1a1b22]">16 days</div>
+          <div className="font-mono text-base font-bold text-zinc-100">16 days</div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 font-mono text-[10px] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[6px] bg-amber-950/40 border border-amber-500/30 text-amber-400 font-mono text-[10px] font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
             <span>Replication Active (Peer: us-east-local)</span>
           </span>
         </div>
@@ -871,58 +909,58 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
 
       {/* Main Content Area: Kanban Board, List View, or Table View */}
       {displayedDeals.length === 0 ? (
-        <div className="flex-1 p-12 flex flex-col items-center justify-center text-center bg-[#fafafc]">
-          <div className="w-12 h-12 rounded-full bg-[#eeedf7] flex items-center justify-center mb-3 text-[#9900c2]">
+        <div className="flex-1 p-12 flex flex-col items-center justify-center text-center bg-[#09090b]">
+          <div className="w-12 h-12 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-center mb-3 text-orange-400">
             <span className="material-symbols-outlined text-[24px]">filter_alt_off</span>
           </div>
-          <h3 className="font-semibold text-sm text-[#1a1b22] mb-1">No deals match your criteria</h3>
-          <p className="text-xs text-[#837284] max-w-sm mb-4">
+          <h3 className="font-semibold text-sm text-zinc-100 mb-1">No deals match your criteria</h3>
+          <p className="text-xs text-zinc-400 max-w-sm mb-4">
             Try adjusting your search query or clearing quick filters to view active opportunities.
           </p>
           <button
             onClick={handleClearCrmFilters}
-            className="px-3.5 py-1.5 bg-[#9900c2] text-white rounded-lg text-xs font-semibold hover:bg-[#b731e0] transition-colors shadow-xs"
+            className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs"
           >
             Reset All Filters
           </button>
         </div>
       ) : currentView === 'list' ? (
-        <div className="flex-1 p-6 overflow-y-auto bg-[#fafafc] custom-scrollbar">
-          <div className="bg-white rounded-2xl border border-[#d4c0d5]/30 overflow-hidden shadow-xs divide-y divide-[#d4c0d5]/20">
+        <div className="flex-1 p-6 overflow-y-auto bg-[#09090b] custom-scrollbar">
+          <div className="bg-[#121214] rounded-[6px] border border-[#27272a] overflow-hidden shadow-xs divide-y divide-[#27272a]">
             {displayedDeals.map((deal) => {
               const isSelected = deal.id === selectedDealId;
               return (
                 <div
                   key={deal.id}
                   onClick={() => onSelectDeal(deal)}
-                  className={`p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-[#f4f2fd]/50 transition-colors ${
-                    isSelected ? 'bg-[#eeedf7]' : ''
+                  className={`p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-zinc-800/40 transition-colors ${
+                    isSelected ? 'bg-orange-950/30 border-l-2 border-orange-500' : ''
                   }`}
                 >
                   <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-7 h-7 rounded-full bg-[#eeedf7] text-[#1a1b22] font-mono text-xs flex items-center justify-center font-bold shrink-0">
+                    <span className="w-7 h-7 rounded-full bg-[#18181b] border border-[#27272a] text-zinc-200 font-mono text-xs flex items-center justify-center font-bold shrink-0">
                       {deal.contact.initials}
                     </span>
                     <div className="truncate">
-                      <div className="font-semibold text-xs text-[#1a1b22] truncate">{deal.title}</div>
-                      <div className="text-[11px] text-[#504252] truncate">
+                      <div className="font-semibold text-xs text-zinc-100 truncate">{deal.title}</div>
+                      <div className="text-[11px] text-zinc-400 truncate">
                         {deal.company} • {deal.contact.name} • {deal.owner}
                       </div>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-6 shrink-0">
-                    <span className="font-mono text-xs px-2.5 py-0.5 rounded-full bg-[#f4f2fd] text-[#9900c2] font-semibold border border-[#9900c2]/20">
+                    <span className="font-mono text-xs px-2.5 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30">
                       {deal.stage}
                     </span>
                     <div className="text-right">
-                      <div className="font-mono text-xs font-bold text-[#1a1b22]">{deal.formattedValue}</div>
-                      <div className="font-mono text-[10px] text-[#837284]">{deal.probability}% prob</div>
+                      <div className="font-mono text-xs font-bold text-zinc-100">{deal.formattedValue}</div>
+                      <div className="font-mono text-[10px] text-zinc-400">{deal.probability}% prob</div>
                     </div>
-                    <span className="font-mono text-[10px] text-[#837284] hidden md:inline">
+                    <span className="font-mono text-[10px] text-zinc-400 hidden md:inline">
                       {deal.targetCloseDate}
                     </span>
-                    <span className="material-symbols-outlined text-[16px] text-[#837284]">chevron_right</span>
+                    <span className="material-symbols-outlined text-[16px] text-zinc-400">chevron_right</span>
                   </div>
                 </div>
               );
@@ -930,11 +968,11 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           </div>
         </div>
       ) : currentView === 'table' ? (
-        <div className="flex-1 p-6 overflow-auto bg-[#fafafc] custom-scrollbar">
-          <div className="bg-white rounded-2xl border border-[#d4c0d5]/30 overflow-hidden shadow-xs">
+        <div className="flex-1 p-6 overflow-auto bg-[#09090b] custom-scrollbar">
+          <div className="bg-[#121214] rounded-[6px] border border-[#27272a] overflow-hidden shadow-xs">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="bg-[#f4f2fd]/60 border-b border-[#d4c0d5]/30 font-mono text-[11px] text-[#504252]">
+                <tr className="bg-[#18181b] border-b border-[#27272a] font-mono text-[11px] text-zinc-400">
                   <th className="p-3 font-semibold">Deal Title</th>
                   <th className="p-3 font-semibold">Account</th>
                   <th className="p-3 font-semibold">Value</th>
@@ -944,28 +982,28 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                   <th className="p-3 font-semibold">Owner</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#d4c0d5]/20 font-sans">
+              <tbody className="divide-y divide-[#27272a] font-sans">
                 {displayedDeals.map((deal) => {
                   const isSelected = deal.id === selectedDealId;
                   return (
                     <tr
                       key={deal.id}
                       onClick={() => onSelectDeal(deal)}
-                      className={`cursor-pointer hover:bg-[#f4f2fd]/50 transition-colors ${
-                        isSelected ? 'bg-[#eeedf7]' : ''
+                      className={`cursor-pointer hover:bg-zinc-800/40 transition-colors ${
+                        isSelected ? 'bg-orange-950/30' : ''
                       }`}
                     >
-                      <td className="p-3 font-semibold text-[#1a1b22]">{deal.title}</td>
-                      <td className="p-3 text-[#504252]">{deal.company}</td>
-                      <td className="p-3 font-mono font-bold text-[#1a1b22]">{deal.formattedValue}</td>
+                      <td className="p-3 font-semibold text-zinc-100">{deal.title}</td>
+                      <td className="p-3 text-zinc-400">{deal.company}</td>
+                      <td className="p-3 font-mono font-bold text-zinc-100">{deal.formattedValue}</td>
                       <td className="p-3">
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded-full bg-[#f4f2fd] text-[#9900c2] font-semibold border border-[#9900c2]/20">
+                        <span className="font-mono text-[10px] px-2 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30">
                           {deal.stage}
                         </span>
                       </td>
-                      <td className="p-3 font-mono text-[#504252]">{deal.probability}%</td>
-                      <td className="p-3 font-mono text-[#837284]">{deal.targetCloseDate}</td>
-                      <td className="p-3 text-[#504252]">{deal.owner}</td>
+                      <td className="p-3 font-mono text-zinc-400">{deal.probability}%</td>
+                      <td className="p-3 font-mono text-zinc-400">{deal.targetCloseDate}</td>
+                      <td className="p-3 text-zinc-400">{deal.owner}</td>
                     </tr>
                   );
                 })}
@@ -975,179 +1013,179 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
         </div>
       ) : (
         /* Main Content Area: Deal Pipeline Board (Columns grouped by groupBy) */
-        <div className="flex-1 p-6 overflow-x-auto overflow-y-hidden bg-[#fafafc]">
-        <div className="flex gap-5 min-w-[1540px] h-full items-start">
-          {boardColumns.map((col) => {
-            const colDeals = displayedDeals.filter(col.filterDeals);
-            const colValueSum = colDeals.reduce((sum, d) => sum + d.value, 0);
+        <div className="flex-1 p-6 overflow-x-auto overflow-y-hidden bg-[#09090b]">
+          <div className="flex gap-4 min-w-[1540px] h-full items-start">
+            {boardColumns.map((col) => {
+              const colDeals = displayedDeals.filter(col.filterDeals);
+              const colValueSum = colDeals.reduce((sum, d) => sum + d.value, 0);
 
-            return (
-              <div
-                key={col.key}
-                className={`w-[292px] shrink-0 flex flex-col max-h-full rounded-2xl p-3 transition-all relative ${
-                  col.isHighlighted
-                    ? 'bg-[#f4f2fd] border-2 border-[#9900c2]/50 shadow-sm'
-                    : 'bg-[#f4f2fd]/50 border border-[#d4c0d5]/30'
-                }`}
-              >
-                {/* Violet Top Accent Strip on highlighted column */}
-                {col.isHighlighted && (
-                  <div className="absolute -top-[2px] left-0 right-0 h-[3px] bg-[#9900c2] rounded-t-2xl"></div>
-                )}
-
-                {/* Column Header */}
+              return (
                 <div
-                  className={`flex items-center justify-between pb-2.5 mb-2.5 border-b px-1 text-xs ${
-                    col.isHighlighted ? 'border-[#9900c2]/20' : 'border-[#d4c0d5]/20'
+                  key={col.key}
+                  className={`w-[292px] shrink-0 flex flex-col max-h-full rounded-[6px] p-3 transition-all relative ${
+                    col.isHighlighted
+                      ? 'bg-[#121214] border border-orange-500/50 shadow-sm'
+                      : 'bg-[#121214] border border-[#27272a]'
                   }`}
                 >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`w-2 h-2 rounded-full ${col.dotColor} ${
-                        col.isHighlighted ? 'animate-pulse' : ''
-                      }`}
-                    ></span>
-                    <span
-                      className={`font-semibold ${
-                        col.isHighlighted ? 'text-[#9900c2]' : 'text-[#1a1b22]'
-                      }`}
-                    >
-                      {col.title}
-                    </span>
-                    <span
-                      className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                        col.isHighlighted
-                          ? 'bg-[#9900c2]/10 text-[#9900c2]'
-                          : 'bg-[#eeedf7] text-[#5f5e61]'
-                      }`}
-                    >
-                      {colDeals.length}
-                    </span>
-                  </div>
-                  <span
-                    className={`font-mono text-xs font-bold ${
-                      col.isHighlighted ? 'text-[#9900c2]' : 'text-[#504252]'
+                  {/* Top Orange Accent Strip on highlighted column */}
+                  {col.isHighlighted && (
+                    <div className="absolute -top-[1px] left-0 right-0 h-[2px] bg-orange-500 rounded-t-[6px]"></div>
+                  )}
+
+                  {/* Column Header */}
+                  <div
+                    className={`flex items-center justify-between pb-2.5 mb-2.5 border-b px-1 text-xs ${
+                      col.isHighlighted ? 'border-orange-500/30' : 'border-[#27272a]'
                     }`}
                   >
-                    ${Math.round(colValueSum / 1000)}k
-                  </span>
-                </div>
-
-                {/* Cards Container */}
-                <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
-                  {colDeals.map((deal) => {
-                    const isSelected = deal.id === selectedDealId;
-                    const isFeatured = deal.id === 'DEAL-402';
-
-                    return (
-                      <div
-                        key={deal.id}
-                        onClick={() => onSelectDeal(deal)}
-                        className={`p-3.5 bg-white rounded-xl transition-all cursor-pointer group relative text-xs ${
-                          isSelected
-                            ? 'border-2 border-[#9900c2] shadow-md ring-2 ring-[#9900c2]/10'
-                            : isFeatured
-                            ? 'border border-[#9900c2]/40 shadow-xs hover:border-[#9900c2]'
-                            : 'border border-[#d4c0d5]/30 hover:border-[#837284]'
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`w-2 h-2 rounded-full ${col.dotColor} ${
+                          col.isHighlighted ? 'animate-pulse' : ''
+                        }`}
+                      ></span>
+                      <span
+                        className={`font-semibold ${
+                          col.isHighlighted ? 'text-orange-400' : 'text-zinc-100'
                         }`}
                       >
-                        <div className="flex items-start justify-between gap-2 mb-1.5">
-                          <span className="font-semibold text-xs text-[#1a1b22] leading-tight group-hover:text-[#9900c2] transition-colors">
-                            {deal.title}
-                          </span>
-                          {!isFeatured && (
-                            <span className="font-mono text-xs font-bold text-[#1a1b22] shrink-0">
-                              {deal.formattedValue}
+                        {col.title}
+                      </span>
+                      <span
+                        className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] font-bold ${
+                          col.isHighlighted
+                            ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
+                            : 'bg-[#18181b] text-zinc-400 border border-[#27272a]'
+                        }`}
+                      >
+                        {colDeals.length}
+                      </span>
+                    </div>
+                    <span
+                      className={`font-mono text-xs font-bold ${
+                        col.isHighlighted ? 'text-orange-400' : 'text-zinc-400'
+                      }`}
+                    >
+                      ${Math.round(colValueSum / 1000)}k
+                    </span>
+                  </div>
+
+                  {/* Cards Container */}
+                  <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+                    {colDeals.map((deal) => {
+                      const isSelected = deal.id === selectedDealId;
+                      const isFeatured = deal.id === 'DEAL-402';
+
+                      return (
+                        <div
+                          key={deal.id}
+                          onClick={() => onSelectDeal(deal)}
+                          className={`p-3.5 bg-[#18181b] rounded-[6px] transition-all cursor-pointer group relative text-xs ${
+                            isSelected
+                              ? 'border-2 border-orange-500 shadow-md ring-2 ring-orange-500/10'
+                              : isFeatured
+                              ? 'border border-orange-500/40 shadow-xs hover:border-orange-500'
+                              : 'border border-[#27272a] hover:border-zinc-700'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-2 mb-1.5">
+                            <span className="font-semibold text-xs text-zinc-100 leading-tight group-hover:text-orange-400 transition-colors">
+                              {deal.title}
                             </span>
+                            {!isFeatured && (
+                              <span className="font-mono text-xs font-bold text-zinc-100 shrink-0">
+                                {deal.formattedValue}
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Featured Deal Big Price Row */}
+                          {isFeatured && (
+                            <div className="font-mono text-xl font-bold text-orange-400 mb-2">
+                              {deal.formattedValue}
+                            </div>
+                          )}
+
+                          <div className="flex items-center justify-between text-zinc-400 text-[11px] mb-2">
+                            <div className="flex items-center gap-1.5 truncate">
+                              <span className="w-4 h-4 rounded-full bg-[#121214] border border-[#27272a] text-zinc-200 font-mono text-[9px] flex items-center justify-center font-bold">
+                                {deal.contact.initials}
+                              </span>
+                              <span className="text-zinc-300 font-medium truncate">
+                                {deal.contact.name}
+                              </span>
+                            </div>
+                            <span
+                              className={`font-mono text-[10px] ${
+                                isFeatured ? 'text-orange-400 font-semibold' : 'text-zinc-500'
+                              }`}
+                            >
+                              {deal.targetCloseDate.split(',')[0]}
+                            </span>
+                          </div>
+
+                          {deal.nextStep && (
+                            <div className="bg-[#121214] border border-[#27272a] p-1.5 rounded-[6px] font-mono text-[10px] text-zinc-400 mb-2">
+                              <span className="font-semibold text-orange-400">Next step:</span>{' '}
+                              {deal.nextStep}
+                            </div>
+                          )}
+
+                          {/* Tags */}
+                          {deal.tags.length > 0 && (
+                            <div className="flex items-center gap-1.5 mb-2">
+                              {deal.tags.map((tg) => (
+                                <span
+                                  key={tg}
+                                  className={`font-mono text-[10px] px-2 py-0.5 rounded-[6px] border ${
+                                    isFeatured
+                                      ? 'bg-orange-950/40 text-orange-400 border-orange-500/30 font-medium'
+                                      : 'bg-[#121214] border-[#27272a] text-zinc-400'
+                                  }`}
+                                >
+                                  {tg}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Card Footer: Deliverables countdown */}
+                          {deal.linkedTasks.length > 0 && (
+                            <div className="flex items-center justify-between pt-2 border-t border-[#27272a] text-zinc-400 font-mono text-[10px]">
+                              <span className="flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[13px] text-orange-400">
+                                  assignment_turned_in
+                                </span>
+                                <span>{deal.linkedTasks.length} deliverables linked</span>
+                              </span>
+                              <span className="material-symbols-outlined text-[14px] text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity">
+                                arrow_forward
+                              </span>
+                            </div>
                           )}
                         </div>
+                      );
+                    })}
+                  </div>
 
-                        {/* Featured Deal Big Price Row */}
-                        {isFeatured && (
-                          <div className="font-mono text-xl font-bold text-[#9900c2] mb-2">
-                            {deal.formattedValue}
-                          </div>
-                        )}
-
-                        <div className="flex items-center justify-between text-[#504252] text-[11px] mb-2">
-                          <div className="flex items-center gap-1.5 truncate">
-                            <span className="w-4 h-4 rounded-full bg-[#eeedf7] text-[#1b1b1e] font-mono text-[9px] flex items-center justify-center font-bold">
-                              {deal.contact.initials}
-                            </span>
-                            <span className="text-[#1a1b22] font-medium truncate">
-                              {deal.contact.name}
-                            </span>
-                          </div>
-                          <span
-                            className={`font-mono text-[10px] ${
-                              isFeatured ? 'text-[#9900c2] font-semibold' : 'text-[#837284]'
-                            }`}
-                          >
-                            {deal.targetCloseDate.split(',')[0]}
-                          </span>
-                        </div>
-
-                        {deal.nextStep && (
-                          <div className="bg-[#f4f2fd] p-1.5 rounded font-mono text-[10px] text-[#504252] mb-2">
-                            <span className="semibold text-[#9900c2]">Next step:</span>{' '}
-                            {deal.nextStep}
-                          </div>
-                        )}
-
-                        {/* Tags */}
-                        {deal.tags.length > 0 && (
-                          <div className="flex items-center gap-1.5 mb-2">
-                            {deal.tags.map((tg) => (
-                              <span
-                                key={tg}
-                                className={`font-mono text-[10px] px-2 py-0.5 rounded ${
-                                  isFeatured
-                                    ? 'bg-[#9900c2]/10 text-[#9900c2] font-medium'
-                                    : 'bg-[#eeedf7] text-[#504252]'
-                                }`}
-                              >
-                                {tg}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Card Footer: Deliverables countdown */}
-                        {deal.linkedTasks.length > 0 && (
-                          <div className="flex items-center justify-between pt-2 border-t border-[#d4c0d5]/20 text-[#504252] font-mono text-[10px]">
-                            <span className="flex items-center gap-1">
-                              <span className="material-symbols-outlined text-[13px] text-[#9900c2]">
-                                assignment_turned_in
-                              </span>
-                              <span>{deal.linkedTasks.length} deliverables linked</span>
-                            </span>
-                            <span className="material-symbols-outlined text-[14px] text-[#9900c2] opacity-0 group-hover:opacity-100 transition-opacity">
-                              arrow_forward
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
+                  {/* Add Deal Ghost Button */}
+                  <button
+                    onClick={() => onOpenNewDeal(col.defaultStage)}
+                    className={`mt-2.5 w-full py-1.5 rounded-[6px] border border-dashed text-xs font-mono font-medium flex items-center justify-center gap-1 transition-colors ${
+                      col.isHighlighted
+                        ? 'border-orange-500/40 hover:border-orange-500 text-orange-400 bg-orange-950/20'
+                        : 'border-[#27272a] hover:border-zinc-600 text-zinc-400 hover:text-zinc-200 bg-transparent'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[14px]">add</span>
+                    <span>Add Deal</span>
+                  </button>
                 </div>
-
-                {/* Add Deal Ghost Button */}
-                <button
-                  onClick={() => onOpenNewDeal(col.defaultStage)}
-                  className={`mt-2.5 w-full py-1.5 rounded-lg border border-dashed text-xs font-mono font-medium flex items-center justify-center gap-1 transition-colors ${
-                    col.isHighlighted
-                      ? 'border-[#9900c2]/40 hover:border-[#9900c2] text-[#9900c2] bg-white/40'
-                      : 'border-[#d4c0d5]/40 hover:border-[#837284] text-[#837284] hover:text-[#1a1b22] bg-transparent'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[14px]">add</span>
-                  <span>Add Deal</span>
-                </button>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
-      </div>
       )}
     </div>
   );

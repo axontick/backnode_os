@@ -41,10 +41,11 @@ export class PipelinesService {
       id,
       name: data.name,
       description: data.description || '',
-      icon: data.icon || 'building',
-      color: data.color || '#9900c2',
+      icon: data.icon || 'leaderboard',
+      color: data.color || '#ea580c',
       dealCount: data.dealCount || 0,
       totalValue: data.totalValue || 0,
+      subFolders: data.subFolders || [],
       accountId,
     });
     return this.pipelineRepo.save(pipeline);
@@ -61,6 +62,7 @@ export class PipelinesService {
     if (data.icon !== undefined) pipeline.icon = data.icon;
     if (data.color !== undefined) pipeline.color = data.color;
     if (data.totalValue !== undefined) pipeline.totalValue = data.totalValue;
+    if (data.subFolders !== undefined) pipeline.subFolders = data.subFolders;
 
     return this.pipelineRepo.save(pipeline);
   }

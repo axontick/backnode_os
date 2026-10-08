@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { SpaceFolder, CrmPipeline } from '../types';
+import { SpaceFolder, SpaceSubFolder, CrmPipeline, CrmPipelineSubFolder } from '../types';
 import { ActionContextMenu } from './ActionContextMenu';
 
 export interface InnerSidebarProps {
@@ -14,21 +14,401 @@ export interface InnerSidebarProps {
   onSelectSpace?: (spaceId: string) => void;
   onSelectDashboard?: () => void;
   onOpenAddFolder?: () => void;
+  onOpenAddListToFolder?: (folder: SpaceFolder) => void;
   onEditFolder?: (folder: SpaceFolder) => void;
   onDeleteFolder?: (folder: SpaceFolder) => void;
+  onOpenAddSubFolder?: (folder: SpaceFolder, parentSubFolderId?: string) => void;
+  onEditSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
+  onDeleteSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
+  onOpenAddListToSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
 
   // CRM props
   pipelines?: CrmPipeline[];
   activePipelineId?: string;
+  activePipelineSubFolderId?: string | null;
   crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
   onSelectPipeline?: (pipelineId: string) => void;
+  onSelectPipelineSubFolder?: (pipelineId: string, subFolderId: string) => void;
   onSelectCrmDashboard?: () => void;
   onSelectCrmBoard?: () => void;
   onSelectPipelineView?: (pipelineId: string, view: 'board' | 'analytics' | 'settings') => void;
   onOpenAddPipeline?: () => void;
   onEditPipeline?: (pipeline: CrmPipeline) => void;
   onDeletePipeline?: (pipeline: CrmPipeline) => void;
+  onOpenAddPipelineSubFolder?: (pipeline: CrmPipeline, parentSubFolderId?: string) => void;
+  onEditPipelineSubFolder?: (pipeline: CrmPipeline, subFolder: CrmPipelineSubFolder) => void;
+  onDeletePipelineSubFolder?: (pipeline: CrmPipeline, subFolder: CrmPipelineSubFolder) => void;
 }
+
+interface RecursiveSubFolderNodeProps {
+  folder: SpaceFolder;
+  subFolder: SpaceSubFolder;
+  depth: number;
+  expandedSubFolderIds: Record<string, boolean>;
+  toggleSubFolder: (id: string, e?: React.MouseEvent) => void;
+  activeSpace?: string;
+  currentView?: string;
+  onSelectSpace?: (spaceId: string) => void;
+  onOpenAddListToSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
+  onOpenAddSubFolder?: (folder: SpaceFolder, parentSubFolderId?: string) => void;
+  onEditSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
+  onDeleteSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
+  activeMenuId: string | null;
+  setActiveMenuId: (id: string | null) => void;
+  filterText: string;
+}
+
+const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
+  folder,
+  subFolder,
+  depth,
+  expandedSubFolderIds,
+  toggleSubFolder,
+  activeSpace,
+  currentView,
+  onSelectSpace,
+  onOpenAddListToSubFolder,
+  onOpenAddSubFolder,
+  onEditSubFolder,
+  onDeleteSubFolder,
+  activeMenuId,
+  setActiveMenuId,
+  filterText,
+}) => {
+  const isExpanded = !!expandedSubFolderIds[subFolder.id] || Boolean(filterText);
+  const hasItems = subFolder.items && subFolder.items.length > 0;
+  const hasSubFolders = subFolder.subFolders && subFolder.subFolders.length > 0;
+
+  return (
+    <div className="flex flex-col mt-0.5">
+      {/* Sub-Folder Header */}
+      <div
+        onClick={() => toggleSubFolder(subFolder.id)}
+        className="flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-all cursor-pointer group/sub select-none"
+      >
+        <div className="flex items-center gap-1.5 truncate min-w-0">
+          <button
+            type="button"
+            onClick={(e) => toggleSubFolder(subFolder.id, e)}
+            className="w-3.5 h-3.5 flex items-center justify-center text-zinc-500 group-hover/sub:text-orange-400 transition-all cursor-pointer shrink-0"
+          >
+            <span
+              className={`material-symbols-outlined text-[13px] transition-transform duration-200 ${
+                isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
+              }`}
+            >
+              chevron_right
+            </span>
+          </button>
+          <span
+            className="material-symbols-outlined text-[14px] shrink-0"
+            style={{ color: subFolder.color || '#ea580c' }}
+          >
+            {subFolder.icon || 'folder_open'}
+          </span>
+          <span className="truncate text-[11.5px] font-medium text-zinc-300">
+            {subFolder.name}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <span className="text-[10px] font-mono text-zinc-500 tabular-nums">
+            {subFolder.items?.length || 0}
+          </span>
+
+          <div className="flex items-center gap-1.5">
+            {onOpenAddListToSubFolder && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenAddListToSubFolder(folder, subFolder);
+                }}
+                className="w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all opacity-0 group-hover/sub:opacity-100 cursor-pointer"
+                title="Add list under this sub-folder"
+              >
+                <span className="material-symbols-outlined text-[14px]">add</span>
+              </button>
+            )}
+
+            <div className="relative shrink-0 flex items-center">
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveMenuId(activeMenuId === `subfld-${subFolder.id}` ? null : `subfld-${subFolder.id}`);
+                }}
+                aria-haspopup="menu"
+                aria-expanded={activeMenuId === `subfld-${subFolder.id}`}
+                className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                  activeMenuId === `subfld-${subFolder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/sub:opacity-100'
+                }`}
+                title="Sub-folder actions"
+              >
+                <span className="material-symbols-outlined text-[14px]">more_vert</span>
+              </button>
+              <ActionContextMenu
+                isOpen={activeMenuId === `subfld-${subFolder.id}`}
+                onClose={() => setActiveMenuId(null)}
+                onEdit={() => onEditSubFolder?.(folder, subFolder)}
+                onDelete={() => onDeleteSubFolder?.(folder, subFolder)}
+                onAddChild={onOpenAddListToSubFolder ? () => onOpenAddListToSubFolder(folder, subFolder) : undefined}
+                onAddSubFolder={onOpenAddSubFolder ? () => onOpenAddSubFolder(folder, subFolder.id) : undefined}
+                addChildLabel="Add List"
+                addChildIcon="playlist_add"
+                addSubFolderLabel="Add Sub-folder"
+                addSubFolderIcon="create_new_folder"
+                editLabel="Edit Sub-folder"
+                deleteLabel="Delete Sub-folder"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Sub-Folder Children (lists + nested subfolders) */}
+      {isExpanded && (
+        <div className="flex flex-col gap-0.5 pl-3 ml-2.5 my-0.5 border-l border-[#27272a]/80">
+          {/* Direct Lists */}
+          {hasItems &&
+            subFolder.items!.map((subItem) => {
+              const isActive = activeSpace === subItem.id && currentView !== 'dashboard';
+              const lower = (subItem.name + ' ' + subItem.id).toLowerCase();
+              const spaceIcon = lower.includes('infra') || lower.includes('devops')
+                ? 'terminal'
+                : lower.includes('client') || lower.includes('deliverable')
+                ? 'inventory_2'
+                : lower.includes('bug') || lower.includes('triage')
+                ? 'bug_report'
+                : lower.includes('design') || lower.includes('ui')
+                ? 'palette'
+                : lower.includes('sprint') || lower.includes('backlog')
+                ? 'checklist'
+                : 'tag';
+
+              return (
+                <button
+                  key={subItem.id}
+                  type="button"
+                  onClick={() => onSelectSpace?.(subItem.id)}
+                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer group ${
+                    isActive
+                      ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
+                  }`}
+                >
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span
+                      className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${
+                        isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300'
+                      }`}
+                    >
+                      {spaceIcon}
+                    </span>
+                    <span className="truncate">{subItem.name}</span>
+                  </div>
+                  <span
+                    className={`text-[9px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 ml-1 font-semibold ${
+                      isActive
+                        ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
+                        : 'bg-zinc-800/80 text-zinc-400'
+                    }`}
+                  >
+                    {subItem.taskCount}
+                  </span>
+                </button>
+              );
+            })}
+
+          {/* Nested Sub-Folders Recursively */}
+          {hasSubFolders &&
+            subFolder.subFolders!.map((childSub) => (
+              <RecursiveSubFolderNode
+                key={childSub.id}
+                folder={folder}
+                subFolder={childSub}
+                depth={depth + 1}
+                expandedSubFolderIds={expandedSubFolderIds}
+                toggleSubFolder={toggleSubFolder}
+                activeSpace={activeSpace}
+                currentView={currentView}
+                onSelectSpace={onSelectSpace}
+                onOpenAddListToSubFolder={onOpenAddListToSubFolder}
+                onOpenAddSubFolder={onOpenAddSubFolder}
+                onEditSubFolder={onEditSubFolder}
+                onDeleteSubFolder={onDeleteSubFolder}
+                activeMenuId={activeMenuId}
+                setActiveMenuId={setActiveMenuId}
+                filterText={filterText}
+              />
+            ))}
+
+          {!hasItems && !hasSubFolders && (
+            <div className="py-0.5 px-2 text-[10px] text-zinc-500 italic">Empty sub-folder</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+interface RecursivePipelineSubFolderNodeProps {
+  pipe: CrmPipeline;
+  subFolder: CrmPipelineSubFolder;
+  depth: number;
+  expandedSubFolderIds: Record<string, boolean>;
+  toggleSubFolder: (id: string, e?: React.MouseEvent) => void;
+  activePipelineSubFolderId?: string | null;
+  onSelectPipelineSubFolder?: (pipelineId: string, subFolderId: string) => void;
+  onOpenAddPipelineSubFolder?: (pipeline: CrmPipeline, parentSubFolderId?: string) => void;
+  onEditPipelineSubFolder?: (pipeline: CrmPipeline, subFolder: CrmPipelineSubFolder) => void;
+  onDeletePipelineSubFolder?: (pipeline: CrmPipeline, subFolder: CrmPipelineSubFolder) => void;
+  activeMenuId: string | null;
+  setActiveMenuId: (id: string | null) => void;
+  filterText: string;
+}
+
+const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodeProps> = ({
+  pipe,
+  subFolder,
+  depth,
+  expandedSubFolderIds,
+  toggleSubFolder,
+  activePipelineSubFolderId,
+  onSelectPipelineSubFolder,
+  onOpenAddPipelineSubFolder,
+  onEditPipelineSubFolder,
+  onDeletePipelineSubFolder,
+  activeMenuId,
+  setActiveMenuId,
+  filterText,
+}) => {
+  const isSubActive = activePipelineSubFolderId === subFolder.id;
+  const isExpanded = !!expandedSubFolderIds[`pipe-${subFolder.id}`] || Boolean(filterText);
+  const hasChildSubFolders = subFolder.subFolders && subFolder.subFolders.length > 0;
+
+  return (
+    <div className="flex flex-col mt-0.5">
+      <div
+        className={`group/sub flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
+          isSubActive
+            ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+            : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
+        }`}
+      >
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          {hasChildSubFolders ? (
+            <button
+              type="button"
+              onClick={(e) => toggleSubFolder(`pipe-${subFolder.id}`, e)}
+              className="w-3.5 h-3.5 flex items-center justify-center text-zinc-500 group-hover/sub:text-orange-400 transition-all cursor-pointer shrink-0"
+            >
+              <span
+                className={`material-symbols-outlined text-[13px] transition-transform duration-200 ${
+                  isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
+                }`}
+              >
+                chevron_right
+              </span>
+            </button>
+          ) : (
+            <span className="w-1.5" />
+          )}
+
+          <button
+            type="button"
+            onClick={() => onSelectPipelineSubFolder?.(pipe.id, subFolder.id)}
+            className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left cursor-pointer"
+          >
+            <span
+              className="material-symbols-outlined text-[13px] shrink-0"
+              style={{ color: subFolder.color || '#ea580c' }}
+            >
+              {subFolder.icon || 'folder'}
+            </span>
+            <span className="truncate">{subFolder.name}</span>
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0 ml-2">
+          <span className="text-[10px] font-mono text-zinc-500 tabular-nums">
+            {subFolder.dealCount ?? 0}
+          </span>
+          <div className="flex items-center gap-1.5">
+            {onOpenAddPipelineSubFolder && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenAddPipelineSubFolder(pipe, subFolder.id);
+                }}
+                className="w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all opacity-0 group-hover/sub:opacity-100 cursor-pointer"
+                title="Add child sub-folder"
+              >
+                <span className="material-symbols-outlined text-[14px]">add</span>
+              </button>
+            )}
+
+            <div className="relative shrink-0 flex items-center">
+              <button
+                type="button"
+                onMouseDown={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setActiveMenuId(activeMenuId === `pipe-sub-${subFolder.id}` ? null : `pipe-sub-${subFolder.id}`);
+                }}
+                aria-haspopup="menu"
+                aria-expanded={activeMenuId === `pipe-sub-${subFolder.id}`}
+                className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                  activeMenuId === `pipe-sub-${subFolder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/sub:opacity-100'
+                }`}
+                title="Sub-folder actions"
+              >
+                <span className="material-symbols-outlined text-[14px]">more_vert</span>
+              </button>
+              <ActionContextMenu
+                isOpen={activeMenuId === `pipe-sub-${subFolder.id}`}
+                onClose={() => setActiveMenuId(null)}
+                onEdit={() => onEditPipelineSubFolder?.(pipe, subFolder)}
+                onDelete={() => onDeletePipelineSubFolder?.(pipe, subFolder)}
+                onAddSubFolder={onOpenAddPipelineSubFolder ? () => onOpenAddPipelineSubFolder(pipe, subFolder.id) : undefined}
+                addSubFolderLabel="Add Sub-folder"
+                addSubFolderIcon="create_new_folder"
+                editLabel="Edit Sub-folder"
+                deleteLabel="Delete Sub-folder"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Children Subfolders */}
+      {(isExpanded || isSubActive) && hasChildSubFolders && (
+        <div className="flex flex-col gap-0.5 pl-3 ml-2.5 my-0.5 border-l border-[#27272a]/80">
+          {subFolder.subFolders!.map((childSub) => (
+            <RecursivePipelineSubFolderNode
+              key={childSub.id}
+              pipe={pipe}
+              subFolder={childSub}
+              depth={depth + 1}
+              expandedSubFolderIds={expandedSubFolderIds}
+              toggleSubFolder={toggleSubFolder}
+              activePipelineSubFolderId={activePipelineSubFolderId}
+              onSelectPipelineSubFolder={onSelectPipelineSubFolder}
+              onOpenAddPipelineSubFolder={onOpenAddPipelineSubFolder}
+              onEditPipelineSubFolder={onEditPipelineSubFolder}
+              onDeletePipelineSubFolder={onDeletePipelineSubFolder}
+              activeMenuId={activeMenuId}
+              setActiveMenuId={setActiveMenuId}
+              filterText={filterText}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 export const InnerSidebar: React.FC<InnerSidebarProps> = ({
   currentHub,
@@ -42,20 +422,30 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
   onSelectSpace,
   onSelectDashboard,
   onOpenAddFolder,
+  onOpenAddListToFolder,
   onEditFolder,
   onDeleteFolder,
+  onOpenAddSubFolder,
+  onEditSubFolder,
+  onDeleteSubFolder,
+  onOpenAddListToSubFolder,
 
   // CRM
   pipelines = [],
   activePipelineId,
+  activePipelineSubFolderId,
   crmView = 'dashboard',
   onSelectPipeline,
+  onSelectPipelineSubFolder,
   onSelectCrmDashboard,
   onSelectCrmBoard,
   onSelectPipelineView,
   onOpenAddPipeline,
   onEditPipeline,
   onDeletePipeline,
+  onOpenAddPipelineSubFolder,
+  onEditPipelineSubFolder,
+  onDeletePipelineSubFolder,
 }) => {
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
@@ -63,12 +453,24 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
     'fld-engineering': true,
     'fld-client-deliverables': true,
   });
+  const [expandedSubFolderIds, setExpandedSubFolderIds] = useState<Record<string, boolean>>({
+    'sub-replication-core': true,
+    'sub-enterprise-poc': true,
+  });
 
   const toggleFolder = (folderId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setExpandedFolderIds((prev) => ({
       ...prev,
       [folderId]: !prev[folderId],
+    }));
+  };
+
+  const toggleSubFolder = (subFolderId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setExpandedSubFolderIds((prev) => ({
+      ...prev,
+      [subFolderId]: !prev[subFolderId],
     }));
   };
 
@@ -99,19 +501,38 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
     );
   }
 
+  // Recursive matching helper for space subfolders
+  const matchesSubFolder = (sf: SpaceSubFolder, q: string): boolean => {
+    if (sf.name.toLowerCase().includes(q)) return true;
+    if (sf.items?.some((i) => i.name.toLowerCase().includes(q))) return true;
+    if (sf.subFolders?.some((child) => matchesSubFolder(child, q))) return true;
+    return false;
+  };
+
+  // Recursive matching helper for pipeline subfolders
+  const matchesPipeSubFolder = (sf: CrmPipelineSubFolder, q: string): boolean => {
+    if (sf.name.toLowerCase().includes(q)) return true;
+    if (sf.subFolders?.some((child) => matchesPipeSubFolder(child, q))) return true;
+    return false;
+  };
+
   // Filtered Task Space Folders
   const filteredFolders = folders.filter((folder) => {
     if (!filterText.trim()) return true;
     const q = filterText.toLowerCase();
     const matchFolderName = folder.name.toLowerCase().includes(q);
     const matchSubItem = folder.items?.some((i) => i.name.toLowerCase().includes(q));
-    return matchFolderName || matchSubItem;
+    const matchSubFolder = folder.subFolders?.some((sf) => matchesSubFolder(sf, q));
+    return matchFolderName || matchSubItem || matchSubFolder;
   });
 
   // Filtered CRM Pipelines
   const filteredPipelines = pipelines.filter((pipe) => {
     if (!filterText.trim()) return true;
-    return pipe.name.toLowerCase().includes(filterText.toLowerCase());
+    const q = filterText.toLowerCase();
+    const matchPipeName = pipe.name.toLowerCase().includes(q);
+    const matchSubFolder = pipe.subFolders?.some((sf) => matchesPipeSubFolder(sf, q));
+    return matchPipeName || matchSubFolder;
   });
 
   return (
@@ -232,102 +653,169 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                     <div key={folder.id} className="flex flex-col">
                       {/* Folder Item Header */}
                       <div
-                        onClick={() => {
-                          if (hasItems) toggleFolder(folder.id);
-                        }}
+                        onClick={() => toggleFolder(folder.id)}
                         className="flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-xs text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 transition-all cursor-pointer group select-none"
                       >
                         <div className="flex items-center gap-1.5 truncate min-w-0">
-                          {hasItems ? (
-                            <button
-                              type="button"
-                              onClick={(e) => toggleFolder(folder.id, e)}
-                              className="w-3.5 h-3.5 flex items-center justify-center text-zinc-400 group-hover:text-orange-400 transition-all cursor-pointer shrink-0"
+                          <button
+                            type="button"
+                            onClick={(e) => toggleFolder(folder.id, e)}
+                            className="w-3.5 h-3.5 flex items-center justify-center text-zinc-400 group-hover:text-orange-400 transition-all cursor-pointer shrink-0"
+                          >
+                            <span
+                              className={`material-symbols-outlined text-[14px] transition-transform duration-200 ${
+                                isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
+                              }`}
                             >
-                              <span
-                                className={`material-symbols-outlined text-[14px] transition-transform duration-200 ${
-                                  isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
-                                }`}
-                              >
-                                chevron_right
-                              </span>
-                            </button>
-                          ) : (
-                            <span className="w-3.5 h-3.5 shrink-0" />
-                          )}
+                              chevron_right
+                            </span>
+                          </button>
 
                           <span
                             className="material-symbols-outlined text-[14px] shrink-0"
-                            style={{ color: folder.color || '#ea580c' }}
+                            style={{ color: folder.color && folder.color !== '#9900c2' ? folder.color : '#ea580c' }}
                           >
                             {folder.icon || 'folder'}
                           </span>
                           <span className="truncate font-medium">{folder.name}</span>
                         </div>
 
-                        <div className="flex items-center gap-1 shrink-0 ml-1">
-                          <span className="text-[10px] font-mono text-zinc-500">
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-[10px] font-mono text-zinc-500 tabular-nums">
                             {folder.items?.length || 0}
                           </span>
-                          <div className="relative shrink-0 flex items-center">
-                            <button
-                              type="button"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuId(activeMenuId === `fld-${folder.id}` ? null : `fld-${folder.id}`);
-                              }}
-                              aria-haspopup="menu"
-                              aria-expanded={activeMenuId === `fld-${folder.id}`}
-                              className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                                activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
-                              }`}
-                              title="Folder actions"
-                            >
-                              <span className="material-symbols-outlined text-[15px]" aria-hidden="true">more_vert</span>
-                            </button>
-                            <ActionContextMenu
-                              isOpen={activeMenuId === `fld-${folder.id}`}
-                              onClose={() => setActiveMenuId(null)}
-                              onEdit={() => onEditFolder?.(folder)}
-                              onDelete={() => onDeleteFolder?.(folder)}
-                              editLabel="Edit Folder"
-                              deleteLabel="Delete Folder"
-                            />
+
+                          <div className="flex items-center gap-1.5">
+                            {onOpenAddListToFolder && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenAddListToFolder(folder);
+                                }}
+                                className="w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                title="Add list under this folder"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">add</span>
+                              </button>
+                            )}
+
+                            <div className="relative shrink-0 flex items-center">
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(activeMenuId === `fld-${folder.id}` ? null : `fld-${folder.id}`);
+                                }}
+                                aria-haspopup="menu"
+                                aria-expanded={activeMenuId === `fld-${folder.id}`}
+                                className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                                  activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
+                                }`}
+                                title="Folder actions"
+                              >
+                                <span className="material-symbols-outlined text-[14px]" aria-hidden="true">more_vert</span>
+                              </button>
+                              <ActionContextMenu
+                                isOpen={activeMenuId === `fld-${folder.id}`}
+                                onClose={() => setActiveMenuId(null)}
+                                onEdit={() => onEditFolder?.(folder)}
+                                onDelete={() => onDeleteFolder?.(folder)}
+                                onAddChild={onOpenAddListToFolder ? () => onOpenAddListToFolder(folder) : undefined}
+                                onAddSubFolder={onOpenAddSubFolder ? () => onOpenAddSubFolder(folder) : undefined}
+                                addChildLabel="Add List"
+                                addChildIcon="playlist_add"
+                                addSubFolderLabel="Add Sub-folder"
+                                addSubFolderIcon="create_new_folder"
+                                editLabel="Edit Folder"
+                                deleteLabel="Delete Folder"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Expandable Folder Child Items */}
-                      {hasItems && isExpanded && (
-                        <div className="flex flex-col gap-0.5 pl-4 ml-1.5 my-0.5 border-l border-[#27272a]">
-                          {folder.items!.map((subItem) => {
-                            const isActive = activeSpace === subItem.id && currentView !== 'dashboard';
-                            return (
-                              <button
-                                key={subItem.id}
-                                type="button"
-                                onClick={() => onSelectSpace?.(subItem.id)}
-                                className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-                                  isActive
-                                    ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
-                                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                                }`}
-                              >
-                                <div className="flex items-center gap-1.5 truncate">
+                      {/* Expandable Folder Child Items & Sub-folders */}
+                      {isExpanded && (
+                        <div className="flex flex-col gap-0.5 pl-3 ml-2 my-0.5 border-l border-[#27272a]">
+                          {/* Direct Lists */}
+                          {hasItems &&
+                            folder.items!.map((subItem) => {
+                              const isActive = activeSpace === subItem.id && currentView !== 'dashboard';
+                              const lower = (subItem.name + ' ' + subItem.id).toLowerCase();
+                              const spaceIcon = lower.includes('infra') || lower.includes('devops')
+                                ? 'terminal'
+                                : lower.includes('client') || lower.includes('deliverable')
+                                ? 'inventory_2'
+                                : lower.includes('bug') || lower.includes('triage')
+                                ? 'bug_report'
+                                : lower.includes('design') || lower.includes('ui')
+                                ? 'palette'
+                                : lower.includes('sprint') || lower.includes('backlog')
+                                ? 'checklist'
+                                : 'tag';
+
+                              return (
+                                <button
+                                  key={subItem.id}
+                                  type="button"
+                                  onClick={() => onSelectSpace?.(subItem.id)}
+                                  className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer group ${
+                                    isActive
+                                      ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <span
+                                      className={`material-symbols-outlined text-[14px] shrink-0 transition-colors ${
+                                        isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300'
+                                      }`}
+                                    >
+                                      {spaceIcon}
+                                    </span>
+                                    <span className="truncate">{subItem.name}</span>
+                                  </div>
                                   <span
-                                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                                      isActive ? 'bg-orange-500 animate-pulse' : 'bg-zinc-500'
+                                    className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 ml-1 font-semibold ${
+                                      isActive
+                                        ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
+                                        : 'bg-zinc-800/80 text-zinc-400'
                                     }`}
-                                  />
-                                  <span className="truncate">{subItem.name}</span>
-                                </div>
-                                <span className="text-[9.5px] font-mono text-zinc-500 shrink-0 ml-1">
-                                  {subItem.taskCount}
-                                </span>
-                              </button>
-                            );
-                          })}
+                                  >
+                                    {subItem.taskCount}
+                                  </span>
+                                </button>
+                              );
+                            })}
+
+                          {/* Sub-Folders (Recursive Tree) */}
+                          {folder.subFolders && folder.subFolders.length > 0 &&
+                            folder.subFolders.map((subFolder) => (
+                              <RecursiveSubFolderNode
+                                key={subFolder.id}
+                                folder={folder}
+                                subFolder={subFolder}
+                                depth={1}
+                                expandedSubFolderIds={expandedSubFolderIds}
+                                toggleSubFolder={toggleSubFolder}
+                                activeSpace={activeSpace}
+                                currentView={currentView}
+                                onSelectSpace={onSelectSpace}
+                                onOpenAddListToSubFolder={onOpenAddListToSubFolder}
+                                onOpenAddSubFolder={onOpenAddSubFolder}
+                                onEditSubFolder={onEditSubFolder}
+                                onDeleteSubFolder={onDeleteSubFolder}
+                                activeMenuId={activeMenuId}
+                                setActiveMenuId={setActiveMenuId}
+                                filterText={filterText}
+                              />
+                            ))}
+
+                          {!hasItems && (!folder.subFolders || folder.subFolders.length === 0) && (
+                            <div className="py-1 px-2 text-[10px] text-zinc-500 italic">No lists yet</div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -394,40 +882,59 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                             className="material-symbols-outlined text-[14px] shrink-0"
                             style={{ color: pipe.color || '#ea580c' }}
                           >
-                            {pipe.icon || 'trending_up'}
+                            {pipe.icon || 'leaderboard'}
                           </span>
                           <span className="truncate font-medium">{pipe.name}</span>
                         </button>
 
-                        <div className="flex items-center gap-1 shrink-0 ml-1">
-                          <span className="text-[10px] font-mono text-zinc-500">
+                        <div className="flex items-center gap-2 shrink-0 ml-2">
+                          <span className="text-[10px] font-mono text-zinc-500 tabular-nums">
                             {pipe.dealCount}
                           </span>
-                          <div className="relative shrink-0 flex items-center">
-                            <button
-                              type="button"
-                              onMouseDown={(e) => e.stopPropagation()}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setActiveMenuId(activeMenuId === `pipe-${pipe.id}` ? null : `pipe-${pipe.id}`);
-                              }}
-                              aria-haspopup="menu"
-                              aria-expanded={activeMenuId === `pipe-${pipe.id}`}
-                              className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                                activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
-                              }`}
-                              title="Pipeline actions"
-                            >
-                              <span className="material-symbols-outlined text-[15px]" aria-hidden="true">more_vert</span>
-                            </button>
-                            <ActionContextMenu
-                              isOpen={activeMenuId === `pipe-${pipe.id}`}
-                              onClose={() => setActiveMenuId(null)}
-                              onEdit={() => onEditPipeline?.(pipe)}
-                              onDelete={() => onDeletePipeline?.(pipe)}
-                              editLabel="Edit Pipeline"
-                              deleteLabel="Delete Pipeline"
-                            />
+                          <div className="flex items-center gap-1.5">
+                            {onOpenAddPipelineSubFolder && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onOpenAddPipelineSubFolder(pipe);
+                                }}
+                                className="w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all opacity-0 group-hover:opacity-100 cursor-pointer"
+                                title="Add sub-folder"
+                              >
+                                <span className="material-symbols-outlined text-[14px]">add</span>
+                              </button>
+                            )}
+
+                            <div className="relative shrink-0 flex items-center">
+                              <button
+                                type="button"
+                                onMouseDown={(e) => e.stopPropagation()}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(activeMenuId === `pipe-${pipe.id}` ? null : `pipe-${pipe.id}`);
+                                }}
+                                aria-haspopup="menu"
+                                aria-expanded={activeMenuId === `pipe-${pipe.id}`}
+                                className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                                  activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
+                                }`}
+                                title="Pipeline actions"
+                              >
+                                <span className="material-symbols-outlined text-[15px]" aria-hidden="true">more_vert</span>
+                              </button>
+                              <ActionContextMenu
+                                isOpen={activeMenuId === `pipe-${pipe.id}`}
+                                onClose={() => setActiveMenuId(null)}
+                                onEdit={() => onEditPipeline?.(pipe)}
+                                onDelete={() => onDeletePipeline?.(pipe)}
+                                onAddSubFolder={onOpenAddPipelineSubFolder ? () => onOpenAddPipelineSubFolder(pipe) : undefined}
+                                addSubFolderLabel="Add Sub-folder"
+                                addSubFolderIcon="create_new_folder"
+                                editLabel="Edit Pipeline"
+                                deleteLabel="Delete Pipeline"
+                              />
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -442,7 +949,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                               else if (onSelectCrmBoard) onSelectCrmBoard();
                             }}
                             className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-                              crmView === 'board'
+                              crmView === 'board' && !activePipelineSubFolderId
                                 ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                                 : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                             }`}
@@ -490,6 +997,46 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                               Edit
                             </span>
                           </button>
+
+                          {/* Sub-Folders Section */}
+                          <div className="mt-2 pt-2 border-t border-[#27272a] flex flex-col gap-1">
+                            <div className="flex items-center justify-between px-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold tracking-wider">
+                              <span>Sub-folders ({pipe.subFolders?.length || 0})</span>
+                              {onOpenAddPipelineSubFolder && (
+                                <button
+                                  type="button"
+                                  onClick={() => onOpenAddPipelineSubFolder(pipe)}
+                                  className="w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all cursor-pointer"
+                                  title="Add sub-folder"
+                                >
+                                  <span className="material-symbols-outlined text-[14px]">add</span>
+                                </button>
+                              )}
+                            </div>
+
+                            {pipe.subFolders && pipe.subFolders.length > 0 ? (
+                              pipe.subFolders.map((subFolder) => (
+                                <RecursivePipelineSubFolderNode
+                                  key={subFolder.id}
+                                  pipe={pipe}
+                                  subFolder={subFolder}
+                                  depth={1}
+                                  expandedSubFolderIds={expandedSubFolderIds}
+                                  toggleSubFolder={toggleSubFolder}
+                                  activePipelineSubFolderId={activePipelineSubFolderId}
+                                  onSelectPipelineSubFolder={onSelectPipelineSubFolder}
+                                  onOpenAddPipelineSubFolder={onOpenAddPipelineSubFolder}
+                                  onEditPipelineSubFolder={onEditPipelineSubFolder}
+                                  onDeletePipelineSubFolder={onDeletePipelineSubFolder}
+                                  activeMenuId={activeMenuId}
+                                  setActiveMenuId={setActiveMenuId}
+                                  filterText={filterText}
+                                />
+                              ))
+                            ) : (
+                              <div className="py-1 px-1 text-[10px] text-zinc-500 italic">No sub-folders</div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>

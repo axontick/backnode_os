@@ -8,6 +8,7 @@ interface DeliverablesTableViewProps {
   onOpenCreateTask: () => void;
   onRequestDeleteTask: (task: TaskItem) => void;
   onNavigateToView: (view: 'board' | 'list' | 'table' | 'timeline' | 'calendar' | 'docs') => void;
+  onEditTask?: (task: TaskItem) => void;
 }
 
 export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
@@ -17,6 +18,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   onOpenCreateTask,
   onRequestDeleteTask,
   onNavigateToView,
+  onEditTask,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>(['ENG-101', 'ENG-103']);
   const [density, setDensity] = useState<'compact' | 'comfortable'>('compact');
@@ -54,14 +56,86 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   const doneCount = tasks.filter((t) => t.status === 'Done').length;
   const backlogCount = tasks.filter((t) => t.status === 'Backlog').length;
 
+  const getStatusBadge = (status: TaskStatus) => {
+    switch (status) {
+      case 'In Progress':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] font-mono text-[10px] font-semibold bg-orange-950/40 text-orange-400 border border-orange-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse" />
+            <span>In Progress</span>
+          </span>
+        );
+      case 'In Review':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] font-mono text-[10px] font-semibold bg-amber-950/40 text-amber-400 border border-amber-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+            <span>In Review</span>
+          </span>
+        );
+      case 'Done':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] font-mono text-[10px] font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            <span>Done</span>
+          </span>
+        );
+      case 'Blocked':
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] font-mono text-[10px] font-semibold bg-red-950/40 text-red-400 border border-red-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
+            <span>Blocked</span>
+          </span>
+        );
+      case 'Backlog':
+      default:
+        return (
+          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-[6px] font-mono text-[10px] font-semibold bg-zinc-800/80 text-zinc-400 border border-zinc-700/50">
+            <span className="w-1.5 h-1.5 rounded-full bg-zinc-500" />
+            <span>Backlog</span>
+          </span>
+        );
+    }
+  };
+
+  const getPriorityBadge = (priority: TaskItem['priority']) => {
+    switch (priority) {
+      case 'Urgent':
+        return (
+          <span className="font-mono text-[10px] text-red-400 border border-red-500/30 bg-red-950/40 px-2 py-0.5 rounded-[6px] font-semibold">
+            Urgent
+          </span>
+        );
+      case 'High':
+        return (
+          <span className="font-mono text-[10px] text-orange-400 border border-orange-500/30 bg-orange-950/40 px-2 py-0.5 rounded-[6px] font-semibold">
+            High
+          </span>
+        );
+      case 'Medium':
+        return (
+          <span className="font-mono text-[10px] text-amber-400 border border-amber-500/30 bg-amber-950/40 px-2 py-0.5 rounded-[6px] font-semibold">
+            Medium
+          </span>
+        );
+      case 'Low':
+        return (
+          <span className="font-mono text-[10px] text-zinc-400 border border-zinc-700/50 bg-zinc-800/60 px-2 py-0.5 rounded-[6px]">
+            Low
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#fafafc] overflow-hidden select-none text-xs">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden select-none text-xs">
       {/* Table Utility Controls Toolbar */}
-      <div className="px-6 py-2 bg-white/80 border-b border-[#d4c0d5]/30 flex items-center justify-between shrink-0 h-11">
+      <div className="px-6 py-2 bg-[#121214] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11">
         {/* Left Table Context */}
         <div className="flex items-center gap-2">
-          <span className="font-bold text-[#1a1b22] text-xs">Deliverables Spreadsheet</span>
-          <span className="font-mono text-[10px] bg-[#eeedf7] text-[#504252] px-2 py-0.5 rounded-full">
+          <span className="font-bold text-zinc-100 text-xs">Deliverables Spreadsheet</span>
+          <span className="font-mono text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-[6px]">
             {filteredTasks.length} records
           </span>
         </div>
@@ -70,7 +144,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
         <div className="flex items-center gap-2">
           {/* Quick Filter Input */}
           <div className="relative w-48">
-            <span className="material-symbols-outlined absolute left-2 top-2 text-[14px] text-[#5f5e61]">
+            <span className="material-symbols-outlined absolute left-2 top-2 text-[14px] text-zinc-500">
               filter_alt
             </span>
             <input
@@ -78,7 +152,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
               value={filterQuery}
               onChange={(e) => setFilterQuery(e.target.value)}
               placeholder="Filter deliverables..."
-              className="w-full h-8 pl-7 pr-2 bg-[#f4f2fd] border border-[#d4c0d5]/30 rounded-md text-xs text-[#1a1b22] placeholder:text-[#5f5e61] focus:outline-none focus:border-[#9900c2]"
+              className="w-full h-8 pl-7 pr-2 bg-[#18181b] border border-[#27272a] rounded-[6px] text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
             />
           </div>
 
@@ -86,7 +160,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="h-8 px-2 rounded-md border border-[#d4c0d5]/30 bg-white text-[#504252] text-xs focus:outline-none cursor-pointer"
+            className="h-8 px-2.5 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-200 text-xs focus:outline-none focus:border-orange-500 cursor-pointer"
           >
             <option value="All">All Statuses ({tasks.length})</option>
             <option value="In Progress">In Progress ({inProgressCount})</option>
@@ -96,19 +170,21 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
           </select>
 
           {/* Density Toggle */}
-          <div className="h-8 px-1 bg-[#f4f2fd] rounded-md border border-[#d4c0d5]/30 flex items-center font-mono text-[10px]">
+          <div className="h-8 p-0.5 bg-[#18181b] rounded-[6px] border border-[#27272a] flex items-center font-mono text-[10px]">
             <button
+              type="button"
               onClick={() => setDensity('compact')}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                density === 'compact' ? 'bg-white text-[#1a1b22] shadow-xs font-bold' : 'text-[#504252]'
+              className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${
+                density === 'compact' ? 'bg-[#27272a] text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               Compact
             </button>
             <button
+              type="button"
               onClick={() => setDensity('comfortable')}
-              className={`px-2 py-0.5 rounded transition-colors ${
-                density === 'comfortable' ? 'bg-white text-[#1a1b22] shadow-xs font-bold' : 'text-[#504252]'
+              className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${
+                density === 'comfortable' ? 'bg-[#27272a] text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
               Comfortable
@@ -117,6 +193,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
 
           {/* Export CSV */}
           <button
+            type="button"
             onClick={() => {
               const headers = ['ID', 'Title', 'Status', 'Priority', 'Assignee', 'Due Date'];
               const rows = filteredTasks.map((t) => [
@@ -137,7 +214,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
               link.click();
               document.body.removeChild(link);
             }}
-            className="h-8 px-2.5 rounded-md border border-[#d4c0d5]/30 bg-white hover:bg-[#eeedf7] text-[#504252] hover:text-[#1a1b22] flex items-center gap-1 transition-colors text-xs"
+            className="h-8 px-2.5 rounded-[6px] border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-orange-400 flex items-center gap-1 transition-colors text-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[15px]">download</span>
             <span>Export CSV</span>
@@ -148,22 +225,22 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
       {/* 2. Main High-Density Matrix View Canvas */}
       <div className="flex-1 p-6 overflow-hidden flex flex-col justify-between">
         {/* Table Enclosure Card */}
-        <div className="flex-1 bg-white rounded-xl border border-[#d4c0d5]/40 shadow-xs flex flex-col overflow-hidden">
+        <div className="flex-1 bg-[#121214] rounded-[6px] border border-[#27272a] shadow-sm flex flex-col overflow-hidden">
           <div className="flex-1 overflow-x-auto overflow-y-auto custom-scrollbar">
             <table className="w-full text-left border-collapse min-w-[1200px]">
               {/* Header Row */}
               <thead>
-                <tr className="bg-[#f4f2fd]/80 border-b border-[#d4c0d5]/30 text-[#5f5e61] font-mono text-[11px] uppercase tracking-wider select-none">
+                <tr className="bg-[#18181b] border-b border-[#27272a] text-zinc-400 font-mono text-[11px] uppercase tracking-wider select-none">
                   <th className="w-10 px-3 py-2.5 text-center">
                     <input
                       type="checkbox"
                       checked={selectedIds.length === filteredTasks.length && filteredTasks.length > 0}
                       onChange={handleToggleSelectAll}
-                      className="rounded border-zinc-300 text-[#9900c2] focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                      className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
                     />
                   </th>
                   <th className="w-24 px-3 py-2.5 font-medium">
-                    <div className="flex items-center gap-1 hover:text-[#1a1b22] cursor-pointer">
+                    <div className="flex items-center gap-1 hover:text-zinc-200 cursor-pointer">
                       <span>ID</span>
                       <span className="material-symbols-outlined text-[13px]">unfold_more</span>
                     </div>
@@ -180,7 +257,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
               </thead>
 
               {/* High-Density Rows */}
-              <tbody className="divide-y divide-[#d4c0d5]/20 text-xs">
+              <tbody className="divide-y divide-[#27272a] text-xs">
                 {filteredTasks.map((t) => {
                   const isChecked = selectedIds.includes(t.id);
                   const isRowActive = selectedTaskId === t.id;
@@ -189,8 +266,8 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                     <tr
                       key={t.id}
                       onClick={() => onSelectTask(t)}
-                      className={`hover:bg-[#f4f2fd]/50 transition-colors group cursor-pointer ${
-                        isRowActive ? 'bg-[#9900c2]/5 font-medium' : ''
+                      className={`hover:bg-zinc-800/40 transition-colors group cursor-pointer ${
+                        isRowActive ? 'bg-orange-950/30 border-l-2 border-orange-500' : ''
                       } ${density === 'comfortable' ? 'py-3' : 'py-2'}`}
                     >
                       {/* Checkbox */}
@@ -205,30 +282,30 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleSelectId(t.id)}
-                          className="rounded border-zinc-300 text-[#9900c2] focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                          className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
                         />
                       </td>
 
                       {/* ID */}
-                      <td className="px-3 py-2 font-mono text-[11px] text-[#5f5e61] font-semibold">
+                      <td className="px-3 py-2 font-mono text-[11px] text-zinc-400 font-semibold">
                         {t.id}
                       </td>
 
                       {/* Task Name */}
-                      <td className="px-3 py-2 font-medium text-[#1a1b22]">
+                      <td className="px-3 py-2 font-medium text-zinc-200">
                         <div className="flex items-center gap-2">
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${
                               t.status === 'In Progress'
-                                ? 'bg-[#9900c2]'
+                                ? 'bg-orange-500'
                                 : t.status === 'Done'
                                 ? 'bg-emerald-500'
                                 : t.status === 'In Review'
-                                ? 'bg-indigo-500'
-                                : 'bg-zinc-400'
+                                ? 'bg-amber-500'
+                                : 'bg-zinc-500'
                             }`}
                           />
-                          <span className={`truncate ${t.status === 'Done' ? 'line-through text-zinc-400' : ''}`}>
+                          <span className={`truncate group-hover:text-orange-400 transition-colors ${t.status === 'Done' ? 'line-through text-zinc-500' : ''}`}>
                             {t.title}
                           </span>
                         </div>
@@ -236,161 +313,97 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
 
                       {/* Status */}
                       <td className="px-3 py-2">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full font-mono text-[10px] font-medium ${
-                            t.status === 'In Progress'
-                              ? 'bg-[#fbd7ff]/40 text-[#9900c2] border border-[#9900c2]/30'
-                              : t.status === 'Done'
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                              : t.status === 'In Review'
-                              ? 'bg-indigo-50 text-indigo-700 border border-indigo-200'
-                              : 'bg-zinc-100 text-zinc-700 border border-zinc-200'
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              t.status === 'In Progress'
-                                ? 'bg-[#9900c2] animate-pulse'
-                                : t.status === 'Done'
-                                ? 'bg-emerald-500'
-                                : t.status === 'In Review'
-                                ? 'bg-indigo-500'
-                                : 'bg-zinc-400'
-                            }`}
-                          />
-                          {t.status}
-                        </span>
+                        {getStatusBadge(t.status)}
                       </td>
 
                       {/* Priority */}
                       <td className="px-3 py-2">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded font-mono text-[10px] font-semibold ${
-                            t.priority === 'Urgent'
-                              ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                              : t.priority === 'High'
-                              ? 'bg-amber-50 text-amber-800 border border-amber-200'
-                              : t.priority === 'Medium'
-                              ? 'bg-zinc-100 text-zinc-700 border border-zinc-200'
-                              : 'bg-slate-100 text-slate-600 border border-slate-200'
-                          }`}
-                        >
-                          {t.priority}
-                        </span>
+                        {getPriorityBadge(t.priority)}
                       </td>
 
                       {/* Due Date */}
-                      <td className="px-3 py-2 font-mono text-[11px] text-[#5f5e61]">
-                        {t.dueDate || 'Oct 24, 2026'}
+                      <td className="px-3 py-2 font-mono text-[11px] text-orange-400 font-semibold">
+                        {t.dueDate || 'Today'}
                       </td>
 
                       {/* Assignee */}
                       <td className="px-3 py-2">
-                        <div className="flex items-center gap-1.5">
-                          <div className="w-5 h-5 rounded-full bg-[#eeedf7] text-[#9900c2] flex items-center justify-center font-mono text-[9px] font-bold border border-[#d4c0d5]/40">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold text-zinc-200 bg-zinc-800 border border-zinc-700"
+                            style={{
+                              backgroundColor: t.assignee.avatarBg && t.assignee.avatarBg !== '#9900c2' ? t.assignee.avatarBg : '#27272a',
+                            }}
+                          >
                             {t.assignee.initials}
                           </div>
-                          <span className="text-[11px] text-[#1a1b22]">{t.assignee.name}</span>
+                          <span className="truncate text-zinc-300">{t.assignee.name}</span>
                         </div>
                       </td>
 
                       {/* Linked CRM Deal */}
                       <td className="px-3 py-2">
-                        {t.linkedCrmDeal?.name ? (
-                          <div className="inline-flex items-center gap-1 text-[11px] text-[#9900c2] hover:underline">
-                            <span className="material-symbols-outlined text-[13px]">link</span>
-                            <span>{t.linkedCrmDeal.name} ({t.linkedCrmDeal.value})</span>
-                          </div>
+                        {t.linkedCrmDeal ? (
+                          <span className="inline-block font-mono text-zinc-300 bg-[#18181b] border border-[#27272a] px-2 py-0.5 rounded-[6px] text-[10px] truncate max-w-[160px]">
+                            {t.linkedCrmDeal.name}
+                          </span>
                         ) : (
-                          <span className="text-[11px] text-[#837284]">—</span>
+                          <span className="text-zinc-600 font-mono text-[11px]">—</span>
                         )}
                       </td>
 
                       {/* Est. Hours */}
-                      <td className="px-3 py-2 text-right pr-4 font-mono text-[11px] text-[#5f5e61]">
-                        {t.estimation.hours}h
+                      <td className="px-3 py-2 text-right font-mono text-zinc-400 pr-4">
+                        {t.estimation?.hours || 6}h
                       </td>
 
-                      {/* Action Menu (Delete, Inspect) */}
-                      <td
-                        onClick={(e) => e.stopPropagation()}
-                        className="px-3 py-2 text-center"
-                      >
-                        <button
-                          onClick={() => onRequestDeleteTask(t)}
-                          title="Delete deliverable permanently..."
-                          className="p-1 hover:bg-rose-50 text-zinc-400 hover:text-rose-600 rounded transition-colors"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">delete</span>
-                        </button>
+                      {/* Action */}
+                      <td className="px-3 py-2 text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {onEditTask && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditTask(t);
+                              }}
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 rounded-[6px] transition-all cursor-pointer"
+                              title="Edit deliverable"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">edit</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onRequestDeleteTask(t);
+                            }}
+                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-950/40 text-zinc-400 hover:text-red-400 rounded-[6px] transition-all cursor-pointer"
+                            title="Delete deliverable"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">delete</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
                 })}
-
-                {/* Inline Quick Add Row Placeholder */}
-                <tr
-                  onClick={onOpenCreateTask}
-                  className="hover:bg-[#f4f2fd]/30 cursor-pointer group transition-colors border-t border-dashed border-[#d4c0d5]/50"
-                >
-                  <td className="px-3 py-2 text-center text-[#837284]">
-                    <span className="material-symbols-outlined text-[16px]">add</span>
-                  </td>
-                  <td colSpan={9} className="px-3 py-2 text-xs text-[#504252] italic group-hover:text-[#9900c2]">
-                    + Add new deliverable or press Enter...
-                  </td>
-                </tr>
               </tbody>
             </table>
           </div>
 
-          {/* Pinned Summary Footer Bar Inside Card */}
-          <div className="h-10 bg-[#f4f2fd]/60 border-t border-[#d4c0d5]/30 px-4 flex items-center justify-between font-mono text-[11px] text-[#5f5e61] select-none">
+          {/* Table Footer Pagination & Telemetry */}
+          <div className="h-10 px-4 bg-[#18181b] border-t border-[#27272a] flex items-center justify-between font-mono text-[11px] text-zinc-400">
             <div className="flex items-center gap-3">
-              <span className="font-medium text-[#1a1b22]">
-                Showing {filteredTasks.length} of {tasks.length} tasks
-              </span>
-              <span className="text-[#d4c0d5]">·</span>
-              <span className="text-[#9900c2] font-medium">{inProgressCount} In Progress</span>
-              <span className="text-indigo-600 font-medium">{inReviewCount} In Review</span>
-              <span className="text-emerald-600 font-medium">{doneCount} Done</span>
-              <span className="text-zinc-600 font-medium">{backlogCount} Backlog</span>
+              <span>Selected: <strong className="text-orange-400">{selectedIds.length}</strong></span>
+              <span>•</span>
+              <span>Total Hours: <strong className="text-zinc-200">{filteredTasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0)}h</strong></span>
             </div>
 
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5 px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">
-                <span>⚡ SQLite Query Time:</span>
-                <span className="font-semibold">0.12ms</span>
-              </div>
-              <div className="text-[#1a1b22] font-semibold text-xs">
-                Total Est:{' '}
-                <span className="text-[#9900c2]">
-                  {tasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0)} hrs
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <span>Local Replica: <strong className="text-emerald-400">synced (0.2ms)</strong></span>
             </div>
-          </div>
-        </div>
-
-        {/* Ambient Command HUD Pill / Micro-Status Dock */}
-        <div className="mt-4 flex items-center justify-between px-1 text-xs text-[#5f5e61]">
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-              <span className="font-mono text-[11px]">IndexedDB Cache: Synchronized</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[13px]">lock_reset</span>
-              <span className="font-mono text-[11px]">E2E Encryption: AES-256-GCM</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 font-mono text-[11px]">
-            <span>
-              Shortcuts: <kbd className="px-1 py-0.5 bg-white border border-[#d4c0d5]/40 rounded text-[10px]">C</kbd>{' '}
-              New Task, <kbd className="px-1 py-0.5 bg-white border border-[#d4c0d5]/40 rounded text-[10px]">J</kbd>/
-              <kbd className="px-1 py-0.5 bg-white border border-[#d4c0d5]/40 rounded text-[10px]">K</kbd> Navigate
-            </span>
           </div>
         </div>
       </div>

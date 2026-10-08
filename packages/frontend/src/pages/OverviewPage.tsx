@@ -13,9 +13,7 @@ export const OverviewPage: React.FC = () => {
     setCurrentView,
     setSelectedDealId,
     setCrmView,
-    setNewItemDefaultStatus,
-    setNewItemType,
-    setIsNewItemModalOpen,
+    handleOpenCreateTask,
     handleUpdateTask,
   } = useWorkspace();
 
@@ -39,11 +37,7 @@ export const OverviewPage: React.FC = () => {
           setCurrentHub('crm');
           setCrmView('dashboard');
         }}
-        onOpenCreateTask={() => {
-          setNewItemDefaultStatus('In Progress');
-          setNewItemType('task');
-          setIsNewItemModalOpen(true);
-        }}
+        onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
         onUpdateTask={handleUpdateTask}
       />
     );
@@ -72,11 +66,7 @@ export const OverviewPage: React.FC = () => {
         setCurrentHub('crm');
         setCrmView('dashboard');
       }}
-      onOpenCreateTask={() => {
-        setNewItemDefaultStatus('In Progress');
-        setNewItemType('task');
-        setIsNewItemModalOpen(true);
-      }}
+      onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
       onUpdateTask={handleUpdateTask}
     />
   );

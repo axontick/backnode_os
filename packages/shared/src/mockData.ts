@@ -560,7 +560,7 @@ export const initialListSettings: ListSettings = {
   name: 'Sprint 14 - Q4 Infra',
   listId: 'TS-8820',
   description: 'Core infrastructure, local replication queues, protocol buffers, and zero-latency caching deliverables for Q4 release.',
-  color: '#9900c2',
+  color: '#ea580c',
   icon: 'terminal',
   defaultView: 'Board',
   defaultPriority: 'P2 - Medium (Normal)',
@@ -666,7 +666,7 @@ export const initialCrmPipelineSettings: CrmPipelineSettings = {
   name: 'Enterprise Deals 2026',
   code: 'CRM-PIPE-2026',
   description: 'Strategic Q1-Q4 enterprise cloud deployments, multi-region local-first contracts, and Fortune 500 infrastructure expansions.',
-  accentColor: '#9900c2',
+  accentColor: '#ea580c',
   icon: 'monetization_on',
   currency: 'USD ($) - United States Dollar',
   formatNotation: 'Compact',
@@ -710,6 +710,8 @@ export const initialCrmDeals: CrmDeal[] = [
     ownerInitials: 'SJ',
     tags: ['Enterprise Tier-1'],
     nextStep: 'Executive Sponsor review scheduled',
+    pipelineId: 'pipe-enterprise',
+    subFolderId: 'sub-pipe-strategic',
     linkedTasks: [
       {
         id: 'task-1',
@@ -781,6 +783,8 @@ export const initialCrmDeals: CrmDeal[] = [
     owner: 'Alex Rivera',
     ownerInitials: 'AR',
     tags: ['Cloud', 'Tier-2'],
+    pipelineId: 'pipe-enterprise',
+    subFolderId: 'sub-pipe-strategic',
     linkedTasks: [],
     history: [],
   },
@@ -805,6 +809,7 @@ export const initialCrmDeals: CrmDeal[] = [
     owner: 'Elena Chen',
     ownerInitials: 'EC',
     tags: ['GenAI Pilot'],
+    pipelineId: 'pipe-enterprise',
     linkedTasks: [],
     history: [],
   },
@@ -830,6 +835,8 @@ export const initialCrmDeals: CrmDeal[] = [
     ownerInitials: 'MB',
     tags: ['Fleet Tech'],
     nextStep: 'Technical demo scheduled',
+    pipelineId: 'pipe-enterprise',
+    subFolderId: 'sub-pipe-gov',
     linkedTasks: [
       { id: 'lt-1', title: 'Prepare latency simulation benchmark', done: true },
       { id: 'lt-2', title: 'Confirm telemetry throughput capacity', done: false },
@@ -1201,12 +1208,25 @@ export const initialFolders: SpaceFolder[] = [
     id: 'fld-engineering',
     name: 'Engineering',
     icon: 'terminal',
-    color: '#9900c2',
+    color: '#ea580c',
     description: 'Core runtime architecture, replication VFS, and sprint deliverables.',
     items: [
       { id: 'sprint-14', name: 'Sprint 14 - Q4 Infra', taskCount: 14, status: 'Active', active: true },
       { id: 'security-audits', name: 'Security Audits', taskCount: 6, status: 'In Review' },
-      { id: 'core-replication', name: 'Core Engine Replicas', taskCount: 8, status: 'Planned' },
+    ],
+    subFolders: [
+      {
+        id: 'sub-replication-core',
+        name: 'Replication Core VFS',
+        icon: 'terminal',
+        color: '#ea580c',
+        description: 'VFS engine internals and local-first CRDT protocols.',
+        parentId: 'fld-engineering',
+        items: [
+          { id: 'core-replication', name: 'Core Engine Replicas', taskCount: 8, status: 'Planned' },
+          { id: 'vfs-sqlite-driver', name: 'VFS SQLite Driver', taskCount: 5, status: 'Active' },
+        ],
+      },
     ],
   },
   {
@@ -1218,6 +1238,19 @@ export const initialFolders: SpaceFolder[] = [
     items: [
       { id: 'client-deliverables', name: 'Acme Corp Milestone Alpha', taskCount: 4, status: 'In Execution' },
       { id: 'globalbank-sla', name: 'GlobalBank SOC-2 Audit SLA', taskCount: 3, status: 'Pending Review' },
+    ],
+    subFolders: [
+      {
+        id: 'sub-enterprise-poc',
+        name: 'Tier-1 PoC Deployments',
+        icon: 'verified',
+        color: '#3B82F6',
+        description: 'Pilots and customer trials with strict SLAs.',
+        parentId: 'fld-client-deliverables',
+        items: [
+          { id: 'poc-hyperion-pos', name: 'Hyperion Edge POS Rollout', taskCount: 3, status: 'Active' },
+        ],
+      },
     ],
   },
   {
@@ -1259,9 +1292,31 @@ export const initialCrmPipelines: CrmPipeline[] = [
     name: 'Enterprise Deals 2026',
     description: 'High ARR strategic software licenses and cloud migration contracts.',
     icon: 'business',
-    color: '#9900c2',
+    color: '#ea580c',
     dealCount: 18,
     totalValue: 585000,
+    subFolders: [
+      {
+        id: 'sub-pipe-strategic',
+        name: 'Strategic Cloud Accounts',
+        icon: 'domain',
+        color: '#ea580c',
+        description: 'Fortune 500 multi-region cloud licenses and edge replication nodes.',
+        dealCount: 8,
+        totalValue: 320000,
+        pipelineId: 'pipe-enterprise',
+      },
+      {
+        id: 'sub-pipe-gov',
+        name: 'Gov & Defense Sector',
+        icon: 'shield',
+        color: '#f97316',
+        description: 'Air-gapped and high-security compliance procurement funnels.',
+        dealCount: 4,
+        totalValue: 165000,
+        pipelineId: 'pipe-enterprise',
+      },
+    ],
   },
   {
     id: 'pipe-midmarket',

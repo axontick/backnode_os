@@ -1,7 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { TaskItem, CrmDeal } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 import { BacknodeLogo } from './BacknodeLogo';
+import { findSpaceBreadcrumbs, findPipelineSubFolderPath } from '../utils/treeUtils';
 
 interface TopNavBarProps {
   currentHub?: string;
@@ -34,6 +36,7 @@ interface TopNavBarProps {
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({
   currentHub = 'task-spaces',
+  currentView = 'dashboard',
   crmView = 'dashboard',
   activePipelineName,
   searchQuery,
@@ -58,6 +61,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   syncStatus = 'connected',
 }) => {
   const { user, isAuthenticated, logout, setIsAuthModalOpen } = useAuth();
+  const { activeUserSpace, activeSpace, folders, listSettings, activePipelineSubFolderId, activePipeline, pipelines } = useWorkspace();
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
@@ -120,7 +124,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         ).slice(0, 3)
       : [];
 
-  const workspaceName = user?.account?.name || 'Backnode';
+  const workspaceName = activeUserSpace?.name || user?.account?.name || 'Workspace';
 
   const availableOwners = Array.from(
     new Set([
@@ -141,17 +145,44 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const renderBreadcrumbs = () => {
     switch (currentHub) {
       case 'crm':
+        if (crmView === 'dashboard') {
+          return (
+            <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+              <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+                {workspaceName}
+              </span>
+              <span className="text-zinc-600 font-mono">/</span>
+              <span className="hover:text-zinc-200 cursor-pointer transition-colors">CRM Pipelines</span>
+              <span className="text-zinc-600 font-mono">/</span>
+              <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+                Dashboard
+              </span>
+            </div>
+          );
+        }
+        const currentPipeline = activePipeline || pipelines.find((p) => p.name === activePipelineName);
+        const subFolderTrail = activePipelineSubFolderId
+          ? findPipelineSubFolderPath(currentPipeline?.subFolders, activePipelineSubFolderId)
+          : null;
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
             <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
               {workspaceName}
             </span>
             <span className="text-zinc-600 font-mono">/</span>
-            <span className="hover:text-zinc-200 cursor-pointer transition-colors">CRM</span>
+            <span className="hover:text-zinc-200 cursor-pointer transition-colors">CRM Pipelines</span>
             <span className="text-zinc-600 font-mono">/</span>
             <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
-              {activePipelineName || 'Enterprise Deals 2026'}
+              {activePipelineName || currentPipeline?.name || 'Enterprise Deals 2026'}
             </span>
+            {subFolderTrail && subFolderTrail.map((sfName, idx) => (
+              <React.Fragment key={idx}>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate max-w-[120px]">
+                  {sfName}
+                </span>
+              </React.Fragment>
+            ))}
             {crmView === 'analytics' && (
               <>
                 <span className="text-zinc-600 font-mono">/</span>
@@ -233,7 +264,28 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           </div>
         );
       case 'task-spaces':
-      default:
+      default: {
+        if (currentView === 'dashboard') {
+          return (
+            <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
+              <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
+                {workspaceName}
+              </span>
+              <span className="text-zinc-600 font-mono">/</span>
+              <span className="hover:text-zinc-200 cursor-pointer transition-colors">Task Spaces</span>
+              <span className="text-zinc-600 font-mono">/</span>
+              <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+                Dashboard
+              </span>
+            </div>
+          );
+        }
+
+        const breadcrumbInfo = findSpaceBreadcrumbs(folders, activeSpace);
+        const folderName = breadcrumbInfo?.folderName;
+        const subFolderNames = breadcrumbInfo?.subFolderNames || [];
+        const spaceName = breadcrumbInfo?.spaceName || listSettings?.name || 'Sprint 14 - Q4 Infra';
+
         return (
           <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
             <span className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors">
@@ -241,14 +293,37 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             </span>
             <span className="text-zinc-600 font-mono">/</span>
             <span className="hover:text-zinc-200 cursor-pointer transition-colors">Task Spaces</span>
-            <span className="text-zinc-600 font-mono">/</span>
-            <span className="hover:text-zinc-200 cursor-pointer transition-colors">Engineering</span>
+            {folderName && (
+              <>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[120px]">
+                  {folderName}
+                </span>
+              </>
+            )}
+            {subFolderNames.map((sfName, idx) => (
+              <React.Fragment key={idx}>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[120px]">
+                  {sfName}
+                </span>
+              </React.Fragment>
+            ))}
             <span className="text-zinc-600 font-mono">/</span>
             <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
-              Sprint 14 - Q4 Infra
+              {spaceName}
             </span>
+            {currentView === 'settings' && (
+              <>
+                <span className="text-zinc-600 font-mono">/</span>
+                <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
+                  Space Settings
+                </span>
+              </>
+            )}
           </div>
         );
+      }
     }
   };
 

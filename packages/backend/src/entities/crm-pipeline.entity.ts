@@ -32,6 +32,9 @@ export class CrmPipeline {
   @Column('float', { name: 'total_value', default: 0 })
   totalValue: number;
 
+  @Column('jsonb', { default: [] })
+  subFolders?: any;
+
   @Index()
   @Column('varchar', { name: 'account_id', nullable: true })
   accountId?: string;

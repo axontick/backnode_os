@@ -9,10 +9,15 @@ import { CrmPage } from '../pages/CrmPage';
 import { ContactsPage } from '../pages/ContactsPage';
 import { TeamAccessPage } from '../pages/TeamAccessPage';
 import { ReplicationPage } from '../pages/ReplicationPage';
+import { WorkspaceSettingsPage } from '../pages/WorkspaceSettingsPage';
 import { UniversalAddEditModal } from '../components/UniversalAddEditModal';
 import { NewFolderModal } from '../components/NewFolderModal';
+import { NewSubFolderModal } from '../components/NewSubFolderModal';
+import { NewListModal } from '../components/NewListModal';
 import { NewPipelineModal } from '../components/NewPipelineModal';
+import { NewPipelineSubFolderModal } from '../components/NewPipelineSubFolderModal';
 import { NewContactModal } from '../components/NewContactModal';
+import { NewWorkspaceModal } from '../components/NewWorkspaceModal';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { CommandPalette } from '../components/CommandPalette';
 
@@ -32,6 +37,8 @@ export const DashboardLayout: React.FC = () => {
     activePipeline,
     activePipelineId,
     setActivePipelineId,
+    activePipelineSubFolderId,
+    setActivePipelineSubFolderId,
     searchQuery,
     setSearchQuery,
     filterPriority,
@@ -54,6 +61,12 @@ export const DashboardLayout: React.FC = () => {
     members,
     isNewItemModalOpen,
     setIsNewItemModalOpen,
+    taskToEdit,
+    setTaskToEdit,
+    dealToEdit,
+    setDealToEdit,
+    handleUpdateTask,
+    handleUpdateDeal,
     newItemDefaultStatus,
     setNewItemDefaultStatus,
     newItemType,
@@ -64,12 +77,42 @@ export const DashboardLayout: React.FC = () => {
     folders,
     isNewFolderModalOpen,
     setIsNewFolderModalOpen,
+    isNewSubFolderModalOpen,
+    setIsNewSubFolderModalOpen,
+    targetFolderForNewSubFolder,
+    setTargetFolderForNewSubFolder,
+    targetParentSubFolderIdForNewSubFolder,
+    setTargetParentSubFolderIdForNewSubFolder,
+    handleOpenAddSubFolder,
+    subFolderToEdit,
+    setSubFolderToEdit,
+    handleCreateSubFolder,
+    handleUpdateSubFolder,
+    isNewListModalOpen,
+    setIsNewListModalOpen,
+    targetFolderForNewList,
+    setTargetFolderForNewList,
+    targetSubFolderIdForNewList,
+    setTargetSubFolderIdForNewList,
+    handleAddListToFolder,
+    handleOpenAddListToFolder,
     handleCreateFolder,
     folderToEdit,
     setFolderToEdit,
     handleUpdateFolder,
     isNewPipelineModalOpen,
     setIsNewPipelineModalOpen,
+    isNewPipelineSubFolderModalOpen,
+    setIsNewPipelineSubFolderModalOpen,
+    targetPipelineForNewSubFolder,
+    setTargetPipelineForNewSubFolder,
+    targetParentPipelineSubFolderId,
+    setTargetParentPipelineSubFolderId,
+    handleOpenAddPipelineSubFolder,
+    pipelineSubFolderToEdit,
+    setPipelineSubFolderToEdit,
+    handleCreatePipelineSubFolder,
+    handleUpdatePipelineSubFolder,
     handleCreatePipeline,
     pipelineToEdit,
     setPipelineToEdit,
@@ -80,6 +123,9 @@ export const DashboardLayout: React.FC = () => {
     isNewContactModalOpen,
     setIsNewContactModalOpen,
     handleCreateContact,
+    isNewWorkspaceModalOpen,
+    setIsNewWorkspaceModalOpen,
+    handleCreateUserSpace,
     taskToDelete,
     setTaskToDelete,
     handleConfirmDeleteTask,
@@ -152,10 +198,7 @@ export const DashboardLayout: React.FC = () => {
         currentHub={currentHub}
         onSelectHub={(hub) => {
           setCurrentHub(hub);
-          if (hub === 'settings') {
-            setCurrentHub('task-spaces');
-            setCurrentView('settings');
-          } else if (hub === 'task-spaces') {
+          if (hub === 'task-spaces') {
             setSelectedTaskId(null);
             setCurrentView('dashboard');
           } else if (hub === 'crm') {
@@ -189,17 +232,38 @@ export const DashboardLayout: React.FC = () => {
             setCurrentView('dashboard');
           }}
           onOpenAddFolder={() => setIsNewFolderModalOpen(true)}
+          onOpenAddListToFolder={handleOpenAddListToFolder}
           onEditFolder={(folder) => {
             setFolderToEdit(folder);
             setIsNewFolderModalOpen(true);
           }}
           onDeleteFolder={(folder) => setItemToDelete({ type: 'folder', item: folder })}
+          onOpenAddSubFolder={handleOpenAddSubFolder}
+          onEditSubFolder={(folder, sub) => {
+            setSubFolderToEdit({ folder, subFolder: sub });
+            setIsNewSubFolderModalOpen(true);
+          }}
+          onDeleteSubFolder={(folder, sub) =>
+            setItemToDelete({ type: 'subfolder', item: sub, folderId: folder.id })
+          }
+          onOpenAddListToSubFolder={(folder, sub) =>
+            handleOpenAddListToFolder(folder, sub.id)
+          }
           pipelines={pipelines}
           activePipelineId={activePipelineId}
+          activePipelineSubFolderId={activePipelineSubFolderId}
           crmView={crmView}
           onSelectPipeline={(pipeId) => {
             setCurrentHub('crm');
             setActivePipelineId(pipeId);
+            setActivePipelineSubFolderId(null);
+            setSelectedDealId(null);
+            setCrmView('board');
+          }}
+          onSelectPipelineSubFolder={(pipeId, subId) => {
+            setCurrentHub('crm');
+            setActivePipelineId(pipeId);
+            setActivePipelineSubFolderId(activePipelineSubFolderId === subId ? null : subId);
             setSelectedDealId(null);
             setCrmView('board');
           }}
@@ -225,6 +289,14 @@ export const DashboardLayout: React.FC = () => {
             setIsNewPipelineModalOpen(true);
           }}
           onDeletePipeline={(pipe) => setItemToDelete({ type: 'pipeline', item: pipe })}
+          onOpenAddPipelineSubFolder={handleOpenAddPipelineSubFolder}
+          onEditPipelineSubFolder={(pipe, sub) => {
+            setPipelineSubFolderToEdit({ pipeline: pipe, subFolder: sub });
+            setIsNewPipelineSubFolderModalOpen(true);
+          }}
+          onDeletePipelineSubFolder={(pipe, sub) =>
+            setItemToDelete({ type: 'pipeline-subfolder', item: sub, pipelineId: pipe.id })
+          }
         />
       )}
 
@@ -284,6 +356,7 @@ export const DashboardLayout: React.FC = () => {
           {currentHub === 'contacts' && <ContactsPage />}
           {currentHub === 'team' && <TeamAccessPage />}
           {currentHub === 'replication' && <ReplicationPage />}
+          {currentHub === 'settings' && <WorkspaceSettingsPage />}
         </div>
       </div>
 
@@ -291,13 +364,23 @@ export const DashboardLayout: React.FC = () => {
       {/* Global Universal Add/Edit Modal */}
       <UniversalAddEditModal
         isOpen={isNewItemModalOpen}
-        onClose={() => setIsNewItemModalOpen(false)}
+        onClose={() => {
+          setIsNewItemModalOpen(false);
+          setTaskToEdit(null);
+          setDealToEdit(null);
+        }}
         members={members}
         onAddTask={handleCreateTask}
+        onUpdateTask={handleUpdateTask}
+        taskToEdit={taskToEdit}
         onAddDeal={handleCreateDeal}
+        onUpdateDeal={handleUpdateDeal}
+        dealToEdit={dealToEdit}
         defaultStatus={newItemDefaultStatus}
         initialType={newItemType}
         defaultDealStage={newItemDefaultDealStage}
+        folders={folders}
+        activeSpace={activeSpace}
       />
 
       {/* Add Folder Modal */}
@@ -312,6 +395,37 @@ export const DashboardLayout: React.FC = () => {
         onUpdateFolder={handleUpdateFolder}
       />
 
+      {/* Add Sub-Folder Modal */}
+      <NewSubFolderModal
+        isOpen={isNewSubFolderModalOpen}
+        onClose={() => {
+          setIsNewSubFolderModalOpen(false);
+          setTargetFolderForNewSubFolder(null);
+          setTargetParentSubFolderIdForNewSubFolder(null);
+          setSubFolderToEdit(null);
+        }}
+        folders={folders}
+        defaultFolder={targetFolderForNewSubFolder}
+        defaultParentId={targetParentSubFolderIdForNewSubFolder}
+        subFolderToEdit={subFolderToEdit}
+        onCreateSubFolder={handleCreateSubFolder}
+        onUpdateSubFolder={handleUpdateSubFolder}
+      />
+
+      {/* Add List Under Folder Modal */}
+      <NewListModal
+        isOpen={isNewListModalOpen}
+        onClose={() => {
+          setIsNewListModalOpen(false);
+          setTargetFolderForNewList(null);
+          setTargetSubFolderIdForNewList(null);
+        }}
+        folders={folders}
+        defaultFolder={targetFolderForNewList}
+        defaultSubFolderId={targetSubFolderIdForNewList || undefined}
+        onCreateList={handleAddListToFolder}
+      />
+
       {/* Add Pipeline Modal */}
       <NewPipelineModal
         isOpen={isNewPipelineModalOpen}
@@ -324,11 +438,35 @@ export const DashboardLayout: React.FC = () => {
         onUpdatePipeline={handleUpdatePipeline}
       />
 
+      {/* Add Pipeline Sub-Folder Modal */}
+      <NewPipelineSubFolderModal
+        isOpen={isNewPipelineSubFolderModalOpen}
+        onClose={() => {
+          setIsNewPipelineSubFolderModalOpen(false);
+          setTargetPipelineForNewSubFolder(null);
+          setTargetParentPipelineSubFolderId(null);
+          setPipelineSubFolderToEdit(null);
+        }}
+        pipelines={pipelines}
+        defaultPipeline={targetPipelineForNewSubFolder}
+        defaultParentId={targetParentPipelineSubFolderId}
+        subFolderToEdit={pipelineSubFolderToEdit}
+        onCreateSubFolder={handleCreatePipelineSubFolder}
+        onUpdateSubFolder={handleUpdatePipelineSubFolder}
+      />
+
       {/* Add Contact Modal */}
       <NewContactModal
         isOpen={isNewContactModalOpen}
         onClose={() => setIsNewContactModalOpen(false)}
         onCreateContact={handleCreateContact}
+      />
+
+      {/* Add Workspace Modal */}
+      <NewWorkspaceModal
+        isOpen={isNewWorkspaceModalOpen}
+        onClose={() => setIsNewWorkspaceModalOpen(false)}
+        onCreateWorkspace={handleCreateUserSpace}
       />
 
       {/* Delete Confirmation Modal Dialog */}
@@ -370,11 +508,12 @@ export const DashboardLayout: React.FC = () => {
           setNewItemType('task');
           setIsNewItemModalOpen(true);
         }}
+        onOpenCreateWorkspace={() => setIsNewWorkspaceModalOpen(true)}
       />
 
       {/* Toast Notification Banner */}
       {toastMessage && (
-        <div className="fixed bottom-6 right-6 z-50 bg-[#1a1b22] text-white text-xs px-4 py-2.5 rounded-lg shadow-xl border border-white/10 flex items-center gap-2 animate-bounce">
+        <div className="fixed bottom-6 right-6 z-50 bg-[#121214] text-zinc-100 text-xs px-4 py-2.5 rounded-[6px] shadow-xl border border-[#27272a] flex items-center gap-2 animate-bounce">
           <span className="material-symbols-outlined text-[16px] text-emerald-400">check_circle</span>
           {toastMessage}
         </div>

@@ -21,6 +21,12 @@ export class Account {
   @Column('varchar', { unique: true })
   slug: string;
 
+  @Column('varchar', { nullable: true, default: '#ea580c' })
+  color?: string;
+
+  @Column('varchar', { nullable: true, default: 'workspaces' })
+  icon?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

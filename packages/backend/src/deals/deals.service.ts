@@ -56,6 +56,7 @@ export class DealsService {
       linkedTasks = [],
       history = [],
       pipelineId = 'pipe-enterprise',
+      subFolderId = null,
     } = data;
 
     const deal = this.dealRepo.create({
@@ -75,6 +76,7 @@ export class DealsService {
       linkedTasks,
       history,
       pipelineId,
+      subFolderId: subFolderId || undefined,
       accountId,
     });
 
@@ -104,6 +106,7 @@ export class DealsService {
     if (data.linkedTasks !== undefined) deal.linkedTasks = data.linkedTasks;
     if (data.history !== undefined) deal.history = data.history;
     if (data.pipelineId !== undefined) deal.pipelineId = data.pipelineId;
+    if (data.subFolderId !== undefined) deal.subFolderId = data.subFolderId;
 
     return this.dealRepo.save(deal);
   }

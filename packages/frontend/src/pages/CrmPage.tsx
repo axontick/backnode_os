@@ -17,6 +17,8 @@ export const CrmPage: React.FC = () => {
     activePipeline,
     pipelines,
     setActivePipelineId,
+    activePipelineSubFolderId,
+    setActivePipelineSubFolderId,
     selectedDealId,
     crmSettings,
     crmStages,
@@ -59,6 +61,7 @@ export const CrmPage: React.FC = () => {
           pipelines={pipelines}
           onSelectPipeline={(pipeId) => {
             setActivePipelineId(pipeId);
+            setActivePipelineSubFolderId(null);
             setSelectedDealId(null);
             setCrmView('board');
           }}
@@ -84,6 +87,8 @@ export const CrmPage: React.FC = () => {
           globalStageFilter={crmFilterStage}
           globalOwnerFilter={crmFilterOwner}
           onClearGlobalFilters={handleClearAllFilters}
+          activePipelineSubFolderId={activePipelineSubFolderId}
+          onClearSubFolderFilter={() => setActivePipelineSubFolderId(null)}
         />
       )}
 

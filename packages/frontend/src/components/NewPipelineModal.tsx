@@ -18,31 +18,30 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
 }) => {
   const [pipelineName, setPipelineName] = useState('');
   const [description, setDescription] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState('trending_up');
-  const [selectedColor, setSelectedColor] = useState('#9900c2');
-  const [targetArr, setTargetArr] = useState('250000');
+  const [selectedIcon, setSelectedIcon] = useState('leaderboard');
+  const [selectedColor, setSelectedColor] = useState('#ea580c');
+  const [targetArr, setTargetArr] = useState('');
 
   useEffect(() => {
     if (pipelineToEdit) {
       setPipelineName(pipelineToEdit.name);
       setDescription(pipelineToEdit.description || '');
-      setSelectedIcon(pipelineToEdit.icon || 'trending_up');
-      setSelectedColor(pipelineToEdit.color || '#9900c2');
-      setTargetArr(String(pipelineToEdit.totalValue ?? 250000));
+      setSelectedIcon(pipelineToEdit.icon || 'leaderboard');
+      setSelectedColor(pipelineToEdit.color || '#ea580c');
+      setTargetArr(pipelineToEdit.totalValue ? String(pipelineToEdit.totalValue) : '');
     } else {
       setPipelineName('');
       setDescription('');
-      setSelectedIcon('trending_up');
-      setSelectedColor('#9900c2');
-      setTargetArr('250000');
+      setSelectedIcon('leaderboard');
+      setSelectedColor('#ea580c');
+      setTargetArr('');
     }
   }, [isOpen, pipelineToEdit]);
 
   if (!isOpen) return null;
 
   const icons = [
-    'business',
-    'trending_up',
+    'leaderboard',
     'hub',
     'monetization_on',
     'domain',
@@ -51,16 +50,17 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
     'flag',
     'workspaces',
     'paid',
+    'table_chart',
   ];
 
   const colors = [
-    { hex: '#9900c2', name: 'Executive Violet' },
-    { hex: '#3B82F6', name: 'Sapphire Blue' },
-    { hex: '#10B981', name: 'Emerald Green' },
-    { hex: '#F59E0B', name: 'Amber Gold' },
-    { hex: '#EC4899', name: 'Neon Pink' },
-    { hex: '#6366F1', name: 'Indigo' },
-    { hex: '#06B6D4', name: 'Cyan' },
+    { hex: '#ea580c', name: 'Electric Orange' },
+    { hex: '#f59e0b', name: 'Amber Gold' },
+    { hex: '#10b981', name: 'Emerald Green' },
+    { hex: '#06b6d4', name: 'Cyan' },
+    { hex: '#3b82f6', name: 'Sapphire Blue' },
+    { hex: '#ef4444', name: 'Rose Red' },
+    { hex: '#64748b', name: 'Slate Gray' },
   ];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -68,7 +68,7 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
     if (!pipelineName.trim()) return;
 
     const parsed = parseInt(targetArr.replace(/[^0-9]/g, ''), 10);
-    const val = isNaN(parsed) ? 250000 : parsed;
+    const val = isNaN(parsed) ? 100000 : parsed;
 
     if (pipelineToEdit) {
       onUpdatePipeline?.({
@@ -83,7 +83,7 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
       const newPipeline: CrmPipeline = {
         id: `pipe-${pipelineName.toLowerCase().replace(/[^a-z0-9]/g, '-')}-${Date.now()}`,
         name: pipelineName.trim(),
-        description: description.trim() || 'New commercial opportunities & sales funnel.',
+        description: description.trim() || 'Segregated commercial opportunities & sales funnel.',
         icon: selectedIcon,
         color: selectedColor,
         dealCount: 0,
@@ -99,139 +99,150 @@ export const NewPipelineModal: React.FC<NewPipelineModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#18181b]/40 backdrop-blur-[4px] transition-all duration-200 select-none animate-in fade-in">
-      <div className="w-[500px] max-w-full bg-white rounded-2xl border border-zinc-200/90 shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150">
-        {/* Header */}
-        <div className="p-5 pb-4 border-b border-zinc-100 flex items-center justify-between bg-white">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs transition-all duration-200 select-none animate-in fade-in"
+      onClick={onClose}
+    >
+      <div
+        className="w-[500px] max-w-full max-h-[90vh] bg-[#121214] rounded-[6px] border border-[#27272a] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-150 text-zinc-100"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header - Sticky */}
+        <div className="shrink-0 p-5 pb-4 border-b border-[#27272a] flex items-center justify-between bg-[#121214]">
           <div className="flex items-center gap-3">
             <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-sm"
+              className="w-10 h-10 rounded-[6px] flex items-center justify-center text-white shadow-sm shrink-0"
               style={{ backgroundColor: selectedColor }}
             >
               <span className="material-symbols-outlined text-[20px]">{selectedIcon}</span>
             </div>
             <div>
-              <h2 className="text-[17px] font-bold text-zinc-900 leading-tight">
+              <h2 className="text-[17px] font-bold text-zinc-100 leading-tight font-headline">
                 {pipelineToEdit ? 'Edit Sales Pipeline' : 'Add Sales Pipeline'}
               </h2>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Create a segregated pipeline with custom stages and target ARR.
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Segregated pipeline with custom stages and target ARR.
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full flex items-center justify-center text-zinc-400 hover:text-zinc-700 hover:bg-zinc-100 transition-colors"
+            className="w-7 h-7 rounded-[4px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] transition-colors cursor-pointer"
           >
-            <span className="material-symbols-outlined text-[20px]">close</span>
+            <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 space-y-4 text-xs">
-          <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Pipeline Name <span className="text-[#9900c2]">*</span>
-            </label>
-            <input
-              type="text"
-              required
-              autoFocus
-              value={pipelineName}
-              onChange={(e) => setPipelineName(e.target.value)}
-              placeholder="e.g. Channel Partners 2026, Inbound SaaS Trial"
-              className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-200 focus:border-[#9900c2] focus:ring-1 focus:ring-[#9900c2]/30 text-sm font-medium focus:outline-none transition-all"
-            />
-          </div>
+        {/* Form Container */}
+        <form onSubmit={handleSubmit} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          {/* Scrollable Form Body */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-5 space-y-4 text-xs bg-[#121214]">
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400 flex items-center gap-1">
+                <span>Pipeline Name</span>
+                <span className="text-orange-500">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                autoFocus
+                value={pipelineName}
+                onChange={(e) => setPipelineName(e.target.value)}
+                placeholder="e.g. Enterprise North America, EMEA Mid-Market"
+                className="w-full px-3.5 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 placeholder:text-zinc-500 focus:border-orange-500 text-sm font-medium focus:outline-none transition-all"
+              />
+            </div>
 
-          <div className="space-y-1">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Description / Scope
-            </label>
-            <input
-              type="text"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="Target accounts, contract types, or deal segment..."
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 focus:border-[#9900c2] text-xs focus:outline-none"
-            />
-          </div>
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400">
+                Description &amp; Objective
+              </label>
+              <input
+                type="text"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Brief objective of this sales pipeline funnel..."
+                className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 placeholder:text-zinc-500 focus:border-orange-500 text-xs focus:outline-none"
+              />
+            </div>
 
-          {/* Icon Selector */}
-          <div className="space-y-1.5">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Pipeline Icon Identifier
-            </label>
-            <div className="grid grid-cols-5 gap-2">
-              {icons.map((ic) => (
-                <button
-                  key={ic}
-                  type="button"
-                  onClick={() => setSelectedIcon(ic)}
-                  className={`p-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${
-                    selectedIcon === ic
-                      ? 'border-[#9900c2] bg-purple-50 text-[#9900c2] font-bold shadow-xs'
-                      : 'border-zinc-200 text-zinc-600 hover:bg-zinc-50'
-                  }`}
-                >
-                  <span className="material-symbols-outlined text-[20px]">{ic}</span>
-                </button>
-              ))}
+            <div className="space-y-1">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400">
+                Target Pipeline ARR ($)
+              </label>
+              <input
+                type="text"
+                value={targetArr}
+                onChange={(e) => setTargetArr(e.target.value)}
+                placeholder="e.g. 500000"
+                className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 placeholder:text-zinc-500 focus:border-orange-500 font-mono text-xs focus:outline-none"
+              />
+            </div>
+
+            {/* Icon Selector */}
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400">
+                Pipeline Icon Identifier
+              </label>
+              <div className="grid grid-cols-5 gap-2">
+                {icons.map((ic) => (
+                  <button
+                    key={ic}
+                    type="button"
+                    onClick={() => setSelectedIcon(ic)}
+                    className={`p-2 rounded-[6px] border flex flex-col items-center justify-center gap-1 transition-all cursor-pointer ${
+                      selectedIcon === ic
+                        ? 'border-orange-500 bg-orange-950/40 text-orange-400 font-bold shadow-xs'
+                        : 'border-[#27272a] bg-[#18181b] text-zinc-400 hover:text-zinc-100 hover:border-zinc-700'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[20px]">{ic}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Color Selector */}
+            <div className="space-y-1.5">
+              <label className="font-mono text-[10px] uppercase font-semibold text-zinc-400">
+                Color Accent Swatch
+              </label>
+              <div className="flex items-center gap-2">
+                {colors.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    onClick={() => setSelectedColor(c.hex)}
+                    style={{ backgroundColor: c.hex }}
+                    className={`w-7 h-7 rounded-[4px] transition-transform cursor-pointer ${
+                      selectedColor === c.hex
+                        ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-[#121214] scale-105 shadow-sm'
+                        : 'hover:scale-105 opacity-80 hover:opacity-100'
+                    }`}
+                    title={c.name}
+                  />
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Color Selector */}
-          <div className="space-y-1.5">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Color Accent
-            </label>
-            <div className="flex items-center gap-2">
-              {colors.map((c) => (
-                <button
-                  key={c.hex}
-                  type="button"
-                  onClick={() => setSelectedColor(c.hex)}
-                  style={{ backgroundColor: c.hex }}
-                  className={`w-7 h-7 rounded-full transition-transform ${
-                    selectedColor === c.hex
-                      ? 'ring-2 ring-offset-2 ring-zinc-900 scale-110 shadow-sm'
-                      : 'hover:scale-105 opacity-80 hover:opacity-100'
-                  }`}
-                  title={c.name}
-                />
-              ))}
-            </div>
-          </div>
-
-          {/* Target ARR */}
-          <div className="space-y-1 pt-1 border-t border-zinc-100">
-            <label className="font-mono text-[10px] uppercase font-semibold text-zinc-600">
-              Initial Target ARR Goal ($)
-            </label>
-            <input
-              type="text"
-              value={targetArr}
-              onChange={(e) => setTargetArr(e.target.value)}
-              placeholder="e.g. 500000"
-              className="w-full px-3 py-2 rounded-xl border border-zinc-200 text-xs focus:outline-none focus:border-[#9900c2]"
-            />
-          </div>
-
-          {/* Footer Actions */}
-          <div className="pt-3 border-t border-zinc-100 flex items-center justify-end gap-2.5">
+          {/* Sticky Footer Actions */}
+          <div className="shrink-0 p-4 border-t border-[#27272a] bg-[#121214] flex items-center justify-end gap-2.5">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-medium text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 transition-colors"
+              className="px-4 py-2 rounded-[6px] text-xs font-medium text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] border border-[#27272a] transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-5 py-2 rounded-xl bg-[#9900c2] hover:bg-[#b731e0] active:scale-[0.98] text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5"
+              disabled={!pipelineName.trim()}
+              className="px-5 py-2 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold shadow-sm transition-all flex items-center gap-1.5 cursor-pointer"
             >
               <span className="material-symbols-outlined text-[16px]">
-                {pipelineToEdit ? 'save' : 'add_chart'}
+                {pipelineToEdit ? 'save' : 'add_business'}
               </span>
               <span>{pipelineToEdit ? 'Save Changes' : 'Create Pipeline'}</span>
             </button>

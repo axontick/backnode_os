@@ -42,7 +42,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
         .join('')
         .slice(0, 2)
         .toUpperCase()
-    : 'Me';
+    : 'ME';
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const [isColumnsOpen, setIsColumnsOpen] = useState(false);
@@ -78,27 +78,28 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   const hasActiveFilters = Boolean(filterPriority || filterStatus || quickFilter);
 
   return (
-    <section className="bg-white border-b border-[#d4c0d5]/30 px-6 py-1.5 flex flex-col gap-1.5 shrink-0 select-none z-10">
+    <section className="bg-[#121214] border-b border-[#27272a] px-6 flex flex-col shrink-0 select-none z-10">
       {/* Top Row: View Switcher Tabs & Secondary Controls */}
-      <div className="flex items-center justify-between h-9 text-xs">
+      <div className="flex items-center justify-between h-10 text-xs">
         {/* View Switcher Tabs */}
-        <nav className="flex items-center gap-5 h-full font-medium">
+        <nav className="flex items-center gap-1.5 h-full font-medium">
           {/* List Tab */}
           <button
+            type="button"
             onClick={() => onSelectView('list')}
-            className={`py-1.5 h-full flex items-center gap-1.5 transition-colors relative ${
+            className={`px-3 py-1.5 h-full flex items-center gap-1.5 transition-colors cursor-pointer rounded-t-[6px] ${
               currentView === 'list'
-                ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22]'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
             <span>List</span>
             <span
-              className={`font-mono text-[10px] px-1.5 py-0.2 rounded-full ${
+              className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] ${
                 currentView === 'list'
-                  ? 'bg-[#9900c2]/10 text-[#9900c2] font-bold'
-                  : 'bg-[#eeedf7] text-[#504252]'
+                  ? 'bg-orange-950/60 text-orange-400 font-bold border border-orange-500/30'
+                  : 'bg-zinc-800 text-zinc-400'
               }`}
             >
               {taskCount}
@@ -107,11 +108,12 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
           {/* Board Tab */}
           <button
+            type="button"
             onClick={() => onSelectView('board')}
-            className={`py-1.5 h-full flex items-center gap-1.5 transition-colors relative ${
+            className={`px-3 py-1.5 h-full flex items-center gap-1.5 transition-colors cursor-pointer rounded-t-[6px] ${
               currentView === 'board'
-                ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22]'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">view_kanban</span>
@@ -120,11 +122,12 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
           {/* Table Tab */}
           <button
+            type="button"
             onClick={() => onSelectView('table')}
-            className={`py-1.5 h-full flex items-center gap-1.5 transition-colors relative ${
+            className={`px-3 py-1.5 h-full flex items-center gap-1.5 transition-colors cursor-pointer rounded-t-[6px] ${
               currentView === 'table'
-                ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22]'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">table_chart</span>
@@ -133,11 +136,12 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
           {/* Timeline Tab */}
           <button
+            type="button"
             onClick={() => onSelectView('timeline')}
-            className={`py-1.5 h-full flex items-center gap-1.5 transition-colors relative ${
+            className={`px-3 py-1.5 h-full flex items-center gap-1.5 transition-colors cursor-pointer rounded-t-[6px] ${
               currentView === 'timeline'
-                ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22]'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">waterfall_chart</span>
@@ -146,11 +150,12 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
           {/* Calendar Tab */}
           <button
+            type="button"
             onClick={() => onSelectView('calendar')}
-            className={`py-1.5 h-full flex items-center gap-1.5 transition-colors relative ${
+            className={`px-3 py-1.5 h-full flex items-center gap-1.5 transition-colors cursor-pointer rounded-t-[6px] ${
               currentView === 'calendar'
-                ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22]'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">calendar_today</span>
@@ -159,11 +164,12 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
           {/* Docs Tab */}
           <button
+            type="button"
             onClick={() => onSelectView('docs')}
-            className={`py-1.5 h-full flex items-center gap-1.5 transition-colors relative ${
+            className={`px-3 py-1.5 h-full flex items-center gap-1.5 transition-colors cursor-pointer rounded-t-[6px] ${
               currentView === 'docs'
-                ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22]'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">description</span>
@@ -172,11 +178,12 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
           {/* List Settings Tab */}
           <button
+            type="button"
             onClick={() => onSelectView('settings')}
-            className={`py-1.5 h-full flex items-center gap-1.5 transition-colors relative ${
+            className={`px-3 py-1.5 h-full flex items-center gap-1.5 transition-colors cursor-pointer rounded-t-[6px] ${
               currentView === 'settings'
-                ? 'border-b-2 border-[#9900c2] text-[#9900c2] font-semibold'
-                : 'text-[#504252] hover:text-[#1a1b22]'
+                ? 'text-orange-400 font-semibold border-b-2 border-orange-500 bg-orange-950/20'
+                : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
             }`}
           >
             <span className="material-symbols-outlined text-[16px]">tune</span>
@@ -184,31 +191,32 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
           </button>
         </nav>
 
-        {/* Right Secondary Matrix Toolbar with Working Dropdowns */}
-        <div className="flex items-center gap-2.5 text-xs text-[#504252]">
+        {/* Right Secondary Matrix Toolbar */}
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
           {/* Interactive Priority Dropdown */}
           <div ref={priorityRef} className="relative">
             <button
+              type="button"
               onClick={() => setIsPriorityOpen(!isPriorityOpen)}
-              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full border transition-colors ${
+              className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] border transition-colors cursor-pointer ${
                 filterPriority
-                  ? 'bg-[#fbd7ff]/40 border-[#9900c2] text-[#9900c2] font-semibold'
-                  : 'bg-[#f4f2fd] border-[#d4c0d5]/30 hover:border-[#9900c2]/40 text-[#504252]'
+                  ? 'bg-orange-950/50 border-orange-500/40 text-orange-400 font-semibold'
+                  : 'bg-[#18181b] border-[#27272a] hover:border-zinc-700 text-zinc-300'
               }`}
               title="Filter tasks by priority"
             >
-              <span className="material-symbols-outlined text-[14px] text-[#9900c2]">flag</span>
-              <span className="text-[11px] font-mono">
+              <span className="material-symbols-outlined text-[14px] text-orange-400 leading-none shrink-0">flag</span>
+              <span className="text-[11px] font-mono leading-none">
                 {filterPriority ? `Priority: ${filterPriority}` : 'Priority: All'}
               </span>
-              <span className="material-symbols-outlined text-[13px] opacity-70">
+              <span className="material-symbols-outlined text-[13px] opacity-70 leading-none shrink-0">
                 {isPriorityOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
 
             {isPriorityOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-mono">
-                <div className="px-3 py-1 text-[10px] uppercase text-[#837284] font-semibold">
+              <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-mono">
+                <div className="px-3 py-1 text-[10px] uppercase text-zinc-500 font-semibold">
                   Filter Priority
                 </div>
                 {['All', 'Urgent', 'High', 'Medium', 'Low'].map((p) => {
@@ -216,17 +224,18 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
                   return (
                     <button
                       key={p}
+                      type="button"
                       onClick={() => {
                         setIsPriorityOpen(false);
                         onSelectFilterPriority?.(p === 'All' ? null : p);
                       }}
-                      className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#f4f2fd] transition-colors ${
-                        isSelected ? 'text-[#9900c2] font-bold bg-[#eeedf7]' : 'text-[#1a1b22]'
+                      className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-orange-950/30 hover:text-orange-400 transition-colors cursor-pointer ${
+                        isSelected ? 'text-orange-400 font-bold bg-orange-950/40' : 'text-zinc-300'
                       }`}
                     >
                       <span>{p}</span>
                       {isSelected && (
-                        <span className="material-symbols-outlined text-[13px]">check</span>
+                        <span className="material-symbols-outlined text-[13px] text-orange-400">check</span>
                       )}
                     </button>
                   );
@@ -238,20 +247,21 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
           {/* Interactive Group By Dropdown */}
           <div ref={groupRef} className="relative">
             <button
+              type="button"
               onClick={() => setIsGroupOpen(!isGroupOpen)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#f4f2fd] border border-[#d4c0d5]/30 hover:border-[#9900c2]/40 transition-colors text-[#504252]"
+              className="h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 transition-colors text-zinc-300 cursor-pointer"
               title="Change grouping"
             >
-              <span className="material-symbols-outlined text-[14px] text-[#5f5e61]">layers</span>
-              <span className="text-[11px] capitalize">Group: {groupBy}</span>
-              <span className="material-symbols-outlined text-[13px] opacity-70">
+              <span className="material-symbols-outlined text-[14px] text-zinc-400 leading-none shrink-0">layers</span>
+              <span className="text-[11px] capitalize leading-none">Group: {groupBy}</span>
+              <span className="material-symbols-outlined text-[13px] opacity-70 leading-none shrink-0">
                 {isGroupOpen ? 'expand_less' : 'expand_more'}
               </span>
             </button>
 
             {isGroupOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-3 py-1 text-[10px] font-mono uppercase text-[#837284] font-semibold">
+              <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold">
                   Group Tasks By
                 </div>
                 {[
@@ -261,17 +271,18 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
                 ].map((item) => (
                   <button
                     key={item.id}
+                    type="button"
                     onClick={() => {
                       setIsGroupOpen(false);
                       onSelectGroupBy?.(item.id);
                     }}
-                    className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-[#f4f2fd] transition-colors ${
-                      groupBy === item.id ? 'text-[#9900c2] font-bold bg-[#eeedf7]' : 'text-[#1a1b22]'
+                    className={`px-3 py-1.5 text-left flex items-center justify-between hover:bg-orange-950/30 hover:text-orange-400 transition-colors cursor-pointer ${
+                      groupBy === item.id ? 'text-orange-400 font-bold bg-orange-950/40' : 'text-zinc-300'
                     }`}
                   >
                     <span>{item.label}</span>
                     {groupBy === item.id && (
-                      <span className="material-symbols-outlined text-[13px]">check</span>
+                      <span className="material-symbols-outlined text-[13px] text-orange-400">check</span>
                     )}
                   </button>
                 ))}
@@ -282,17 +293,18 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
           {/* Interactive Columns Visibility Toggle */}
           <div ref={columnsRef} className="relative">
             <button
+              type="button"
               onClick={() => setIsColumnsOpen(!isColumnsOpen)}
-              className="flex items-center gap-1 text-[11px] text-[#5f5e61] hover:text-[#1a1b22] px-2 py-1 rounded hover:bg-[#f4f2fd] transition-colors"
+              className="h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 text-zinc-300 text-[11px] transition-colors cursor-pointer"
               title="Column visibility"
             >
-              <span className="material-symbols-outlined text-[14px]">view_column</span>
-              <span>Columns ({Object.values(visibleColumns).filter(Boolean).length})</span>
+              <span className="material-symbols-outlined text-[14px] leading-none shrink-0">view_column</span>
+              <span className="leading-none">Columns ({Object.values(visibleColumns).filter(Boolean).length})</span>
             </button>
 
             {isColumnsOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-48 bg-white border border-[#d4c0d5]/60 rounded-xl shadow-xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-2 py-1 text-[10px] font-mono uppercase text-[#837284] font-semibold">
+              <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100">
+                <div className="px-2 py-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold">
                   Visible Columns
                 </div>
                 {[
@@ -305,7 +317,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
                 ].map((col) => (
                   <label
                     key={col.key}
-                    className="flex items-center gap-2 px-2 py-1 rounded hover:bg-[#f4f2fd] cursor-pointer text-[#1a1b22]"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-[6px] hover:bg-[#18181b] cursor-pointer text-zinc-300 hover:text-zinc-100"
                   >
                     <input
                       type="checkbox"
@@ -316,7 +328,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
                           [col.key]: !prev[col.key],
                         }))
                       }
-                      className="rounded border-[#d4c0d5] text-[#9900c2] focus:ring-[#9900c2]"
+                      className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-orange-500"
                     />
                     <span>{col.label}</span>
                   </label>
@@ -328,135 +340,143 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
           {/* Reset Filters CTA if active */}
           {hasActiveFilters && onClearFilters && (
             <button
+              type="button"
               onClick={onClearFilters}
-              className="flex items-center gap-1 text-[11px] font-mono text-[#9900c2] hover:underline px-1 py-0.5"
+              className="h-7 flex items-center gap-1 px-2 rounded-[6px] bg-orange-950/40 border border-orange-500/30 text-[11px] font-mono text-orange-400 hover:bg-orange-950/60 transition-colors cursor-pointer"
               title="Clear all active task filters"
             >
-              <span className="material-symbols-outlined text-[13px]">filter_alt_off</span>
-              <span>Reset</span>
+              <span className="material-symbols-outlined text-[13px] leading-none shrink-0">filter_alt_off</span>
+              <span className="leading-none">Reset</span>
             </button>
           )}
 
           {onOpenCreateTask && (
             <button
+              type="button"
               onClick={onOpenCreateTask}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#9900c2] hover:bg-[#b731e0] text-white font-semibold text-[11px] shadow-xs transition-colors ml-1"
+              className="h-7 flex items-center gap-1 px-3 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white font-semibold text-[11px] shadow-sm transition-all active:scale-[0.98] ml-1 cursor-pointer"
             >
-              <span className="material-symbols-outlined text-[14px]">add</span>
-              <span>Task</span>
+              <span className="material-symbols-outlined text-[14px] leading-none shrink-0">add</span>
+              <span className="leading-none">Task</span>
             </button>
           )}
         </div>
       </div>
 
       {/* Bottom Row: Quick Actions Filter Bar */}
-      <div className="flex items-center gap-2 overflow-x-auto py-0.5 border-t border-[#d4c0d5]/20 text-xs no-scrollbar">
-        <span className="font-mono text-[10px] uppercase font-semibold text-[#837284] shrink-0 mr-1 flex items-center gap-1">
-          <span className="material-symbols-outlined text-[13px] text-[#9900c2]">tune</span>
-          <span>Quick:</span>
+      <div className="h-10 flex items-center gap-2 overflow-x-auto border-t border-[#27272a] text-xs no-scrollbar">
+        <span className="font-mono text-[10px] uppercase font-semibold text-zinc-500 shrink-0 mr-1 flex items-center gap-1.5 h-7">
+          <span className="material-symbols-outlined text-[14px] text-orange-400 leading-none shrink-0">tune</span>
+          <span className="leading-none">Quick:</span>
         </span>
 
         {/* All Tasks Pill */}
         <button
+          type="button"
           onClick={() => {
             onSelectQuickFilter?.(null);
             onSelectFilterPriority?.(null);
             onSelectFilterStatus?.(null);
           }}
-          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors shrink-0 ${
+          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
             !quickFilter && !filterPriority && !filterStatus
-              ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-              : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
           }`}
         >
-          <span>All Tasks</span>
-          <span className="font-mono text-[10px] opacity-80">({totalCount})</span>
+          <span className="leading-none">All Tasks</span>
+          <span className="font-mono text-[10px] opacity-80 leading-none">({totalCount})</span>
         </button>
 
         {/* Urgent Only Pill */}
         <button
+          type="button"
           onClick={() => {
             const next = quickFilter === 'urgent' ? null : 'urgent';
             onSelectQuickFilter?.(next);
             onSelectFilterPriority?.(next ? 'Urgent' : null);
           }}
-          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors shrink-0 ${
+          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
             quickFilter === 'urgent' || filterPriority === 'Urgent'
-              ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-              : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
           }`}
         >
-          <span className="material-symbols-outlined text-[13px] text-amber-500">bolt</span>
-          <span>Urgent Only</span>
+          <span className="material-symbols-outlined text-[13px] text-amber-400 leading-none shrink-0">bolt</span>
+          <span className="leading-none">Urgent Only</span>
         </button>
 
-        {/* My Tasks (Alex Wong) */}
+        {/* My Tasks */}
         <button
+          type="button"
           onClick={() => {
             const next = quickFilter === 'my-tasks' ? null : 'my-tasks';
             onSelectQuickFilter?.(next);
           }}
-          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors shrink-0 ${
+          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
             quickFilter === 'my-tasks'
-              ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-              : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
           }`}
         >
-          <span className="material-symbols-outlined text-[13px]">person</span>
-          <span>My Tasks ({userInitials})</span>
+          <span className="material-symbols-outlined text-[13px] leading-none shrink-0">person</span>
+          <span className="leading-none">My Tasks ({userInitials})</span>
         </button>
 
         {/* In Progress */}
         <button
+          type="button"
           onClick={() => {
             const next = quickFilter === 'in-progress' ? null : 'in-progress';
             onSelectQuickFilter?.(next);
             onSelectFilterStatus?.(next ? 'In Progress' : null);
           }}
-          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors shrink-0 ${
+          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
             quickFilter === 'in-progress' || filterStatus === 'In Progress'
-              ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-              : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
           }`}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-[#c03ce9]"></span>
-          <span>In Progress</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>
+          <span className="leading-none">In Progress</span>
         </button>
 
         {/* In Review */}
         <button
+          type="button"
           onClick={() => {
             const next = quickFilter === 'needs-review' ? null : 'needs-review';
             onSelectQuickFilter?.(next);
             onSelectFilterStatus?.(next ? 'In Review' : null);
           }}
-          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors shrink-0 ${
+          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
             quickFilter === 'needs-review' || filterStatus === 'In Review'
-              ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-              : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
           }`}
         >
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-          <span>Needs Review</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+          <span className="leading-none">Needs Review</span>
         </button>
 
         {/* Due Soon */}
         <button
+          type="button"
           onClick={() => {
             const next = quickFilter === 'due-soon' ? null : 'due-soon';
             onSelectQuickFilter?.(next);
           }}
-          className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-medium border transition-colors shrink-0 ${
+          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
             quickFilter === 'due-soon'
-              ? 'bg-[#9900c2] text-white border-[#9900c2] font-semibold shadow-xs'
-              : 'bg-[#fafafc] border-[#d4c0d5]/40 text-[#504252] hover:bg-[#f4f2fd] hover:text-[#1a1b22]'
+              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
           }`}
         >
-          <span className="material-symbols-outlined text-[13px]">schedule</span>
-          <span>Due Soon</span>
+          <span className="material-symbols-outlined text-[13px] leading-none shrink-0">schedule</span>
+          <span className="leading-none">Due Soon</span>
         </button>
 
-        <span className="ml-auto font-mono text-[10px] text-[#837284] shrink-0">
+        <span className="ml-auto font-mono text-[10px] text-zinc-500 shrink-0 flex items-center h-7 leading-none">
           Showing {taskCount} items
         </span>
       </div>

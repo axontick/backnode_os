@@ -7,6 +7,7 @@ interface KanbanBoardProps {
   onSelectTask: (task: TaskItem) => void;
   onAddTaskToColumn: (status: TaskStatus) => void;
   onMoveTaskStatus: (taskId: string, newStatus: TaskStatus) => void;
+  onEditTask?: (task: TaskItem) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -15,6 +16,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onSelectTask,
   onAddTaskToColumn,
   onMoveTaskStatus,
+  onEditTask,
 }) => {
   const columns: {
     status: TaskStatus;
@@ -25,23 +27,23 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     {
       status: 'Backlog',
       title: 'Backlog',
-      dotColor: 'bg-[#5f5e61]',
+      dotColor: 'bg-zinc-500',
     },
     {
       status: 'In Progress',
       title: 'In Progress',
-      dotColor: 'bg-[#9900c2] animate-pulse',
-      countBadgeColor: 'bg-[#fbd7ff] text-[#330043]',
+      dotColor: 'bg-orange-500 animate-pulse',
+      countBadgeColor: 'bg-orange-950/60 text-orange-400 border border-orange-500/30',
     },
     {
       status: 'In Review',
       title: 'In Review',
-      dotColor: 'bg-[#835000]',
+      dotColor: 'bg-amber-500',
     },
     {
       status: 'Done',
       title: 'Done',
-      dotColor: 'bg-[#837284]',
+      dotColor: 'bg-emerald-500',
     },
   ];
 
@@ -49,25 +51,25 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     switch (priority) {
       case 'Urgent':
         return (
-          <span className="font-mono text-[10px] text-[#9900c2] border border-[#b731e0]/60 bg-[#fbd7ff]/40 px-2 py-0.5 rounded font-semibold">
+          <span className="font-mono text-[10px] text-red-400 border border-red-500/30 bg-red-950/40 px-2 py-0.5 rounded-[6px] font-semibold">
             Urgent
           </span>
         );
       case 'High':
         return (
-          <span className="font-mono text-[10px] text-[#835000] border border-[#ffddba] bg-[#ffddba]/30 px-2 py-0.5 rounded font-medium">
+          <span className="font-mono text-[10px] text-orange-400 border border-orange-500/30 bg-orange-950/40 px-2 py-0.5 rounded-[6px] font-semibold">
             High
           </span>
         );
       case 'Medium':
         return (
-          <span className="font-mono text-[10px] text-[#5f5e61] border border-[#d4c0d5]/40 bg-[#eeedf7] px-2 py-0.5 rounded">
+          <span className="font-mono text-[10px] text-amber-400 border border-amber-500/30 bg-amber-950/40 px-2 py-0.5 rounded-[6px] font-medium">
             Medium
           </span>
         );
       case 'Low':
         return (
-          <span className="font-mono text-[10px] text-[#5f5e61] border border-[#d4c0d5]/40 bg-[#eeedf7] px-2 py-0.5 rounded">
+          <span className="font-mono text-[10px] text-zinc-400 border border-zinc-700/50 bg-zinc-800/60 px-2 py-0.5 rounded-[6px]">
             Low
           </span>
         );
@@ -77,50 +79,44 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   };
 
   return (
-    <section className="flex-1 p-6 overflow-x-auto overflow-y-hidden custom-scrollbar flex gap-6 bg-[#fafafc]">
+    <section className="flex-1 p-6 overflow-x-auto overflow-y-hidden custom-scrollbar flex gap-5 bg-[#09090b]">
       {columns.map((col) => {
         const colTasks = tasks.filter((t) => t.status === col.status);
 
         return (
           <div
             key={col.status}
-            className="w-[340px] shrink-0 flex flex-col h-full bg-[#f4f2fd]/50 rounded-2xl border border-[#d4c0d5]/30 p-3.5"
+            className="w-[340px] shrink-0 flex flex-col h-full bg-[#121214] rounded-[6px] border border-[#27272a] p-3.5"
           >
             {/* Column Header */}
             <div className="flex items-center justify-between mb-3 shrink-0">
               <div className="flex items-center gap-2">
-                <span className={`w-2.5 h-2.5 rounded-full ${col.dotColor}`}></span>
-                <h2 className="font-semibold text-sm text-[#1a1b22]">{col.title}</h2>
+                <span className={`w-2 h-2 rounded-full ${col.dotColor}`}></span>
+                <h2 className="font-semibold text-xs font-mono uppercase tracking-wider text-zinc-100">{col.title}</h2>
                 <span
-                  className={`font-mono text-xs px-2 py-0.5 rounded-full font-medium ${
-                    col.countBadgeColor || 'bg-[#eeedf7] text-[#5f5e61]'
+                  className={`font-mono text-[11px] px-2 py-0.5 rounded-[6px] font-medium ${
+                    col.countBadgeColor || 'bg-zinc-800 text-zinc-400'
                   }`}
                 >
                   {colTasks.length}
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-[#837284]">
+              <div className="flex items-center gap-1 text-zinc-400">
                 <button
+                  type="button"
                   onClick={() => onAddTaskToColumn(col.status)}
-                  className="p-1 hover:text-[#1a1b22] hover:bg-[#eeedf7] rounded transition-colors"
+                  className="w-6 h-6 flex items-center justify-center hover:text-orange-400 hover:bg-zinc-800 rounded-[6px] transition-colors cursor-pointer"
                   title="Add task to column"
                 >
                   <span className="material-symbols-outlined text-[16px]">add</span>
-                </button>
-                <button
-                  onClick={() => alert(`Column settings for ${col.title}`)}
-                  className="p-1 hover:text-[#1a1b22] hover:bg-[#eeedf7] rounded transition-colors"
-                  title="More actions"
-                >
-                  <span className="material-symbols-outlined text-[16px]">more_horiz</span>
                 </button>
               </div>
             </div>
 
             {/* Cards Stack */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-1">
+            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
               {colTasks.length === 0 ? (
-                <div className="p-6 text-center text-xs text-[#837284] border border-dashed border-[#d4c0d5]/40 rounded-xl">
+                <div className="p-6 text-center text-xs text-zinc-500 font-mono border border-dashed border-[#27272a] rounded-[6px]">
                   No tasks in {col.title}
                 </div>
               ) : (
@@ -137,47 +133,62 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                     <div
                       key={t.id}
                       onClick={() => onSelectTask(t)}
-                      className={`bg-white transition-all duration-150 rounded-xl p-3.5 cursor-pointer group select-none relative ${
+                      className={`bg-[#18181b] transition-all duration-150 rounded-[6px] p-3.5 cursor-pointer group select-none relative ${
                         isSelected
-                          ? 'border-2 border-[#9900c2] shadow-md ring-2 ring-[#9900c2]/10'
+                          ? 'border-2 border-orange-500 shadow-md ring-1 ring-orange-500/20'
                           : isFeatured
-                          ? 'border-2 border-[#9900c2]/40 hover:border-[#9900c2] shadow-sm'
-                          : 'border border-[#d4c0d5]/30 hover:border-[#9900c2]/50 shadow-none'
+                          ? 'border border-orange-500/40 hover:border-orange-500 shadow-sm'
+                          : 'border border-[#27272a] hover:border-orange-500/50 hover:bg-[#1f1f23]'
                       }`}
                     >
                       {/* Top Meta: Priority & ID */}
                       <div className="flex items-center justify-between mb-2">
                         {getPriorityBadge(t.priority)}
-                        <span className="font-mono text-xs text-[#837284] group-hover:text-[#9900c2] transition-colors">
-                          {t.id}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          {onEditTask && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditTask(t);
+                              }}
+                              className="w-5 h-5 rounded-[4px] hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center cursor-pointer"
+                              title="Edit task in modal"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">edit</span>
+                            </button>
+                          )}
+                          <span className="font-mono text-xs text-zinc-400 group-hover:text-orange-400 transition-colors">
+                            {t.id}
+                          </span>
+                        </div>
                       </div>
 
                       {/* Card Title */}
-                      <h3 className="text-sm font-semibold text-[#1a1b22] mb-1.5 group-hover:text-[#9900c2] transition-colors leading-snug">
+                      <h3 className="text-[13px] font-semibold text-zinc-100 mb-1.5 group-hover:text-orange-400 transition-colors leading-snug">
                         {t.title}
                       </h3>
 
                       {/* Description Summary */}
-                      <p className="text-xs text-[#504252] mb-3 line-clamp-2 leading-relaxed">
+                      <p className="text-xs text-zinc-400 mb-3 line-clamp-2 leading-relaxed">
                         {t.description}
                       </p>
 
                       {/* Mini Progress Bar for Urgent/In-Progress tasks with subtasks */}
                       {hasSubtasks && (isFeatured || t.status === 'In Progress') && (
-                        <div className="w-full bg-[#eeedf7] rounded-full h-1.5 mb-3 overflow-hidden">
+                        <div className="w-full bg-zinc-800 rounded-full h-1.5 mb-3 overflow-hidden">
                           <div
-                            className="bg-[#9900c2] h-full rounded-full transition-all"
+                            className="bg-orange-500 h-full rounded-full transition-all"
                             style={{ width: `${progressPct}%` }}
                           ></div>
                         </div>
                       )}
 
                       {/* Card Footer: Tags, Subtask Counter, Due Date & Assignee */}
-                      <div className="flex items-center justify-between pt-2 border-t border-[#d4c0d5]/20 text-xs">
+                      <div className="flex items-center justify-between pt-2 border-t border-[#27272a] text-xs">
                         <div className="flex items-center gap-2">
                           {t.tags[0] && (
-                            <span className="font-mono text-[10px] bg-[#eeedf7] text-[#504252] px-2 py-0.5 rounded">
+                            <span className="font-mono text-[10px] bg-zinc-800 text-zinc-300 px-2 py-0.5 rounded-[6px]">
                               {t.tags[0]}
                             </span>
                           )}
@@ -185,10 +196,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             <div
                               className={`flex items-center gap-1 font-mono text-[11px] ${
                                 completedSubtasks === t.subtasks.length
-                                  ? 'text-emerald-600'
+                                  ? 'text-emerald-400'
                                   : isFeatured
-                                  ? 'text-[#9900c2] font-semibold'
-                                  : 'text-[#837284]'
+                                  ? 'text-orange-400 font-semibold'
+                                  : 'text-zinc-500'
                               }`}
                             >
                               <span className="material-symbols-outlined text-[13px]">
@@ -202,14 +213,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <span className="font-mono text-[11px] text-[#837284]">
+                          <span className="font-mono text-[11px] text-zinc-400">
                             {t.dueDate}
                           </span>
                           <div
-                            className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold ring-1 ring-white"
+                            className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold ring-1 ring-zinc-700 text-zinc-100 bg-zinc-800"
                             style={{
-                              backgroundColor: t.assignee.avatarBg || '#e4e1e6',
-                              color: t.assignee.avatarColor || '#1b1b1e',
+                              backgroundColor: t.assignee.avatarBg && t.assignee.avatarBg !== '#9900c2' ? t.assignee.avatarBg : '#27272a',
                             }}
                             title={t.assignee.name}
                           >
@@ -220,11 +230,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
                       {/* Quick Move Helper on Hover */}
                       <div
-                        className="absolute top-2 right-2 hidden group-hover:flex items-center gap-1 bg-white/90 backdrop-blur rounded px-1 py-0.5 shadow-sm border border-[#d4c0d5]/40"
+                        className="absolute top-2 right-2 hidden group-hover:flex items-center gap-1 bg-[#121214]/90 backdrop-blur rounded-[6px] px-1 py-0.5 shadow-sm border border-[#27272a]"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {col.status !== 'Backlog' && (
                           <button
+                            type="button"
                             onClick={() => {
                               const prevMap: Record<TaskStatus, TaskStatus> = {
                                 'In Progress': 'Backlog',
@@ -235,7 +246,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               };
                               onMoveTaskStatus(t.id, prevMap[t.status]);
                             }}
-                            className="text-[#837284] hover:text-[#9900c2] p-0.5"
+                            className="text-zinc-400 hover:text-orange-400 p-0.5 cursor-pointer"
                             title="Move left"
                           >
                             <span className="material-symbols-outlined text-[13px]">arrow_back</span>
@@ -243,6 +254,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         )}
                         {col.status !== 'Done' && (
                           <button
+                            type="button"
                             onClick={() => {
                               const nextMap: Record<TaskStatus, TaskStatus> = {
                                 'Backlog': 'In Progress',
@@ -253,7 +265,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               };
                               onMoveTaskStatus(t.id, nextMap[t.status]);
                             }}
-                            className="text-[#837284] hover:text-[#9900c2] p-0.5"
+                            className="text-zinc-400 hover:text-orange-400 p-0.5 cursor-pointer"
                             title="Move right"
                           >
                             <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
@@ -268,8 +280,9 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
             {/* Bottom Add Task CTA */}
             <button
+              type="button"
               onClick={() => onAddTaskToColumn(col.status)}
-              className="mt-2 w-full py-1.5 text-[#837284] hover:text-[#1a1b22] hover:bg-white rounded-lg text-xs flex items-center justify-center gap-1 border border-dashed border-[#d4c0d5]/40 transition-colors"
+              className="mt-2 w-full py-1.5 text-zinc-400 hover:text-orange-400 hover:bg-[#18181b] rounded-[6px] text-xs flex items-center justify-center gap-1 border border-dashed border-[#27272a] transition-colors cursor-pointer"
             >
               <span className="material-symbols-outlined text-[14px]">add</span>
               <span>Add Task</span>

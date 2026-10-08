@@ -8,6 +8,8 @@ export interface Account {
   id: string;
   name: string;
   slug: string;
+  color?: string;
+  icon?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -162,6 +164,17 @@ export interface FolderChildItem {
   active?: boolean;
 }
 
+export interface SpaceSubFolder {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  parentId: string;
+  items?: FolderChildItem[];
+  subFolders?: SpaceSubFolder[];
+}
+
 export interface SpaceFolder {
   id: string;
   name: string;
@@ -169,6 +182,7 @@ export interface SpaceFolder {
   color: string;
   description?: string;
   items: FolderChildItem[];
+  subFolders?: SpaceSubFolder[];
   accountId?: string;
 }
 
@@ -190,6 +204,19 @@ export interface CrmHistoryEvent {
   detail?: string;
 }
 
+export interface CrmPipelineSubFolder {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  description?: string;
+  dealCount?: number;
+  totalValue?: number;
+  pipelineId: string;
+  parentId?: string;
+  subFolders?: CrmPipelineSubFolder[];
+}
+
 export interface CrmPipeline {
   id: string;
   name: string;
@@ -198,6 +225,7 @@ export interface CrmPipeline {
   color?: string;
   dealCount: number;
   totalValue: number;
+  subFolders?: CrmPipelineSubFolder[];
   accountId?: string;
 }
 
@@ -224,6 +252,7 @@ export interface CrmDeal {
   tags: string[];
   nextStep?: string;
   pipelineId?: string;
+  subFolderId?: string;
   linkedTasks: CrmLinkedTask[];
   history: CrmHistoryEvent[];
   accountId?: string;

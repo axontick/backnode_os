@@ -28,9 +28,26 @@ export class WorkspaceController {
   @Post('workspaces')
   async createWorkspace(
     @CurrentUser() user: CurrentUserPayload,
-    @Body() data: { name: string; color?: string },
+    @Body() data: { name: string; color?: string; icon?: string },
   ) {
     return this.workspaceService.createWorkspace(user, data);
+  }
+
+  @Patch('workspaces/:id')
+  async updateWorkspace(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() data: { name?: string; color?: string; icon?: string },
+  ) {
+    return this.workspaceService.updateWorkspace(user, id, data);
+  }
+
+  @Delete('workspaces/:id')
+  async deleteWorkspace(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.workspaceService.deleteWorkspace(user, id);
   }
 
   // Space Folders
