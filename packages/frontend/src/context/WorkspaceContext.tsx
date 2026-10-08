@@ -819,15 +819,13 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleDeleteFolder = (folderId: string) => {
-    setFolders((prev) => {
-      const remaining = prev.filter((f) => f.id !== folderId);
-      const deletedFolder = prev.find((f) => f.id === folderId);
-      if (deletedFolder?.items?.some((i) => i.id === activeSpace)) {
-        const nextSpace = remaining[0]?.items?.[0]?.id || 'sprint-14';
-        setActiveSpace(nextSpace);
-      }
-      return remaining;
-    });
+    const deletedFolder = folders.find((f) => f.id === folderId);
+    const remaining = folders.filter((f) => f.id !== folderId);
+    setFolders(remaining);
+    if (deletedFolder?.items?.some((i) => i.id === activeSpace)) {
+      const nextSpace = remaining[0]?.items?.[0]?.id || 'sprint-14';
+      setActiveSpace(nextSpace);
+    }
     workspaceApi.deleteFolder(folderId).catch((err) => {
       console.error('Failed to delete folder in DB:', err);
     });
@@ -854,13 +852,11 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleDeletePipeline = (pipelineId: string) => {
-    setPipelines((prev) => {
-      const remaining = prev.filter((p) => p.id !== pipelineId);
-      if (activePipelineId === pipelineId && remaining.length > 0) {
-        setActivePipelineId(remaining[0].id);
-      }
-      return remaining;
-    });
+    const remaining = pipelines.filter((p) => p.id !== pipelineId);
+    setPipelines(remaining);
+    if (activePipelineId === pipelineId) {
+      setActivePipelineId(remaining.length > 0 ? remaining[0].id : '');
+    }
     pipelinesApi.delete(pipelineId).catch((err) => {
       console.error('Failed to delete pipeline in DB:', err);
     });
@@ -868,7 +864,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleConfirmDeleteItem = () => {
-    if (!itemToDelete) return;
+    if (!itemToDelete?.item?.id) return;
     if (itemToDelete.type === 'task') {
       handleDeleteTask(itemToDelete.item.id);
     } else if (itemToDelete.type === 'folder') {
