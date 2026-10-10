@@ -31,6 +31,18 @@ export class User {
   @Column('varchar', { default: 'OWNER' })
   role: string;
 
+  @Column('varchar', { default: 'ACTIVE' })
+  status: string;
+
+  @Column('boolean', { name: 'can_login', default: true })
+  canLogin: boolean;
+
+  @Column('simple-json', { name: 'allowed_pages', nullable: true })
+  allowedPages?: string[];
+
+  @Column('simple-json', { name: 'allowed_actions', nullable: true })
+  allowedActions?: string[];
+
   @Column('varchar', { name: 'account_id' })
   accountId: string;
 

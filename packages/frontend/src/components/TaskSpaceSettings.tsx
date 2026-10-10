@@ -29,6 +29,8 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'closed'>('all');
   const [statusSearch, setStatusSearch] = useState('');
   const [isSavedFeedback, setIsSavedFeedback] = useState(false);
+  const [showLifecycleDocs, setShowLifecycleDocs] = useState(false);
+  const [showAllIcons, setShowAllIcons] = useState(false);
 
   const colorPresets = [
     { name: 'Electric Orange', hex: '#ea580c' },
@@ -212,24 +214,41 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
           {activeTab === 'workflow' && (
             <div className="space-y-6">
               {/* Help Callout Banner */}
-              <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-3.5 flex items-start gap-3">
-                <div className="p-1.5 bg-orange-950/40 rounded-[6px] text-orange-400 shrink-0">
-                  <span className="material-symbols-outlined text-[20px]">info</span>
-                </div>
-                <div className="flex-1 flex items-center justify-between">
-                  <div>
-                    <h4 className="font-semibold text-xs text-zinc-100">Status Pipeline Architecture</h4>
-                    <p className="text-xs text-zinc-400 mt-0.5">
-                      Drag handles to reorder columns in Kanban and Table views. Statuses with active tasks require reassignment before deletion.
-                    </p>
+              <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-3.5 flex flex-col gap-3">
+                <div className="flex items-start gap-3">
+                  <div className="p-1.5 bg-orange-950/40 rounded-[6px] text-orange-400 shrink-0">
+                    <span className="material-symbols-outlined text-[20px]">info</span>
                   </div>
-                  <button
-                    onClick={() => alert('Lifecycle documentation loaded.')}
-                    className="text-xs font-mono text-orange-400 hover:underline whitespace-nowrap ml-4 font-medium"
-                  >
-                    View Docs
-                  </button>
+                  <div className="flex-1 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-semibold text-xs text-zinc-100">Status Pipeline Architecture</h4>
+                      <p className="text-xs text-zinc-400 mt-0.5">
+                        Drag handles to reorder columns in Kanban and Table views. Statuses with active tasks require reassignment before deletion.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setShowLifecycleDocs(!showLifecycleDocs)}
+                      className="text-xs font-mono text-orange-400 hover:text-orange-300 whitespace-nowrap ml-4 font-medium flex items-center gap-1 cursor-pointer"
+                    >
+                      <span>{showLifecycleDocs ? 'Hide Policies' : 'View Policies'}</span>
+                      <span className="material-symbols-outlined text-[14px]">
+                        {showLifecycleDocs ? 'expand_less' : 'expand_more'}
+                      </span>
+                    </button>
+                  </div>
                 </div>
+
+                {showLifecycleDocs && (
+                  <div className="p-3 bg-[#18181b] border border-[#27272a] rounded-[6px] text-xs text-zinc-300 space-y-1.5 font-mono text-[11px] animate-in fade-in duration-150">
+                    <p className="text-orange-400 font-semibold uppercase tracking-wider text-[10px]">Lifecycle Transition Policies:</p>
+                    <ul className="list-disc list-inside space-y-1 text-zinc-400">
+                      <li><strong className="text-zinc-200">Strict Forward Progress:</strong> Tasks cannot skip review stages without manager authorization.</li>
+                      <li><strong className="text-zinc-200">WIP Enforcement:</strong> Columns exceeding configured WIP limits will highlight with cautionary borders.</li>
+                      <li><strong className="text-zinc-200">Terminal Stages:</strong> Moving to &lsquo;Done&rsquo; schedules automated archival after the designated retention period.</li>
+                    </ul>
+                  </div>
+                )}
               </div>
 
               {/* Primary 2-Column Grid */}
@@ -409,7 +428,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                             onChange={(e) =>
                               setLocalSettings({ ...localSettings, strictForwardProgress: e.target.checked })
                             }
-                            className="rounded-[3px] accent-orange-500 h-4 w-4 cursor-pointer"
+                            className="rounded-[6px] accent-orange-500 h-4 w-4 cursor-pointer"
                           />
                         </div>
                         <p className="text-[11px] text-zinc-400">
@@ -426,7 +445,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                             onChange={(e) =>
                               setLocalSettings({ ...localSettings, autoArchiveDone: e.target.checked })
                             }
-                            className="rounded-[3px] accent-orange-500 h-4 w-4 cursor-pointer"
+                            className="rounded-[6px] accent-orange-500 h-4 w-4 cursor-pointer"
                           />
                         </div>
                         <p className="text-[11px] text-zinc-400">
@@ -476,7 +495,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                             type="button"
                             onClick={() => setDrawerColor(cp.hex)}
                             title={cp.name}
-                            className={`h-6 rounded-[4px] transition-all ${
+                            className={`h-6 rounded-[6px] transition-all cursor-pointer ${
                               drawerColor.toLowerCase() === cp.hex.toLowerCase()
                                 ? 'ring-2 ring-orange-500 ring-offset-1 ring-offset-zinc-900 scale-105'
                                 : 'hover:opacity-80'
@@ -488,7 +507,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
 
                       <div className="flex items-center gap-2 mt-1">
                         <div
-                          className="w-6 h-6 rounded-[4px] shrink-0 border border-[#27272a] shadow-xs"
+                          className="w-6 h-6 rounded-[6px] shrink-0 border border-[#27272a] shadow-xs"
                           style={{ backgroundColor: drawerColor }}
                         ></div>
                         <input
@@ -544,7 +563,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                           type="checkbox"
                           checked={drawerPrRequired}
                           onChange={(e) => setDrawerPrRequired(e.target.checked)}
-                          className="rounded-[3px] accent-orange-500 h-4 w-4 mt-0.5 cursor-pointer"
+                          className="rounded-[6px] accent-orange-500 h-4 w-4 mt-0.5 cursor-pointer"
                         />
                         <div className="flex flex-col">
                           <span className="text-xs font-semibold text-zinc-100">Require linked PR review</span>
@@ -647,7 +666,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                               key={cp.hex}
                               type="button"
                               onClick={() => setLocalSettings({ ...localSettings, color: cp.hex })}
-                              className={`w-6 h-6 rounded-[4px] transition-all ${
+                              className={`w-6 h-6 rounded-[6px] transition-all cursor-pointer ${
                                 localSettings.color.toLowerCase() === cp.hex.toLowerCase()
                                   ? 'ring-2 ring-orange-500 scale-105'
                                   : 'hover:scale-105'
@@ -671,7 +690,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
 
                           <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#18181b] border border-[#27272a] rounded-[6px]">
                             <span
-                              className="w-3.5 h-3.5 rounded-[3px]"
+                              className="w-3.5 h-3.5 rounded-[6px]"
                               style={{ backgroundColor: localSettings.color }}
                             ></span>
                             <span className="font-mono text-[10px] font-semibold text-zinc-200">Selected</span>
@@ -685,12 +704,22 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                         Icon Identifier
                       </label>
                       <div className="flex items-center gap-2 flex-wrap">
-                        {['terminal', 'folder_open', 'database', 'memory', 'rocket_launch', 'hub'].map((ic) => (
+                        {[
+                          'terminal',
+                          'folder_open',
+                          'database',
+                          'memory',
+                          'rocket_launch',
+                          'hub',
+                          ...(showAllIcons
+                            ? ['code', 'bug_report', 'analytics', 'dataset', 'security', 'api', 'dashboard', 'layers']
+                            : []),
+                        ].map((ic) => (
                           <button
                             key={ic}
                             type="button"
                             onClick={() => setLocalSettings({ ...localSettings, icon: ic })}
-                            className={`w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors ${
+                            className={`w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer ${
                               localSettings.icon === ic
                                 ? 'bg-orange-950/40 text-orange-400 border border-orange-500/40 shadow-xs'
                                 : 'text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]'
@@ -701,11 +730,12 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                           </button>
                         ))}
                         <button
-                          onClick={() => alert('Icon picker modal opened (120+ symbols available).')}
-                          className="px-2.5 py-1 rounded-[6px] border border-[#27272a] text-[11px] text-zinc-400 hover:bg-[#18181b] hover:text-zinc-200 transition-colors flex items-center gap-1"
+                          type="button"
+                          onClick={() => setShowAllIcons(!showAllIcons)}
+                          className="px-2.5 py-1 rounded-[6px] border border-[#27272a] text-[11px] text-zinc-400 hover:bg-[#18181b] hover:text-zinc-200 transition-colors flex items-center gap-1 cursor-pointer"
                         >
                           <span className="material-symbols-outlined text-[14px]">apps</span>
-                          <span>Browse symbols...</span>
+                          <span>{showAllIcons ? 'Fewer symbols' : 'More symbols...'}</span>
                         </button>
                       </div>
                     </div>
@@ -832,7 +862,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                   <div>
                     <h2 className="font-semibold text-sm text-zinc-100 font-headline">Sync &amp; Retention Policy</h2>
                     <p className="text-xs text-zinc-400">
-                      Cluster replication parameters, history purging, and ledger persistency.
+                      Workspace sync parameters, history purging, and ledger persistency.
                     </p>
                   </div>
                   <span className="font-mono text-[10px] px-2 py-0.5 rounded-[6px] bg-amber-950/40 text-amber-400 font-semibold border border-amber-500/20">
@@ -859,7 +889,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                       onChange={(e) =>
                         setLocalSettings({ ...localSettings, distributedWriteLogging: e.target.checked })
                       }
-                      className="rounded-[3px] accent-orange-500 h-4 w-4 cursor-pointer"
+                      className="rounded-[6px] accent-orange-500 h-4 w-4 cursor-pointer"
                     />
                   </div>
 
@@ -900,7 +930,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
             <div className="p-8 text-center text-xs text-zinc-400 bg-[#121214] border border-[#27272a] rounded-[6px]">
               <span className="material-symbols-outlined text-3xl text-orange-400 mb-2">bolt</span>
               <p className="font-semibold text-sm text-zinc-100 font-headline">Automations &amp; Webhooks</p>
-              <p className="mt-1">GitHub PR review synchronization and SQLite CDC replication streams active.</p>
+              <p className="mt-1">GitHub PR review synchronization and event webhook streams active.</p>
             </div>
           )}
 
@@ -937,7 +967,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
           >
             <span className="material-symbols-outlined text-[16px]">save</span>
             <span>{isSavedFeedback ? 'Changes Saved' : 'Save Changes'}</span>
-            <kbd className="font-mono text-[10px] px-1 py-0.2 rounded-[4px] bg-white/20 text-white ml-1">⌘S</kbd>
+            <kbd className="font-mono text-[10px] px-1 py-0.2 rounded-[6px] bg-white/20 text-white ml-1">⌘S</kbd>
           </button>
         </div>
       </footer>

@@ -17,13 +17,34 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
   onNavigateToBoard,
   onOpenAddPipeline,
 }) => {
-  const totalPipeline = deals.reduce((sum, d) => sum + d.value, 0);
+  const totalPipeline = deals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
   const weightedForecast = Math.round(
-    deals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0)
+    deals.reduce((sum, d) => sum + (Number(d.value) || 0) * ((Number(d.probability) || 0) / 100), 0)
   );
 
-  const closedWonDeals = deals.filter((d) => d.stage === 'Closed Won');
-  const winRate = deals.length > 0 ? Math.round((closedWonDeals.length / deals.length) * 100) : 0;
+  const closedWonDeals = deals.filter((d) => d.stage === 'Closed Won' || d.stage?.toLowerCase().includes('won'));
+  const closedLostDeals = deals.filter((d) => d.stage === 'Closed Lost' || d.stage?.toLowerCase().includes('lost'));
+  const totalClosed = closedWonDeals.length + closedLostDeals.length;
+  const winRate = totalClosed > 0 
+    ? Math.round((closedWonDeals.length / totalClosed) * 100) 
+    : deals.length > 0 
+      ? Math.round((closedWonDeals.length / deals.length) * 100)
+      : 0;
+
+  const dealsWithCycle = deals.filter(
+    (d) => (typeof d.cycleDays === 'number' && d.cycleDays > 0) || (d.createdAt && (d.closedAt || d.targetCloseDate))
+  );
+  const totalCycleDays = deals.reduce((acc, d) => {
+    if (typeof d.cycleDays === 'number' && d.cycleDays > 0) return acc + d.cycleDays;
+    if (d.createdAt && (d.closedAt || d.targetCloseDate)) {
+      const diff =
+        (new Date(d.closedAt || d.targetCloseDate).getTime() - new Date(d.createdAt).getTime()) /
+        (1000 * 3600 * 24);
+      if (!isNaN(diff) && diff > 0) return acc + Math.round(diff);
+    }
+    return acc;
+  }, 0);
+  const avgCycleDays = dealsWithCycle.length > 0 ? (totalCycleDays / dealsWithCycle.length).toFixed(1) : '0';
 
   const stages: {
     name: CrmDeal['stage'];
@@ -73,6 +94,14 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
       barColor: 'bg-emerald-500',
       prob: 100,
     },
+    {
+      name: 'Closed Lost',
+      title: 'Closed Lost',
+      dotColor: 'bg-rose-500',
+      badgeBg: 'bg-rose-950/40 text-rose-400 border border-rose-500/30',
+      barColor: 'bg-rose-500',
+      prob: 0,
+    },
   ];
 
   return (
@@ -87,7 +116,7 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
                 DATABASE: SYNCHRONIZED
               </span>
               <span className="text-zinc-600">•</span>
-              <span className="font-mono text-[11px] text-zinc-400">Local SQLite Mirror</span>
+              <span className="font-mono text-[11px] text-zinc-400">Enterprise Engine</span>
             </div>
             <h1 className="text-2xl font-bold text-zinc-100 tracking-tight font-headline">
               Pipeline CRM &amp; Revenue Operations
@@ -135,13 +164,13 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
               </span>
             </div>
             <div className="mt-2">
-              <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">
+              <div className="text-xl font-bold text-zinc-100 font-mono">
                 ${(totalPipeline / 1000).toFixed(0)}k ARR
               </div>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
                 <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
-                  <span className="material-symbols-outlined text-[12px]">north_east</span>
-                  +18.4% MoM
+                  <span className="material-symbols-outlined text-[12px]">payments</span>
+                  {deals.filter((d) => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost').length} in pipeline
                 </span>
                 <span>•</span>
                 <span>{deals.length} opportunities</span>
@@ -160,13 +189,13 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
               </span>
             </div>
             <div className="mt-2">
-              <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">
+              <div className="text-xl font-bold text-zinc-100 font-mono">
                 ${(weightedForecast / 1000).toFixed(0)}k ARR
               </div>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
                 <span className="text-blue-400 font-semibold">Probability adjusted</span>
                 <span>•</span>
-                <span>Q4 Target</span>
+                <span>{deals.length > 0 ? `${deals.length} opportunities` : 'No opportunities'}</span>
               </div>
             </div>
           </div>
@@ -182,13 +211,13 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
               </span>
             </div>
             <div className="mt-2">
-              <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">
+              <div className="text-xl font-bold text-zinc-100 font-mono">
                 {winRate}%
               </div>
               <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
                 <span className="text-emerald-400 font-semibold">{closedWonDeals.length} Won</span>
                 <span>•</span>
-                <span>Historical Closed</span>
+                <span>{closedLostDeals.length} Lost</span>
               </div>
             </div>
           </div>
@@ -204,8 +233,12 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
               </span>
             </div>
             <div className="mt-2">
-              <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">18.4 Days</div>
-              <div className="text-[11px] text-zinc-400 mt-1">Qualified to Closed Won velocity</div>
+              <div className="text-xl font-bold text-zinc-100 font-mono">{avgCycleDays} Days</div>
+              <div className="text-[11px] text-zinc-400 mt-1">
+                {dealsWithCycle.length > 0
+                  ? `Calculated from ${dealsWithCycle.length} deal cycles`
+                  : 'No closed cycles recorded yet'}
+              </div>
             </div>
           </div>
         </div>
@@ -226,7 +259,7 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {stages.map((st) => {
               const stageDeals = deals.filter((d) => d.stage === st.name);
               const stageTotal = stageDeals.reduce((sum, d) => sum + d.value, 0);

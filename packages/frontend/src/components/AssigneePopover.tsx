@@ -16,6 +16,7 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [departmentFilter, setDepartmentFilter] = useState<'All' | 'Engineering' | 'Product' | 'Design'>('All');
+  const [actionFeedback, setActionFeedback] = useState<string | null>(null);
 
   const filteredMembers = members.filter((member) => {
     const matchesSearch =
@@ -29,25 +30,25 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
     switch (status) {
       case 'Optimal':
         return (
-          <span className="font-mono text-[9px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.2 rounded-[4px] font-medium">
+          <span className="font-mono text-[9px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.2 rounded-[6px] font-medium">
             Optimal
           </span>
         );
       case 'Available':
         return (
-          <span className="font-mono text-[9px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.2 rounded-[4px] font-semibold">
+          <span className="font-mono text-[9px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.2 rounded-[6px] font-semibold">
             Available
           </span>
         );
       case 'Near capacity':
         return (
-          <span className="font-mono text-[9px] text-amber-400 bg-amber-950/40 border border-amber-500/30 px-1.5 py-0.2 rounded-[4px] font-semibold">
+          <span className="font-mono text-[9px] text-amber-400 bg-amber-950/40 border border-amber-500/30 px-1.5 py-0.2 rounded-[6px] font-semibold">
             Near capacity
           </span>
         );
       case 'Overloaded':
         return (
-          <span className="font-mono text-[9px] text-rose-400 bg-rose-950/40 border border-rose-500/30 px-1.5 py-0.2 rounded-[4px] font-semibold">
+          <span className="font-mono text-[9px] text-rose-400 bg-rose-950/40 border border-rose-500/30 px-1.5 py-0.2 rounded-[6px] font-semibold">
             Overloaded
           </span>
         );
@@ -93,7 +94,7 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
             className="w-full pl-8 pr-12 py-1.5 bg-[#18181b] border border-[#27272a] text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-orange-500 rounded-[6px] font-sans"
           />
           <div className="absolute right-2 flex items-center">
-            <kbd className="font-mono text-[10px] text-zinc-400 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a]">
+            <kbd className="font-mono text-[10px] text-zinc-400 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a]">
               ESC
             </kbd>
           </div>
@@ -105,7 +106,7 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
             <button
               key={dept}
               onClick={() => setDepartmentFilter(dept)}
-              className={`px-2.5 py-1 rounded-[4px] text-[11px] font-mono font-medium transition-colors ${
+              className={`px-2.5 py-1 rounded-[6px] text-[11px] font-mono font-medium transition-colors cursor-pointer ${
                 departmentFilter === dept
                   ? 'bg-orange-600 text-white font-semibold'
                   : 'bg-[#18181b] hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200'
@@ -163,7 +164,7 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
                         {member.name}
                       </span>
                       {isSelected && (
-                        <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1 py-0.2 rounded-[4px] font-semibold">
+                        <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1 py-0.2 rounded-[6px] font-semibold">
                           Active
                         </span>
                       )}
@@ -183,11 +184,11 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
                   </div>
 
                   {isSelected ? (
-                    <div className="w-5 h-5 rounded-[4px] bg-orange-600 text-white flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-[6px] bg-orange-600 text-white flex items-center justify-center">
                       <span className="material-symbols-outlined text-[14px] font-bold">check</span>
                     </div>
                   ) : (
-                    <div className="w-5 h-5 rounded-[4px] opacity-0 group-hover:opacity-100 flex items-center justify-center text-zinc-400 transition-opacity">
+                    <div className="w-5 h-5 rounded-[6px] opacity-0 group-hover:opacity-100 flex items-center justify-center text-zinc-400 transition-opacity">
                       <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
                     </div>
                   )}
@@ -200,26 +201,37 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
 
       {/* Popover Bottom Action Toolbar */}
       <div className="p-2.5 bg-[#18181b] border-t border-[#27272a] flex items-center justify-between">
-        <button
-          onClick={() => {
-            alert('Collaborator invite link generated and copied to clipboard.');
-            onClose();
-          }}
-          className="flex items-center gap-1.5 px-2 py-1 rounded-[4px] text-orange-400 hover:bg-[#121214] text-xs font-semibold transition-colors"
-        >
-          <span className="material-symbols-outlined text-[16px]">person_add</span>
-          <span>Invite collaborator</span>
-        </button>
-        <button
-          onClick={() => {
-            alert('Reassignment telemetry notifications dispatched to sync nodes.');
-            onClose();
-          }}
-          className="flex items-center gap-1 px-2 py-1 rounded-[4px] text-zinc-400 text-[11px] font-mono hover:text-zinc-200 hover:bg-[#121214] transition-colors"
-        >
-          <span className="material-symbols-outlined text-[14px]">send</span>
-          <span>Reassign &amp; notify</span>
-        </button>
+        {actionFeedback ? (
+          <div className="w-full text-center text-xs font-mono text-emerald-400 py-0.5">
+            {actionFeedback}
+          </div>
+        ) : (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard?.writeText(window.location.origin + '/join');
+                setActionFeedback('Invite link copied!');
+                setTimeout(() => onClose(), 800);
+              }}
+              className="flex items-center gap-1.5 px-2 py-1 rounded-[6px] text-orange-400 hover:bg-[#121214] text-xs font-semibold transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">person_add</span>
+              <span>Invite collaborator</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActionFeedback('Team notified');
+                setTimeout(() => onClose(), 800);
+              }}
+              className="flex items-center gap-1 px-2 py-1 rounded-[6px] text-zinc-400 text-[11px] font-mono hover:text-zinc-200 hover:bg-[#121214] transition-colors cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[14px]">send</span>
+              <span>Reassign &amp; notify</span>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

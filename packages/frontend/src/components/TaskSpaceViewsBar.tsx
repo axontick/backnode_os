@@ -34,7 +34,8 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   onClearFilters,
   onOpenCreateTask,
 }) => {
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
+  const isReadOnly = effectiveRole === 'VIEWER';
   const userInitials = user?.name
     ? user.name
         .split(' ')
@@ -328,7 +329,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
                           [col.key]: !prev[col.key],
                         }))
                       }
-                      className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-orange-500"
+                      className="rounded-[6px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-orange-500"
                     />
                     <span>{col.label}</span>
                   </label>
@@ -350,7 +351,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
             </button>
           )}
 
-          {onOpenCreateTask && (
+          {!isReadOnly && onOpenCreateTask && (
             <button
               type="button"
               onClick={onOpenCreateTask}

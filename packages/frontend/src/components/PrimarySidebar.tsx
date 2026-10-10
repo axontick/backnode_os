@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { SecurityPolicy } from '../utils/security';
 
 export interface PrimarySidebarProps {
   currentHub: string;
@@ -52,6 +53,13 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const accountName = user?.account?.name || 'Backnode Operations';
   const operatorName = user?.name ? user.name.split(' ')[0] : 'Operator';
 
+  const currentMember = members.find(
+    (m) =>
+      (user?.email && m.email?.toLowerCase() === user.email.toLowerCase()) ||
+      m.id === user?.id
+  );
+  const canWrite = SecurityPolicy.canPerformAction(user, currentMember, 'write');
+
   // Derive active space prefix
   const effectiveSpaceId = spaceId || activeUserSpaceId || activeUserSpace?.id || userSpaces[0]?.id || 'space-main';
   const spacePrefix = `/space/${effectiveSpaceId}`;
@@ -70,8 +78,6 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     effectiveHub = 'contacts';
   } else if (normalizedPath.startsWith('/team')) {
     effectiveHub = 'team';
-  } else if (normalizedPath.startsWith('/replication') || normalizedPath.startsWith('/telemetry')) {
-    effectiveHub = 'replication';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
   }
@@ -82,7 +88,6 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     { id: 'crm', path: `${spacePrefix}/crm`, label: 'CRM Pipelines', icon: 'leaderboard', description: 'Deals & Revenue Pipeline' },
     { id: 'contacts', path: `${spacePrefix}/contacts`, label: 'Contacts', icon: 'group', description: 'Client & Partner Directory' },
     { id: 'team', path: `${spacePrefix}/team`, label: 'Team & Access', icon: 'shield_person', description: 'Access Controls & Roles', count: members.length },
-    { id: 'replication', path: `${spacePrefix}/replication`, label: 'Telemetry', icon: 'sync_saved_locally', description: 'Replication Telemetry' },
   ];
 
   return (
@@ -236,17 +241,28 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
         {isCollapsed ? (
           <button
             type="button"
+            disabled={!canWrite}
             onClick={onOpenNewItem}
-            className="w-10 h-10 bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white rounded-[6px] flex items-center justify-center transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-            title="Create New Item"
+            className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-all shadow-sm active:scale-[0.98] ${
+              canWrite
+                ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white cursor-pointer'
+                : 'bg-zinc-800/50 text-zinc-600 border border-[#27272a] cursor-not-allowed opacity-50'
+            }`}
+            title={canWrite ? 'Create New Item' : 'Write / Authoring clearance required'}
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
           </button>
         ) : (
           <button
             type="button"
+            disabled={!canWrite}
             onClick={onOpenNewItem}
-            className="w-full bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white font-semibold text-xs py-2 px-3 rounded-[6px] flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+            className={`w-full font-semibold text-xs py-2 px-3 rounded-[6px] flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98] ${
+              canWrite
+                ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white cursor-pointer'
+                : 'bg-zinc-800/50 text-zinc-600 border border-[#27272a] cursor-not-allowed opacity-50'
+            }`}
+            title={canWrite ? 'Create New Item' : 'Write / Authoring clearance required'}
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
             <span>New Item</span>
@@ -262,6 +278,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
         {hubs.map((hub) => {
           const isActive = effectiveHub === hub.id;
+          const isAuthorized = SecurityPolicy.canAccessPage(user, currentMember, hub.id);
 
           if (isCollapsed) {
             return (
@@ -272,7 +289,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   onSelectHub(hub.id);
                   navigate(hub.path);
                 }}
-                title={`${hub.label}: ${hub.description}`}
+                title={`${hub.label}: ${hub.description}${!isAuthorized ? ' (Clearance Required)' : ''}`}
                 className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer relative group ${
                   isActive
                     ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30'
@@ -288,10 +305,13 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   {hub.icon}
                 </span>
 
-                {/* Hub Badge Dot if count or active */}
-                {hub.count !== undefined && (
+                {!isAuthorized ? (
+                  <span className="absolute top-1 right-1 material-symbols-outlined text-[11px] text-zinc-500">
+                    lock
+                  </span>
+                ) : hub.count !== undefined ? (
                   <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-orange-500"></span>
-                )}
+                ) : null}
               </button>
             );
           }
@@ -322,7 +342,11 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                 <span className="truncate">{hub.label}</span>
               </div>
 
-              {hub.count !== undefined ? (
+              {!isAuthorized ? (
+                <span className="material-symbols-outlined text-[14px] text-zinc-500 shrink-0" title="Restricted clearance required">
+                  lock
+                </span>
+              ) : hub.count !== undefined ? (
                 <span className="text-[10px] font-mono px-1.5 py-0.2 rounded-[6px] bg-zinc-800/80 text-zinc-400 font-semibold">
                   {hub.count}
                 </span>
@@ -337,53 +361,73 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
       {/* Bottom Rail Actions */}
       <div className={`shrink-0 flex flex-col gap-1 pt-2 border-t border-[#27272a] w-full ${isCollapsed ? 'items-center' : ''}`}>
         {/* Settings */}
-        {isCollapsed ? (
-          <button
-            type="button"
-            onClick={() => {
-              onSelectHub('settings');
-              navigate(`${spacePrefix}/settings`);
-            }}
-            title="Workspace Settings"
-            className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer ${
-              effectiveHub === 'settings'
-                ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30'
-                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
-            }`}
-          >
-            <span
-              className="material-symbols-outlined text-[19px]"
-              style={{
-                fontVariationSettings: effectiveHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
+        {(() => {
+          const isSettingsAuthorized = SecurityPolicy.canAccessPage(user, currentMember, 'settings');
+
+          if (isCollapsed) {
+            return (
+              <button
+                type="button"
+                onClick={() => {
+                  onSelectHub('settings');
+                  navigate(`${spacePrefix}/settings`);
+                }}
+                title={`Workspace Settings${!isSettingsAuthorized ? ' (Clearance Required)' : ''}`}
+                className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer relative ${
+                  effectiveHub === 'settings'
+                    ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30'
+                    : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
+                }`}
+              >
+                <span
+                  className="material-symbols-outlined text-[19px]"
+                  style={{
+                    fontVariationSettings: effectiveHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
+                  }}
+                >
+                  settings
+                </span>
+                {!isSettingsAuthorized && (
+                  <span className="absolute top-1 right-1 material-symbols-outlined text-[11px] text-zinc-500">
+                    lock
+                  </span>
+                )}
+              </button>
+            );
+          }
+
+          return (
+            <button
+              type="button"
+              onClick={() => {
+                onSelectHub('settings');
+                navigate(`${spacePrefix}/settings`);
               }}
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer ${
+                effectiveHub === 'settings'
+                  ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
+              }`}
             >
-              settings
-            </span>
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              onSelectHub('settings');
-              navigate(`${spacePrefix}/settings`);
-            }}
-            className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer ${
-              effectiveHub === 'settings'
-                ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30 font-semibold'
-                : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
-            }`}
-          >
-            <span
-              className="material-symbols-outlined text-[18px]"
-              style={{
-                fontVariationSettings: effectiveHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
-              }}
-            >
-              settings
-            </span>
-            <span>Settings</span>
-          </button>
-        )}
+              <div className="flex items-center gap-2.5 truncate">
+                <span
+                  className="material-symbols-outlined text-[18px]"
+                  style={{
+                    fontVariationSettings: effectiveHub === 'settings' ? "'FILL' 1" : "'FILL' 0",
+                  }}
+                >
+                  settings
+                </span>
+                <span>Settings</span>
+              </div>
+              {!isSettingsAuthorized && (
+                <span className="material-symbols-outlined text-[14px] text-zinc-500 shrink-0" title="Restricted clearance required">
+                  lock
+                </span>
+              )}
+            </button>
+          );
+        })()}
 
         {/* Command Palette / Quick Actions */}
         {isCollapsed ? (

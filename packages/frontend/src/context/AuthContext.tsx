@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginDto, SignupDto } from '../types';
+import { User, LoginDto, SignupDto, ForgotPasswordDto, ResetPasswordDto, UserRole } from '../types';
 import { authApi } from '../services/api';
 
 interface AuthContextType {
@@ -11,7 +11,13 @@ interface AuthContextType {
   setIsAuthModalOpen: (open: boolean) => void;
   login: (dto: LoginDto) => Promise<void>;
   signup: (dto: SignupDto) => Promise<void>;
+  forgotPassword: (email: string) => Promise<{ message: string; devToken?: string }>;
+  resetPassword: (dto: ResetPasswordDto) => Promise<{ message: string }>;
   logout: () => Promise<void>;
+  effectiveRole: UserRole;
+  setEffectiveRole: (role: UserRole) => void;
+  effectiveDepartment: string;
+  setEffectiveDepartment: (dept: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -21,6 +27,24 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('backnode_token'));
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false);
+
+  const [effectiveRole, setEffectiveRoleState] = useState<UserRole>(() => {
+    return (localStorage.getItem('backnode_effective_role') as UserRole) || 'OWNER';
+  });
+
+  const [effectiveDepartment, setEffectiveDepartmentState] = useState<string>(() => {
+    return localStorage.getItem('backnode_effective_department') || 'Engineering';
+  });
+
+  const setEffectiveRole = (role: UserRole) => {
+    setEffectiveRoleState(role);
+    localStorage.setItem('backnode_effective_role', role);
+  };
+
+  const setEffectiveDepartment = (dept: string) => {
+    setEffectiveDepartmentState(dept);
+    localStorage.setItem('backnode_effective_department', dept);
+  };
 
   // Restore session if token exists
   useEffect(() => {
@@ -35,6 +59,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         const currentUser = await authApi.getMe();
         setUser(currentUser);
         setToken(storedToken);
+        if (currentUser.role && !localStorage.getItem('backnode_effective_role')) {
+          setEffectiveRoleState(currentUser.role as UserRole);
+        }
       } catch (err) {
         console.warn('Session restoration failed or token expired:', err);
         localStorage.removeItem('backnode_token');
@@ -53,6 +80,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('backnode_token', res.accessToken);
     setToken(res.accessToken);
     setUser(res.user);
+    if (res.user.role) {
+      setEffectiveRoleState(res.user.role as UserRole);
+      localStorage.setItem('backnode_effective_role', res.user.role);
+    }
     setIsAuthModalOpen(false);
   };
 
@@ -61,7 +92,19 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     localStorage.setItem('backnode_token', res.accessToken);
     setToken(res.accessToken);
     setUser(res.user);
+    if (res.user.role) {
+      setEffectiveRoleState(res.user.role as UserRole);
+      localStorage.setItem('backnode_effective_role', res.user.role);
+    }
     setIsAuthModalOpen(false);
+  };
+
+  const forgotPassword = async (email: string) => {
+    return await authApi.forgotPassword({ email });
+  };
+
+  const resetPassword = async (dto: ResetPasswordDto) => {
+    return await authApi.resetPassword(dto);
   };
 
   const logout = async () => {
@@ -71,6 +114,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.warn('Logout notification failed:', err);
     } finally {
       localStorage.removeItem('backnode_token');
+      localStorage.removeItem('backnode_effective_role');
       setToken(null);
       setUser(null);
     }
@@ -87,7 +131,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsAuthModalOpen,
         login,
         signup,
+        forgotPassword,
+        resetPassword,
         logout,
+        effectiveRole,
+        setEffectiveRole,
+        effectiveDepartment,
+        setEffectiveDepartment,
       }}
     >
       {children}

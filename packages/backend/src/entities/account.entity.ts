@@ -27,6 +27,12 @@ export class Account {
   @Column('varchar', { nullable: true, default: 'workspaces' })
   icon?: string;
 
+  @Column('varchar', { name: 'owner_email', nullable: true })
+  ownerEmail?: string;
+
+  @Column('varchar', { name: 'owner_id', nullable: true })
+  ownerId?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { TaskItem, TaskStatus } from '../types';
+import { useAuth } from '../context/AuthContext';
 
 export interface DeliverablesTableViewProps {
   tasks: TaskItem[];
@@ -24,6 +25,9 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   activeStatusRoute,
   onSelectStatusRoute,
 }) => {
+  const { effectiveRole } = useAuth();
+  const isReadOnly = effectiveRole === 'VIEWER';
+
   const [selectedIds, setSelectedIds] = useState<string[]>(['ENG-101', 'ENG-103']);
   const [density, setDensity] = useState<'compact' | 'comfortable'>('compact');
   const [filterQuery, setFilterQuery] = useState('');
@@ -208,7 +212,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
             <button
               type="button"
               onClick={() => setDensity('compact')}
-              className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${
+              className={`px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer ${
                 density === 'compact' ? 'bg-[#27272a] text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -217,7 +221,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
             <button
               type="button"
               onClick={() => setDensity('comfortable')}
-              className={`px-2 py-0.5 rounded-[4px] transition-colors cursor-pointer ${
+              className={`px-2 py-0.5 rounded-[6px] transition-colors cursor-pointer ${
                 density === 'comfortable' ? 'bg-[#27272a] text-zinc-100 font-bold' : 'text-zinc-400 hover:text-zinc-200'
               }`}
             >
@@ -296,7 +300,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
               >
                 <span>{tab.label}</span>
                 <span
-                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-[4px] ${
+                  className={`text-[10px] font-mono px-1.5 py-0.2 rounded-[6px] ${
                     isActive ? 'bg-orange-950 text-orange-300' : 'bg-zinc-800 text-zinc-500'
                   }`}
                 >
@@ -322,7 +326,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                       type="checkbox"
                       checked={selectedIds.length === filteredTasks.length && filteredTasks.length > 0}
                       onChange={handleToggleSelectAll}
-                      className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                      className="rounded-[6px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
                     />
                   </th>
                   <th className="w-24 px-3 py-2.5 font-medium">
@@ -368,7 +372,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                           type="checkbox"
                           checked={isChecked}
                           onChange={() => handleToggleSelectId(t.id)}
-                          className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                          className="rounded-[6px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
                         />
                       </td>
 
@@ -445,32 +449,36 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
 
                       {/* Action */}
                       <td className="px-3 py-2 text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {onEditTask && (
+                        {!isReadOnly ? (
+                          <div className="flex items-center justify-center gap-1">
+                            {onEditTask && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditTask(t);
+                                }}
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 rounded-[6px] transition-all cursor-pointer"
+                                title="Edit deliverable"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">edit</span>
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                onEditTask(t);
+                                onRequestDeleteTask(t);
                               }}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 rounded-[6px] transition-all cursor-pointer"
-                              title="Edit deliverable"
+                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-950/40 text-zinc-400 hover:text-red-400 rounded-[6px] transition-all cursor-pointer"
+                              title="Delete deliverable"
                             >
-                              <span className="material-symbols-outlined text-[15px]">edit</span>
+                              <span className="material-symbols-outlined text-[15px]">delete</span>
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              onRequestDeleteTask(t);
-                            }}
-                            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-950/40 text-zinc-400 hover:text-red-400 rounded-[6px] transition-all cursor-pointer"
-                            title="Delete deliverable"
-                          >
-                            <span className="material-symbols-outlined text-[15px]">delete</span>
-                          </button>
-                        </div>
+                          </div>
+                        ) : (
+                          <span className="text-[10px] font-mono text-zinc-600">view-only</span>
+                        )}
                       </td>
                     </tr>
                   );
@@ -488,7 +496,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
             </div>
 
             <div className="flex items-center gap-2">
-              <span>Local Replica: <strong className="text-emerald-400">synced (0.2ms)</strong></span>
+              <span>Data Store: <strong className="text-emerald-400">Synchronized</strong></span>
             </div>
           </div>
         </div>

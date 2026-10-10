@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { TaskItem, CrmDeal } from '../types';
+import { TaskItem, CrmDeal, UserRole } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { BacknodeLogo } from './BacknodeLogo';
@@ -61,7 +61,16 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   onSelectDeal,
   syncStatus = 'connected',
 }) => {
-  const { user, isAuthenticated, logout, setIsAuthModalOpen } = useAuth();
+  const {
+    user,
+    isAuthenticated,
+    logout,
+    setIsAuthModalOpen,
+    effectiveRole,
+    setEffectiveRole,
+    effectiveDepartment,
+    setEffectiveDepartment,
+  } = useAuth();
   const {
     activeUserSpace,
     activeSpace,
@@ -72,6 +81,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     pipelines,
     activeUserSpaceId,
     userSpaces,
+    docs,
+    setActiveDocId,
+    directoryContacts,
   } = useWorkspace();
   const navigate = useNavigate();
   const location = useLocation();
@@ -86,11 +98,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
+  const roleRef = useRef<HTMLDivElement>(null);
 
   // Derive active hub from route
   let effectiveHub = currentHub;
@@ -104,8 +118,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     effectiveHub = 'contacts';
   } else if (normalizedPath.startsWith('/team')) {
     effectiveHub = 'team';
-  } else if (normalizedPath.startsWith('/replication') || normalizedPath.startsWith('/telemetry')) {
-    effectiveHub = 'telemetry';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
   }
@@ -127,6 +139,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       }
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setIsProfileOpen(false);
+      }
+      if (roleRef.current && !roleRef.current.contains(e.target as Node)) {
+        setIsRoleMenuOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -159,6 +174,31 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             d.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
             d.company.toLowerCase().includes(searchQuery.toLowerCase())
         ).slice(0, 3)
+      : [];
+
+  const matchingDocs =
+    searchQuery.trim().length > 0
+      ? (docs || [])
+          .filter(
+            (doc) =>
+              doc.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              doc.tags.some((t) => t.toLowerCase().includes(searchQuery.toLowerCase())) ||
+              doc.authorName.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .slice(0, 3)
+      : [];
+
+  const matchingContacts =
+    searchQuery.trim().length > 0
+      ? (directoryContacts || [])
+          .filter(
+            (c) =>
+              c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              c.company.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              c.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              c.email.toLowerCase().includes(searchQuery.toLowerCase())
+          )
+          .slice(0, 3)
       : [];
 
   const workspaceName = activeUserSpace?.name || user?.account?.name || 'Workspace';
@@ -308,24 +348,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <span className="text-zinc-600 font-mono">/</span>
             <span className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate">
               Overall Dashboard
-            </span>
-          </div>
-        );
-      case 'telemetry':
-        return (
-          <div className="flex items-center gap-2 text-xs font-medium text-zinc-400 truncate">
-            <span
-              onClick={() => navigate(`${spacePrefix}/dashboard`)}
-              className="text-zinc-200 font-semibold hover:text-orange-400 cursor-pointer transition-colors"
-            >
-              {workspaceName}
-            </span>
-            <span className="text-zinc-600 font-mono">/</span>
-            <span
-              onClick={() => navigate(`${spacePrefix}/replication`)}
-              className="text-orange-400 font-semibold bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/30 truncate cursor-pointer"
-            >
-              Replication Telemetry
             </span>
           </div>
         );
@@ -689,7 +711,9 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
             <div className="absolute left-0 top-full mt-2 w-96 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-150">
               <div className="px-2.5 py-1 text-[10px] font-mono text-zinc-400 uppercase font-semibold flex items-center justify-between border-b border-[#27272a] pb-1.5">
                 <span>Matching Results</span>
-                <span className="text-zinc-500">{matchingTasks.length + matchingDeals.length} found</span>
+                <span className="text-zinc-500">
+                  {matchingTasks.length + matchingDeals.length + matchingDocs.length + matchingContacts.length} found
+                </span>
               </div>
 
               {matchingTasks.length > 0 && (
@@ -752,11 +776,77 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 </div>
               )}
 
-              {matchingTasks.length === 0 && matchingDeals.length === 0 && (
-                <div className="p-3 text-center text-zinc-500 text-[11px] font-mono">
-                  No items matching &ldquo;{searchQuery}&rdquo;. Press Enter or ⌘K for commands.
+              {matchingDocs.length > 0 && (
+                <div className="flex flex-col gap-0.5 mt-1 border-t border-[#27272a] pt-1.5">
+                  <span className="px-2.5 text-[10px] font-mono text-orange-400 uppercase font-semibold">
+                    Documents &amp; RFCs
+                  </span>
+                  {matchingDocs.map((doc) => (
+                    <button
+                      key={doc.id}
+                      onClick={() => {
+                        setIsSearchFocused(false);
+                        setActiveDocId(doc.id);
+                        const targetFolder = folders[0]?.id || 'fld-engineering';
+                        const targetList = folders[0]?.items[0]?.id || 'sprint-14';
+                        navigate(`${spacePrefix}/spaces/${targetFolder}/lists/${targetList}/docs`);
+                      }}
+                      className="px-2.5 py-1.5 rounded-[6px] hover:bg-zinc-800/60 text-left flex items-center justify-between group transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="material-symbols-outlined text-[14px] text-orange-400">
+                          article
+                        </span>
+                        <span className="truncate group-hover:text-orange-400 font-medium text-zinc-200">
+                          {doc.title}
+                        </span>
+                      </div>
+                      <span className="font-mono text-[9.5px] px-1.5 py-0.5 rounded-[6px] bg-zinc-800 text-zinc-400 shrink-0 ml-1 border border-zinc-700/60">
+                        {doc.classification}
+                      </span>
+                    </button>
+                  ))}
                 </div>
               )}
+
+              {matchingContacts.length > 0 && (
+                <div className="flex flex-col gap-0.5 mt-1 border-t border-[#27272a] pt-1.5">
+                  <span className="px-2.5 text-[10px] font-mono text-orange-400 uppercase font-semibold">
+                    Directory Contacts
+                  </span>
+                  {matchingContacts.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => {
+                        setIsSearchFocused(false);
+                        navigate(`${spacePrefix}/contacts`);
+                      }}
+                      className="px-2.5 py-1.5 rounded-[6px] hover:bg-zinc-800/60 text-left flex items-center justify-between group transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-center gap-2 truncate">
+                        <span className="material-symbols-outlined text-[14px] text-orange-400">
+                          person
+                        </span>
+                        <span className="truncate group-hover:text-orange-400 font-medium text-zinc-200">
+                          {c.name} ({c.company})
+                        </span>
+                      </div>
+                      <span className="font-mono text-[9.5px] px-1.5 py-0.5 rounded-[6px] bg-zinc-800 text-zinc-400 shrink-0 ml-1 border border-zinc-700/60">
+                        {c.tag}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {matchingTasks.length === 0 &&
+                matchingDeals.length === 0 &&
+                matchingDocs.length === 0 &&
+                matchingContacts.length === 0 && (
+                  <div className="p-3 text-center text-zinc-500 text-[11px] font-mono">
+                    No items matching &ldquo;{searchQuery}&rdquo;. Press Enter or ⌘K for commands.
+                  </div>
+                )}
             </div>
           )}
         </div>
@@ -981,10 +1071,87 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           )}
         </div>
 
+        {/* Interactive RBAC & ABAC Role Switcher */}
+        <div ref={roleRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
+            className={`px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
+              effectiveRole === 'OWNER'
+                ? 'bg-orange-950/40 text-orange-400 border-orange-500/40 hover:bg-orange-950/60'
+                : effectiveRole === 'ADMIN'
+                ? 'bg-sky-950/40 text-sky-400 border-sky-500/40 hover:bg-sky-950/60'
+                : effectiveRole === 'MEMBER'
+                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/40 hover:bg-emerald-950/60'
+                : 'bg-amber-950/60 text-amber-300 border-amber-500/50 hover:bg-amber-950/80 animate-pulse'
+            }`}
+            title="Interactive RBAC Security Switcher: Click to simulate different roles (Owner, Admin, Member, Viewer)"
+          >
+            <span className="material-symbols-outlined text-[13px]">
+              {effectiveRole === 'VIEWER' ? 'visibility' : 'verified_user'}
+            </span>
+            <span>{effectiveRole}</span>
+            <span className="material-symbols-outlined text-[12px] opacity-70">
+              {isRoleMenuOpen ? 'expand_less' : 'expand_more'}
+            </span>
+          </button>
+
+          {isRoleMenuOpen && (
+            <div className="absolute right-0 top-full mt-2 w-64 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2.5 flex flex-col gap-1.5 text-xs animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-2 py-1 border-b border-[#27272a] flex items-center justify-between font-mono text-[10px] text-zinc-400 font-semibold uppercase">
+                <span>RBAC Security Matrix</span>
+                <span className="text-zinc-500">{effectiveDepartment}</span>
+              </div>
+              {(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'] as UserRole[]).map((r) => {
+                const isSelected = effectiveRole === r;
+                return (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => {
+                      setEffectiveRole(r);
+                      setIsRoleMenuOpen(false);
+                    }}
+                    className={`w-full text-left px-2.5 py-1.5 rounded-[6px] text-xs font-mono flex items-center justify-between transition-colors cursor-pointer ${
+                      isSelected
+                        ? 'bg-orange-600 text-white font-bold'
+                        : 'text-zinc-300 hover:bg-[#18181b] hover:text-zinc-100'
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-bold">{r}</span>
+                      <span className={`text-[10px] ${isSelected ? 'text-zinc-200' : 'text-zinc-500'}`}>
+                        {r === 'OWNER'
+                          ? 'Full master jurisdiction'
+                          : r === 'ADMIN'
+                          ? 'Team & Operational admin'
+                          : r === 'MEMBER'
+                          ? 'Standard collaborative write'
+                          : 'Strict read-only observer'}
+                      </span>
+                    </div>
+                    {isSelected && (
+                      <span className="material-symbols-outlined text-[14px]">check</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Primary CTA Button */}
         <button
+          disabled={effectiveRole === 'VIEWER'}
           onClick={onOpenCreateTask}
-          className="px-3.5 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold transition-all shadow-sm flex items-center gap-1 active:scale-[0.98] cursor-pointer"
+          className="px-3.5 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-all shadow-sm flex items-center gap-1 active:scale-[0.98] cursor-pointer"
+          title={
+            effectiveRole === 'VIEWER'
+              ? 'Action disabled in Viewer Read-Only Mode'
+              : currentHub === 'crm'
+              ? 'Add Deal'
+              : 'Create Task'
+          }
         >
           <span className="material-symbols-outlined text-[16px]">add</span>
           <span>{currentHub === 'crm' ? 'Add Deal' : 'Create Task'}</span>
@@ -1125,7 +1292,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                   </div>
                   <div className="flex items-center gap-1.5 mt-1">
                     <span className="px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-orange-950/40 text-orange-400 border border-orange-500/30">
-                      {user?.role || (isAuthenticated ? 'MEMBER' : 'GUEST')}
+                      {effectiveRole}
+                    </span>
+                    <span className="px-1.5 py-0.5 rounded-[6px] text-[10px] font-mono font-medium bg-[#18181b] text-zinc-400 border border-[#27272a]">
+                      {effectiveDepartment}
                     </span>
                     <span className="text-[10px] text-zinc-400 truncate">
                       {user?.account?.name || (isAuthenticated ? 'My Workspace' : 'Local Workspace')}

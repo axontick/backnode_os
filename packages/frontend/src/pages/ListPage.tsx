@@ -208,6 +208,7 @@ export const ListPage: React.FC = () => {
             onSelectTask={(t) => setSelectedTaskId(t.id)}
             onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
             onNavigateToView={(v) => handleSelectView(v)}
+            onUpdateTask={handleUpdateTask}
           />
         )}
 
@@ -217,6 +218,7 @@ export const ListPage: React.FC = () => {
             onSelectTask={(t) => setSelectedTaskId(t.id)}
             onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
             onNavigateToView={(v) => handleSelectView(v)}
+            onUpdateTask={handleUpdateTask}
           />
         )}
 

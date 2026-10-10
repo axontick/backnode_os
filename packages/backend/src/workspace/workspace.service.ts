@@ -94,6 +94,8 @@ export class WorkspaceService {
       slug,
       color: data.color || '#ea580c',
       icon: data.icon || 'workspaces',
+      ownerEmail: user.email,
+      ownerId: user.id,
     });
     const saved = await this.accountRepo.save(account);
 
@@ -108,7 +110,7 @@ export class WorkspaceService {
         .toUpperCase()
         .slice(0, 2),
       role: 'Workspace Owner',
-      accessLevel: 'ADMIN',
+      accessLevel: 'OWNER',
       status: 'Active',
       department: 'Executive',
       capacityStatus: 'Available',
@@ -202,7 +204,7 @@ export class WorkspaceService {
             email: u.email,
             initials: (u.name || 'OW').slice(0, 2).toUpperCase(),
             role: 'Workspace Owner',
-            accessLevel: 'ADMIN',
+            accessLevel: 'OWNER',
             status: 'Active',
             department: 'Executive',
             capacityStatus: 'Available',

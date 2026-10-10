@@ -9,6 +9,8 @@ import { initialCrmPipelineSettings, initialCrmStages } from '../mockData';
 import { PipelineWinLossView } from './PipelineWinLossView';
 import { CrmPipelineSettings } from './CrmPipelineSettings';
 import { findPipelineSubFolder } from '../utils/treeUtils';
+import { useAuth } from '../context/AuthContext';
+import { SecurityPolicy } from '../utils/security';
 
 interface PipelineCrmViewProps {
   deals: CrmDeal[];
@@ -33,6 +35,7 @@ interface PipelineCrmViewProps {
   onClearGlobalFilters?: () => void;
   activePipelineSubFolderId?: string | null;
   onClearSubFolderFilter?: () => void;
+  onAdvanceDealStage?: (dealId: string, newStage: CrmDeal['stage']) => void;
 }
 
 export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
@@ -58,7 +61,10 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   onClearGlobalFilters,
   activePipelineSubFolderId,
   onClearSubFolderFilter,
+  onAdvanceDealStage,
 }) => {
+  const { effectiveRole } = useAuth();
+  const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
   const [isPipelinePickerOpen, setIsPipelinePickerOpen] = useState(false);
   const [searchFilter, setSearchFilter] = useState('');
   const [quickActionFilter, setQuickActionFilter] = useState<string | null>(null);
@@ -189,7 +195,27 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     displayedDeals.reduce((sum, d) => sum + d.value * (d.probability / 100), 0)
   );
   const wonCount = displayedDeals.filter((d) => d.stage === 'Closed Won').length;
-  const winRate = displayedDeals.length > 0 ? ((wonCount / displayedDeals.length) * 100).toFixed(1) : '68.4';
+  const closedCount = displayedDeals.filter((d) => d.stage === 'Closed Won' || d.stage === 'Closed Lost').length;
+  const winRate = closedCount > 0 
+    ? ((wonCount / closedCount) * 100).toFixed(1)
+    : displayedDeals.length > 0 
+      ? ((wonCount / displayedDeals.length) * 100).toFixed(1) 
+      : '0.0';
+
+  const dealsWithCycle = displayedDeals.filter(
+    (d) => (typeof d.cycleDays === 'number' && d.cycleDays > 0) || (d.createdAt && (d.closedAt || d.targetCloseDate))
+  );
+  const totalCycleDays = displayedDeals.reduce((acc, d) => {
+    if (typeof d.cycleDays === 'number' && d.cycleDays > 0) return acc + d.cycleDays;
+    if (d.createdAt && (d.closedAt || d.targetCloseDate)) {
+      const diff =
+        (new Date(d.closedAt || d.targetCloseDate).getTime() - new Date(d.createdAt).getTime()) /
+        (1000 * 3600 * 24);
+      if (!isNaN(diff) && diff > 0) return acc + Math.round(diff);
+    }
+    return acc;
+  }, 0);
+  const avgCycle = dealsWithCycle.length > 0 ? `${Math.round(totalCycleDays / dealsWithCycle.length)} days` : '0 days';
 
   const hasActiveCrmFilters = Boolean(
     searchFilter.trim() !== '' ||
@@ -427,11 +453,11 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           </div>
 
           {/* + Button to Add New Pipeline */}
-          {onOpenAddPipeline && (
+          {!isReadOnly && onOpenAddPipeline && (
             <button
               type="button"
               onClick={onOpenAddPipeline}
-              className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-semibold transition-all shadow-xs shrink-0"
+              className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-[11px] font-semibold transition-all shadow-xs shrink-0 cursor-pointer"
               title="Create new sales pipeline"
             >
               <span className="material-symbols-outlined text-[14px]">add</span>
@@ -598,15 +624,17 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             )}
           </div>
 
-          <button
-            onClick={() => {
-              if (onSelectView) onSelectView('settings');
-              else if (onOpenSettings) onOpenSettings('stages');
-            }}
-            className="h-7 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-orange-400 font-semibold hover:bg-zinc-800 transition-colors ml-1 cursor-pointer flex items-center leading-none"
-          >
-            Edit Stages
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => {
+                if (onSelectView) onSelectView('settings');
+                else if (onOpenSettings) onOpenSettings('stages');
+              }}
+              className="h-7 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-orange-400 font-semibold hover:bg-zinc-800 transition-colors ml-1 cursor-pointer flex items-center leading-none"
+            >
+              Edit Stages
+            </button>
+          )}
         </div>
       </div>
 
@@ -838,13 +866,15 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           </div>
 
           {/* Add Deal Primary CTA Button */}
-          <button
-            onClick={() => onOpenNewDeal('Proposal Submitted')}
-            className="h-7 flex items-center gap-1.5 px-3 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs shadow-xs transition-colors shrink-0 cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[15px] leading-none shrink-0">add</span>
-            <span className="leading-none">Deal</span>
-          </button>
+          {!isReadOnly && (
+            <button
+              onClick={() => onOpenNewDeal('Proposal Submitted')}
+              className="h-7 flex items-center gap-1.5 px-3 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs shadow-xs transition-colors shrink-0 cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[15px] leading-none shrink-0">add</span>
+              <span className="leading-none">Deal</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -896,13 +926,13 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
             Avg Cycle
           </div>
-          <div className="font-mono text-base font-bold text-zinc-100">16 days</div>
+          <div className="font-mono text-base font-bold text-zinc-100">{avgCycle}</div>
         </div>
 
         <div className="flex items-center gap-2 shrink-0 ml-auto">
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[6px] bg-amber-950/40 border border-amber-500/30 text-amber-400 font-mono text-[10px] font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-ping"></span>
-            <span>Replication Active (Peer: us-east-local)</span>
+          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[6px] bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-mono text-[10px] font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            <span>Pipeline Status: Active</span>
           </span>
         </div>
       </section>
@@ -1072,7 +1102,23 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                   </div>
 
                   {/* Cards Container */}
-                  <div className="flex flex-col gap-2.5 overflow-y-auto pr-1 flex-1 custom-scrollbar">
+                  <div
+                    onDragOver={(e) => {
+                      if (!isReadOnly && onAdvanceDealStage) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                      }
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      if (isReadOnly || !onAdvanceDealStage) return;
+                      const dealId = e.dataTransfer.getData('text/plain');
+                      if (dealId && col.defaultStage) {
+                        onAdvanceDealStage(dealId, col.defaultStage);
+                      }
+                    }}
+                    className="flex flex-col gap-2.5 overflow-y-auto pr-1 flex-1 custom-scrollbar min-h-[120px]"
+                  >
                     {colDeals.map((deal) => {
                       const isSelected = deal.id === selectedDealId;
                       const isFeatured = deal.id === 'DEAL-402';
@@ -1080,6 +1126,12 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                       return (
                         <div
                           key={deal.id}
+                          draggable={!isReadOnly}
+                          onDragStart={(e) => {
+                            if (isReadOnly) return;
+                            e.dataTransfer.setData('text/plain', deal.id);
+                            e.dataTransfer.effectAllowed = 'move';
+                          }}
                           onClick={() => onSelectDeal(deal)}
                           className={`p-3.5 bg-[#18181b] rounded-[6px] transition-all cursor-pointer group relative text-xs ${
                             isSelected
@@ -1150,37 +1202,63 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                             </div>
                           )}
 
-                          {/* Card Footer: Deliverables countdown */}
-                          {deal.linkedTasks.length > 0 && (
-                            <div className="flex items-center justify-between pt-2 border-t border-[#27272a] text-zinc-400 font-mono text-[10px]">
+                          {/* Card Footer: Deliverables countdown & Quick Stage Advance */}
+                          <div className="flex items-center justify-between pt-2 border-t border-[#27272a] text-zinc-400 font-mono text-[10px]">
+                            {deal.linkedTasks.length > 0 ? (
                               <span className="flex items-center gap-1">
                                 <span className="material-symbols-outlined text-[13px] text-orange-400">
                                   assignment_turned_in
                                 </span>
-                                <span>{deal.linkedTasks.length} deliverables linked</span>
+                                <span>{deal.linkedTasks.length} deliverables</span>
                               </span>
-                              <span className="material-symbols-outlined text-[14px] text-orange-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                                arrow_forward
-                              </span>
-                            </div>
-                          )}
+                            ) : (
+                              <span className="text-zinc-500 font-mono text-[9px]">{deal.id}</span>
+                            )}
+
+                            {!isReadOnly && onAdvanceDealStage && deal.stage !== 'Closed Won' && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const stageSeq: CrmDeal['stage'][] = [
+                                    'Qualified Lead',
+                                    'Discovery & Demo',
+                                    'Proposal Submitted',
+                                    'Contract & Legal',
+                                    'Closed Won',
+                                  ];
+                                  const curIdx = stageSeq.indexOf(deal.stage);
+                                  if (curIdx >= 0 && curIdx < stageSeq.length - 1) {
+                                    onAdvanceDealStage(deal.id, stageSeq[curIdx + 1]);
+                                  }
+                                }}
+                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-[6px] bg-[#121214] hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 border border-[#27272a] hover:border-orange-500/30 transition-all cursor-pointer ml-auto"
+                                title="Advance to next sales stage"
+                              >
+                                <span>Next Stage</span>
+                                <span className="material-symbols-outlined text-[11px]">arrow_forward</span>
+                              </button>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
                   </div>
 
                   {/* Add Deal Ghost Button */}
-                  <button
-                    onClick={() => onOpenNewDeal(col.defaultStage)}
-                    className={`mt-2.5 w-full py-1.5 rounded-[6px] border border-dashed text-xs font-mono font-medium flex items-center justify-center gap-1 transition-colors ${
-                      col.isHighlighted
-                        ? 'border-orange-500/40 hover:border-orange-500 text-orange-400 bg-orange-950/20'
-                        : 'border-[#27272a] hover:border-zinc-600 text-zinc-400 hover:text-zinc-200 bg-transparent'
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[14px]">add</span>
-                    <span>Add Deal</span>
-                  </button>
+                  {!isReadOnly && (
+                    <button
+                      onClick={() => onOpenNewDeal(col.defaultStage)}
+                      className={`mt-2.5 w-full py-1.5 rounded-[6px] border border-dashed text-xs font-mono font-medium flex items-center justify-center gap-1 transition-colors cursor-pointer ${
+                        col.isHighlighted
+                          ? 'border-orange-500/40 hover:border-orange-500 text-orange-400 bg-orange-950/20'
+                          : 'border-[#27272a] hover:border-zinc-600 text-zinc-400 hover:text-zinc-200 bg-transparent'
+                      }`}
+                    >
+                      <span className="material-symbols-outlined text-[14px]">add</span>
+                      <span>Add Deal</span>
+                    </button>
+                  )}
                 </div>
               );
             })}

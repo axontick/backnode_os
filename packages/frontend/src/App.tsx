@@ -13,7 +13,6 @@ import { CrmPage } from './pages/CrmPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { ContactsPage } from './pages/ContactsPage';
 import { TeamAccessPage } from './pages/TeamAccessPage';
-import { ReplicationPage } from './pages/ReplicationPage';
 import { WorkspaceSettingsPage } from './pages/WorkspaceSettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AuthModal } from './components/AuthModal';
@@ -117,10 +116,11 @@ export default function App() {
 
             {/* Team & Access Controls */}
             <Route path="team" element={<TeamAccessPage />} />
+            <Route path="team/members/:memberId/edit" element={<TeamAccessPage />} />
 
-            {/* Telemetry / Replication HUD */}
-            <Route path="replication" element={<ReplicationPage />} />
-            <Route path="telemetry" element={<Navigate to="replication" replace />} />
+            {/* Telemetry / Replication HUD - Removed as requested, redirecting to dashboard */}
+            <Route path="replication" element={<Navigate to="dashboard" replace />} />
+            <Route path="telemetry" element={<Navigate to="dashboard" replace />} />
 
             {/* Workspace Settings */}
             <Route path="settings" element={<WorkspaceSettingsPage />} />

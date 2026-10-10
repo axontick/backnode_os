@@ -18,6 +18,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
   const [gate1, setGate1] = useState(true); // acceptance criteria validated
   const [gate2, setGate2] = useState(false); // peer code review approved
   const [gate3, setGate3] = useState(true); // automated tests passing
+  const [showRules, setShowRules] = useState(false);
 
   const stages: {
     name: TaskStatus;
@@ -96,7 +97,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
         </div>
 
         {/* Orange highlight pill with stage timer */}
-        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-950/40 text-orange-400 border border-orange-500/30 font-mono text-[10px] font-semibold rounded-[4px]">
+        <div className="flex items-center gap-1.5 px-2.5 py-1 bg-orange-950/40 text-orange-400 border border-orange-500/30 font-mono text-[10px] font-semibold rounded-[6px]">
           <span className="material-symbols-outlined text-[13px]" style={{ fontVariationSettings: "'FILL' 1" }}>
             timer
           </span>
@@ -142,7 +143,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
                     {stage.label}
                   </span>
                   <span
-                    className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[4px] font-medium ${
+                    className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] font-medium ${
                       isCurrent
                         ? 'bg-orange-950/40 text-orange-400 border border-orange-500/20'
                         : isSelectedTarget
@@ -173,7 +174,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
             <span className="material-symbols-outlined text-[14px] text-orange-400">verified</span>
             Transition Gates Checklist
           </span>
-          <span className="font-mono text-[10px] bg-orange-950/40 text-orange-400 border border-orange-500/20 px-1.5 py-0.2 rounded-[4px] font-medium">
+          <span className="font-mono text-[10px] bg-orange-950/40 text-orange-400 border border-orange-500/20 px-1.5 py-0.2 rounded-[6px] font-medium">
             {readyGatesCount} of 3 Ready
           </span>
         </div>
@@ -185,7 +186,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
               type="checkbox"
               checked={gate1}
               onChange={(e) => setGate1(e.target.checked)}
-              className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
+              className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
             />
             <span
               className={`text-xs ${
@@ -201,13 +202,13 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
               type="checkbox"
               checked={gate2}
               onChange={(e) => setGate2(e.target.checked)}
-              className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
+              className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
             />
             <span className="text-xs text-zinc-200 font-medium">
               Peer code review approved
             </span>
             {!gate2 && (
-              <span className="font-mono text-[9px] text-amber-400 ml-auto bg-amber-950/40 border border-amber-500/20 px-1 rounded-[3px]">
+              <span className="font-mono text-[9px] text-amber-400 ml-auto bg-amber-950/40 border border-amber-500/20 px-1 rounded-[6px]">
                 Required
               </span>
             )}
@@ -218,7 +219,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
               type="checkbox"
               checked={gate3}
               onChange={(e) => setGate3(e.target.checked)}
-              className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
+              className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
             />
             <span
               className={`text-xs ${
@@ -229,29 +230,38 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
             </span>
           </label>
         </div>
+
+        {showRules && (
+          <div className="p-2 bg-[#121214] border border-orange-500/30 rounded-[6px] text-[11px] text-zinc-300 font-mono space-y-1 mt-2">
+            <div className="text-orange-400 font-semibold">Lifecycle Policy:</div>
+            <div>Transitions to &apos;In Review&apos; and &apos;Done&apos; require verified gates or lead override.</div>
+          </div>
+        )}
       </div>
 
       {/* Popover Actions & Commit Execution */}
       <div className="p-2.5 bg-[#121214] border-t border-[#27272a] flex flex-col gap-1.5">
         <button
+          type="button"
           onClick={handleApply}
-          className="w-full h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] rounded-[6px]"
+          className="w-full h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] rounded-[6px] cursor-pointer"
         >
           <span>Update Status &amp; Notify Sprint</span>
-          <span className="font-mono text-[10px] opacity-80 font-normal bg-black/20 px-1.5 py-0.5 rounded-[4px]">
+          <span className="font-mono text-[10px] opacity-80 font-normal bg-black/20 px-1.5 py-0.5 rounded-[6px]">
             ⌘Enter
           </span>
         </button>
 
         <div className="flex items-center justify-between px-1 text-zinc-400 text-[11px]">
           <span>
-            Press <kbd className="font-mono bg-[#18181b] border border-[#27272a] px-1 rounded-[3px] text-zinc-300">Esc</kbd> to dismiss
+            Press <kbd className="font-mono bg-[#18181b] border border-[#27272a] px-1 rounded-[6px] text-zinc-300">Esc</kbd> to dismiss
           </span>
           <button
-            onClick={() => alert('Lifecycle policy: Stages require verified gates or lead override.')}
-            className="text-orange-400 hover:underline font-medium"
+            type="button"
+            onClick={() => setShowRules(!showRules)}
+            className="text-orange-400 hover:underline font-medium cursor-pointer"
           >
-            Lifecycle rules
+            {showRules ? 'Hide rules' : 'Lifecycle rules'}
           </button>
         </div>
       </div>

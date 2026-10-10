@@ -256,7 +256,7 @@ export const SpacePage: React.FC = () => {
                 <div className="flex items-center gap-2 text-xs">
                   <span className="material-symbols-outlined text-orange-400 text-[18px]">folder_open</span>
                   <span className="text-zinc-300 font-medium">Viewing sub-folder scope:</span>
-                  <span className="text-orange-400 font-semibold bg-orange-950/60 px-2 py-0.5 rounded-[4px] border border-orange-500/20 font-mono">
+                  <span className="text-orange-400 font-semibold bg-orange-950/60 px-2 py-0.5 rounded-[6px] border border-orange-500/20 font-mono">
                     {currentSubFolder.name}
                   </span>
                   <span className="text-zinc-500 font-mono text-[10px]">
@@ -545,7 +545,7 @@ export const SpacePage: React.FC = () => {
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-[#27272a] mt-2">
                 <button
                   type="button"
-                  onClick={() => setActiveTab('overview')}
+                  onClick={() => navigate(subFolderId ? `${spacePrefix}/spaces/${folder.id}/folders/${subFolderId}` : `${spacePrefix}/spaces/${folder.id}`)}
                   className="px-4 py-2 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 text-xs font-medium border border-[#27272a] transition-colors cursor-pointer"
                 >
                   Cancel

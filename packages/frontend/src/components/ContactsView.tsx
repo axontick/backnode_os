@@ -22,7 +22,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({ members }) => {
               Contacts &amp; Engineering Operators
             </h1>
             <p className="text-xs text-zinc-400 mt-0.5">
-              Live capacity monitoring, public peer keys, and assigned task workloads.
+              Live capacity monitoring, team assignments, and access permissions.
             </p>
           </div>
         </div>
@@ -47,7 +47,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({ members }) => {
                 <div className="flex flex-col">
                   <div className="flex items-center gap-1.5">
                     <span className="font-semibold text-xs text-zinc-100">{member.name}</span>
-                    <span className="font-mono text-[9px] bg-[#18181b] border border-[#27272a] px-1 rounded-[4px] text-zinc-400">
+                    <span className="font-mono text-[9px] bg-[#18181b] border border-[#27272a] px-1 rounded-[6px] text-zinc-400">
                       {member.department}
                     </span>
                   </div>
@@ -56,7 +56,7 @@ export const ContactsView: React.FC<ContactsViewProps> = ({ members }) => {
                     <span className="font-mono text-[10px] text-zinc-400">
                       {member.activeTasks} active tasks
                     </span>
-                    <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-[4px] font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                    <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-[6px] font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
                       {member.capacityStatus}
                     </span>
                   </div>

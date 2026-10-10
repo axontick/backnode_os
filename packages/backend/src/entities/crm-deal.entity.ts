@@ -51,6 +51,21 @@ export class CrmDeal {
   @Column('varchar', { name: 'next_step', nullable: true })
   nextStep?: string;
 
+  @Column('varchar', { nullable: true })
+  competitor?: string;
+
+  @Column('varchar', { name: 'loss_reason', nullable: true })
+  lossReason?: string;
+
+  @Column('varchar', { name: 'won_reason', nullable: true })
+  wonReason?: string;
+
+  @Column('int', { name: 'cycle_days', nullable: true, default: 0 })
+  cycleDays?: number;
+
+  @Column('varchar', { name: 'closed_at', nullable: true })
+  closedAt?: string;
+
   @Column('jsonb', { name: 'linked_tasks', default: [] })
   linkedTasks: any;
 

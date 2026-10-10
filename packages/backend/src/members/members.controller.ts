@@ -48,6 +48,25 @@ export class MembersController {
     return this.membersService.update(user.accountId, id, data);
   }
 
+  @Patch(':id/password')
+  async changePassword(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body('password') password?: string,
+    @Body('newPassword') newPassword?: string,
+  ) {
+    return this.membersService.changePassword(user.accountId, id, password || newPassword || '');
+  }
+
+  @Patch(':id/toggle-login')
+  async toggleLogin(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body('canLogin') canLogin?: boolean,
+  ) {
+    return this.membersService.toggleLogin(user.accountId, id, canLogin);
+  }
+
   @Delete(':id')
   async delete(
     @CurrentUser() user: CurrentUserPayload,

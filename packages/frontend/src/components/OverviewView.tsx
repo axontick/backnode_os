@@ -23,7 +23,8 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   onOpenCreateTask,
   onUpdateTask,
 }) => {
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
+  const isReadOnly = effectiveRole === 'VIEWER';
 
   // Task execution computations
   const inProgressCount = tasks.filter((t) => t.status === 'In Progress').length;
@@ -140,25 +141,25 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           {/* Module 1: Sprint Velocity KPI (1x1) */}
           <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+              <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">
                 Sprint Execution
               </span>
-              <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/30 px-1.5 py-0.5 rounded-[6px] font-bold">
+              <span className="font-mono text-[11px] text-orange-400 bg-orange-950/40 border border-orange-500/30 px-2 py-0.5 rounded-[6px] font-bold">
                 Velocity
               </span>
             </div>
-            <div className="my-3 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">{completionPct}%</span>
+            <div className="my-2 flex items-baseline gap-2">
+              <span className="text-xl font-bold text-zinc-100 font-mono tracking-tight">{completionPct}%</span>
               <span className="text-xs text-zinc-400">{doneCount} of {totalCount} closed</span>
             </div>
             <div>
-              <div className="w-full bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+              <div className="w-full bg-zinc-800 h-2 rounded-full overflow-hidden">
                 <div
                   className="bg-orange-600 h-full rounded-full transition-all duration-500"
                   style={{ width: `${completionPct}%` }}
                 ></div>
               </div>
-              <span className="block font-mono text-[10px] text-zinc-500 mt-2">
+              <span className="block font-mono text-[11px] text-zinc-400 mt-2">
                 Active sprint cadence
               </span>
             </div>
@@ -167,24 +168,24 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           {/* Module 2: Active Deliverables & Blockers (1x1) */}
           <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+              <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">
                 Triage Workload
               </span>
               {urgentCount > 0 ? (
-                <span className="font-mono text-[10px] text-red-400 bg-red-950/40 border border-red-500/30 px-1.5 py-0.5 rounded-[6px] font-bold animate-pulse">
+                <span className="font-mono text-[11px] text-red-400 bg-red-950/40 border border-red-500/30 px-2 py-0.5 rounded-[6px] font-bold animate-pulse">
                   {urgentCount} Urgent
                 </span>
               ) : (
-                <span className="font-mono text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.5 rounded-[6px] font-bold">
+                <span className="font-mono text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-[6px] font-bold">
                   Nominal
                 </span>
               )}
             </div>
-            <div className="my-3 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">{inProgressCount}</span>
+            <div className="my-2 flex items-baseline gap-2">
+              <span className="text-xl font-bold text-zinc-100 font-mono tracking-tight">{inProgressCount}</span>
               <span className="text-xs text-orange-400 font-medium">In Progress items</span>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1 border-t border-[#1f1f23]">
+            <div className="flex items-center justify-between text-xs font-mono text-zinc-400 pt-1.5 border-t border-[#1f1f23]">
               <span>In Review: {reviewCount}</span>
               <span>Backlog: {tasks.filter((t) => t.status === 'Backlog').length}</span>
             </div>
@@ -193,19 +194,19 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           {/* Module 3: CRM Pipeline ARR (1x1) */}
           <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+              <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">
                 Pipeline ARR
               </span>
-              <span className="font-mono text-[10px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1.5 py-0.5 rounded-[6px] font-semibold">
+              <span className="font-mono text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-2 py-0.5 rounded-[6px] font-semibold">
                 Active Value
               </span>
             </div>
-            <div className="my-3 flex items-baseline gap-2">
-              <span className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono tracking-tight">
+            <div className="my-2 flex items-baseline gap-2">
+              <span className="text-xl font-bold text-zinc-100 font-mono tracking-tight">
                 {formattedPipeline}
               </span>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-1 border-t border-[#1f1f23]">
+            <div className="flex items-center justify-between text-xs font-mono text-zinc-400 pt-1.5 border-t border-[#1f1f23]">
               <span>{deals.length} active deals</span>
               <span className="text-emerald-400 font-medium">Weighted 72%</span>
             </div>
@@ -214,39 +215,39 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           {/* Module 4: Data Engine Status (1x1) */}
           <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
             <div className="flex items-center justify-between">
-              <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
+              <span className="font-mono text-[11px] text-zinc-400 uppercase tracking-wider font-semibold">
                 Database Engine
               </span>
-              <span className="font-mono text-[10px] text-sky-400 bg-sky-950/40 border border-sky-500/30 px-1.5 py-0.5 rounded-[6px] font-semibold">
-                SQLite + PG
+              <span className="font-mono text-[11px] text-sky-400 bg-sky-950/40 border border-sky-500/30 px-2 py-0.5 rounded-[6px] font-semibold">
+                PostgreSQL
               </span>
             </div>
-            <div className="my-3 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-emerald-400 font-mono tracking-tight">100%</span>
+            <div className="my-2 flex items-baseline gap-2">
+              <span className="text-xl font-bold text-emerald-400 font-mono tracking-tight">100%</span>
               <span className="text-xs text-zinc-400">Multi-Tenant Isolation</span>
             </div>
-            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 pt-1 border-t border-[#1f1f23]">
-              <span className="text-emerald-400 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                Synced (4ms)
+            <div className="flex items-center justify-between text-xs font-mono text-zinc-400 pt-1.5 border-t border-[#1f1f23]">
+              <span className="text-emerald-400 flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                Connected (4ms)
               </span>
-              <span>Replica 01</span>
+              <span>Primary DB</span>
             </div>
           </div>
 
           {/* Module 5: Major Widget - Deliverables Triage Stream (2x2) */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-2 bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
+          <div className="col-span-1 md:col-span-2 lg:col-span-2 bg-[#121214] border border-[#27272a] rounded-[6px] p-5 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
             <div className="flex items-center justify-between border-b border-[#27272a] pb-3 mb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-orange-500">bolt</span>
-                <h3 className="font-semibold text-[13px] text-zinc-100 font-headline">
+                <span className="material-symbols-outlined text-[20px] text-orange-500">bolt</span>
+                <h3 className="font-bold text-base text-zinc-100 font-headline">
                   Active High-Priority Deliverables
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={onNavigateToBoard}
-                className="text-xs text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1 cursor-pointer font-mono text-[11px]"
+                className="text-xs text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1 cursor-pointer font-mono"
               >
                 <span>View Board</span>
                 <span>→</span>
@@ -255,9 +256,9 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
             {triageTasks.length === 0 ? (
               <div className="p-8 text-center border border-dashed border-[#27272a] rounded-[6px] bg-[#18181b]/50 flex flex-col items-center justify-center my-auto">
-                <span className="material-symbols-outlined text-[28px] text-zinc-600">inbox</span>
-                <p className="text-xs font-semibold text-zinc-300 mt-1.5">No active deliverables</p>
-                <p className="text-[11px] text-zinc-500 mt-0.5">
+                <span className="material-symbols-outlined text-[32px] text-zinc-600">inbox</span>
+                <p className="text-sm font-semibold text-zinc-300 mt-2">No active deliverables</p>
+                <p className="text-xs text-zinc-500 mt-1">
                   Create a deliverable task to start sprint tracking.
                 </p>
               </div>
@@ -269,50 +270,56 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                     <div
                       key={t.id}
                       onClick={() => onSelectTask(t)}
-                      className="py-2.5 px-2 flex items-center justify-between hover:bg-zinc-800/40 rounded-[6px] transition-colors cursor-pointer group"
+                      className="py-3 px-2 flex items-center justify-between hover:bg-zinc-800/40 rounded-[6px] transition-colors cursor-pointer group"
                     >
-                      <div className="flex items-center gap-2.5 min-w-0 flex-1 pr-3">
+                      <div className="flex items-center gap-3 min-w-0 flex-1 pr-3">
                         <button
                           type="button"
-                          onClick={(e) => handleToggleDone(t, e)}
-                          className={`w-4 h-4 rounded-[4px] border flex items-center justify-center transition-colors cursor-pointer shrink-0 ${
+                          disabled={isReadOnly}
+                          onClick={(e) => {
+                            if (isReadOnly) return;
+                            handleToggleDone(t, e);
+                          }}
+                          className={`w-4 h-4 rounded-[6px] border flex items-center justify-center transition-colors shrink-0 ${
+                            isReadOnly ? 'cursor-default opacity-60' : 'cursor-pointer'
+                          } ${
                             isDone
                               ? 'bg-emerald-600 border-emerald-500 text-white'
                               : 'border-zinc-700 hover:border-orange-500 bg-[#18181b]'
                           }`}
-                          title={isDone ? 'Mark In Progress' : 'Mark Done'}
+                          title={isReadOnly ? 'Read-only view' : isDone ? 'Mark In Progress' : 'Mark Done'}
                         >
-                          {isDone && <span className="material-symbols-outlined text-[12px]">check</span>}
+                          {isDone && <span className="material-symbols-outlined text-[13px]">check</span>}
                         </button>
-                        <span className="font-mono text-[10px] text-orange-400/80 font-bold shrink-0">
+                        <span className="font-mono text-xs text-orange-400 font-bold shrink-0">
                           {t.id}
                         </span>
                         <span
-                          className={`text-xs font-medium truncate ${
-                            isDone ? 'line-through text-zinc-500' : 'text-zinc-200 group-hover:text-orange-400'
+                          className={`text-[13px] font-medium truncate ${
+                            isDone ? 'line-through text-zinc-500' : 'text-zinc-100 group-hover:text-orange-400'
                           }`}
                         >
                           {t.title}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-2.5 shrink-0">
+                      <div className="flex items-center gap-3 shrink-0">
                         <span
-                          className={`font-mono text-[9px] uppercase px-1.5 py-0.5 rounded-[4px] font-semibold ${
+                          className={`font-mono text-[10px] uppercase px-2 py-0.5 rounded-[6px] font-semibold ${
                             t.priority === 'Urgent'
                               ? 'bg-red-950/50 text-red-400 border border-red-500/30'
                               : t.priority === 'High'
                               ? 'bg-orange-950/50 text-orange-400 border border-orange-500/30'
-                              : 'bg-zinc-800 text-zinc-400'
+                              : 'bg-zinc-800 text-zinc-300'
                           }`}
                         >
                           {t.priority}
                         </span>
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-[#18181b] border border-[#27272a] text-zinc-300">
+                        <span className="font-mono text-xs px-2.5 py-0.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-200">
                           {t.status}
                         </span>
                         <div
-                          className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0"
+                          className="w-6 h-6 rounded-full flex items-center justify-center font-mono text-[10px] font-bold bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0"
                           title={t.assignee?.name || 'Operator'}
                         >
                           {t.assignee?.initials || 'OP'}
@@ -326,11 +333,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
           </div>
 
           {/* Module 6: Major Widget - CRM Pipeline & Stage Velocity (2x2) */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-2 bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
+          <div className="col-span-1 md:col-span-2 lg:col-span-2 bg-[#121214] border border-[#27272a] rounded-[6px] p-5 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
             <div className="flex items-center justify-between border-b border-[#27272a] pb-3 mb-3">
               <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-orange-500">leaderboard</span>
-                <h3 className="font-semibold text-[13px] text-zinc-100 font-headline">
+                <span className="material-symbols-outlined text-[20px] text-orange-500">leaderboard</span>
+                <h3 className="font-bold text-base text-zinc-100 font-headline">
                   Stage Velocity &amp; Conversion
                 </h3>
               </div>
@@ -338,7 +345,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
                 <button
                   type="button"
                   onClick={onNavigateToDeals}
-                  className="text-xs text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1 cursor-pointer font-mono text-[11px]"
+                  className="text-xs text-zinc-400 hover:text-orange-400 transition-colors flex items-center gap-1 cursor-pointer font-mono"
                 >
                   <span>Open CRM</span>
                   <span>→</span>
@@ -346,20 +353,20 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               )}
             </div>
 
-            <div className="flex flex-col gap-3 my-auto">
+            <div className="flex flex-col gap-3.5 my-auto">
               {stageMetrics.map((stg) => (
-                <div key={stg.name} className="flex flex-col gap-1">
+                <div key={stg.name} className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between text-xs">
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full ${stg.color}`}></span>
-                      <span className="font-medium text-zinc-200">{stg.label}</span>
-                      <span className="font-mono text-[10px] text-zinc-500">({stg.count} deals)</span>
+                      <span className={`w-2.5 h-2.5 rounded-full ${stg.color}`}></span>
+                      <span className="font-semibold text-zinc-200">{stg.label}</span>
+                      <span className="font-mono text-xs text-zinc-400">({stg.count} deals)</span>
                     </div>
-                    <span className="font-mono text-xs font-semibold text-zinc-100">
+                    <span className="font-mono text-sm font-bold text-zinc-100">
                       ${stg.sumVal.toLocaleString()}
                     </span>
                   </div>
-                  <div className="w-full bg-zinc-800/80 h-2 rounded-full overflow-hidden">
+                  <div className="w-full bg-zinc-800/80 h-2.5 rounded-full overflow-hidden">
                     <div
                       className={`h-full rounded-full transition-all duration-500 ${stg.color}`}
                       style={{ width: `${Math.max(stg.pct, stg.count > 0 ? 4 : 0)}%` }}
@@ -369,14 +376,14 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               ))}
             </div>
 
-            <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 pt-3 border-t border-[#1f1f23] mt-2">
+            <div className="flex items-center justify-between text-xs font-mono text-zinc-400 pt-3 border-t border-[#1f1f23] mt-2">
               <span>Weighted Win Rate: 42%</span>
               <span className="text-zinc-500">5 Pipeline Stages Active</span>
             </div>
           </div>
 
           {/* Module 7: Full-Width Global System Health Strip (4x1) */}
-          <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-[#121214] border border-[#27272a] rounded-[6px] px-4 py-3 flex flex-wrap items-center justify-between text-xs font-mono text-zinc-400 gap-3 shadow-sm">
+          <div className="col-span-1 md:col-span-2 lg:col-span-4 bg-[#121214] border border-[#27272a] rounded-[6px] px-5 py-3.5 flex flex-wrap items-center justify-between text-xs font-mono text-zinc-300 gap-3 shadow-sm">
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span className="text-zinc-200 font-semibold">PostgreSQL Engine:</span>
@@ -384,18 +391,13 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             </div>
             <div className="hidden sm:flex items-center gap-2 text-zinc-500">•</div>
             <div className="flex items-center gap-1.5">
-              <span className="text-zinc-300">SQLite Replica:</span>
-              <span className="text-sky-400">Local Synced (0ms)</span>
+              <span className="text-zinc-400">Multi-Tenant Partition:</span>
+              <span className="text-orange-400 font-semibold">100% Isolated</span>
             </div>
             <div className="hidden sm:flex items-center gap-2 text-zinc-500">•</div>
             <div className="flex items-center gap-1.5">
-              <span className="text-zinc-300">Tenant Partition:</span>
-              <span className="text-orange-400">100% Isolated</span>
-            </div>
-            <div className="hidden sm:flex items-center gap-2 text-zinc-500">•</div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-zinc-300">Cluster Status:</span>
-              <span className="text-emerald-400 font-semibold">Nominal</span>
+              <span className="text-zinc-400">Workspace Status:</span>
+              <span className="text-emerald-400 font-semibold">Operational</span>
             </div>
           </div>
         </div>

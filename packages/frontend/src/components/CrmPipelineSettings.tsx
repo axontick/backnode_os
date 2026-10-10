@@ -40,6 +40,9 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [stageFilter, setStageFilter] = useState<'all' | 'open' | 'closed'>('all');
   const [stageSearch, setStageSearch] = useState('');
+  const [showRoleManager, setShowRoleManager] = useState(false);
+  const [isAddingGate, setIsAddingGate] = useState(false);
+  const [newGateText, setNewGateText] = useState('');
 
   const colorPresets = [
     { name: 'Electric Orange', hex: '#ea580c' },
@@ -87,10 +90,11 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
   };
 
   const handleAddGate = () => {
-    const gatePrompt = prompt('Enter requirement gate description:');
-    if (!gatePrompt) return;
-    const newG = { id: `g-${Date.now()}`, text: gatePrompt.trim(), checked: false };
+    if (!newGateText.trim()) return;
+    const newG = { id: `g-${Date.now()}`, text: newGateText.trim(), checked: false };
     setDrawerGates([...drawerGates, newG]);
+    setNewGateText('');
+    setIsAddingGate(false);
     setHasUnsavedChanges(true);
   };
 
@@ -187,8 +191,8 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
             </div>
 
             {/* Sub-Tabs Strip */}
-            <div className="mt-5 pt-3 border-t border-[#27272a] flex items-center justify-between text-xs">
-              <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap flex-nowrap">
+            <div className="mt-5 pt-3 border-t border-[#27272a] flex flex-wrap items-center justify-between gap-3 text-xs">
+              <div className="flex flex-wrap items-center gap-2">
                 <button
                   onClick={() => setActiveTab('general')}
                   className={`flex items-center gap-2 px-3.5 py-2 rounded-[6px] font-semibold transition-all whitespace-nowrap shrink-0 ${
@@ -260,7 +264,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
 
               <div className="hidden xl:flex items-center gap-2 font-mono text-[11px] text-zinc-500">
                 <span className="material-symbols-outlined text-[15px]">info</span>
-                <span>Changes propagate instantly across SQLite replica clusters</span>
+                <span>Changes propagate instantly across workspace store</span>
               </div>
             </div>
           </section>
@@ -350,7 +354,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                               setLocalSettings({ ...localSettings, accentColor: cp.hex });
                               setHasUnsavedChanges(true);
                             }}
-                            className={`w-7 h-7 rounded-[4px] transition-all flex items-center justify-center text-white ${
+                            className={`w-7 h-7 rounded-[6px] transition-all flex items-center justify-center text-white cursor-pointer ${
                               localSettings.accentColor.toLowerCase() === cp.hex.toLowerCase()
                                 ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-[#121214]'
                                 : 'hover:scale-105'
@@ -711,7 +715,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                             });
                             setHasUnsavedChanges(true);
                           }}
-                          className="rounded-[3px] mt-0.5 accent-orange-500"
+                          className="rounded-[6px] mt-0.5 accent-orange-500 cursor-pointer"
                         />
                         <div className="flex flex-col text-xs">
                           <span className="font-semibold text-zinc-100">Display Deal Age</span>
@@ -735,7 +739,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                             });
                             setHasUnsavedChanges(true);
                           }}
-                          className="rounded-[3px] mt-0.5 accent-orange-500"
+                          className="rounded-[6px] mt-0.5 accent-orange-500 cursor-pointer"
                         />
                         <div className="flex flex-col text-xs">
                           <span className="font-semibold text-zinc-100">Primary Contact Avatar</span>
@@ -759,7 +763,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                             });
                             setHasUnsavedChanges(true);
                           }}
-                          className="rounded-[3px] mt-0.5 accent-orange-500"
+                          className="rounded-[6px] mt-0.5 accent-orange-500 cursor-pointer"
                         />
                         <div className="flex flex-col text-xs">
                           <span className="font-semibold text-zinc-100">Next Milestone Pill</span>
@@ -824,44 +828,36 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                     </div>
                   </div>
                   <button
-                    onClick={() => alert('Manage pipeline operator roles modal.')}
-                    className="w-full py-2 bg-[#18181b] hover:bg-zinc-800 text-orange-400 text-xs font-semibold rounded-[6px] border border-[#27272a] transition-colors flex items-center justify-center gap-1.5"
+                    type="button"
+                    onClick={() => setShowRoleManager(!showRoleManager)}
+                    className="w-full py-2 bg-[#18181b] hover:bg-zinc-800 text-orange-400 text-xs font-semibold rounded-[6px] border border-[#27272a] transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[16px]">group_add</span>
-                    <span>Manage Pipeline Roles</span>
+                    <span>{showRoleManager ? 'Hide Pipeline Roles' : 'Manage Pipeline Roles'}</span>
                   </button>
-                </div>
 
-                <div className="bg-[#121214] rounded-[6px] border border-[#27272a] p-5 flex flex-col gap-4 shadow-xs">
-                  <div className="flex items-center justify-between border-b border-[#27272a] pb-3">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-orange-400 text-[20px]">
-                        database
-                      </span>
-                      <h3 className="font-semibold text-xs text-zinc-100 font-headline">Local SQLite Engine</h3>
+                  {showRoleManager && (
+                    <div className="p-3 bg-[#18181b] border border-[#27272a] rounded-[6px] text-xs space-y-2 animate-in fade-in duration-150">
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] uppercase font-bold text-orange-400">Pipeline Access Matrix</span>
+                        <span className="font-mono text-[9px] text-zinc-500">RBAC / ABAC</span>
+                      </div>
+                      <div className="space-y-1.5 text-[11px]">
+                        <div className="flex items-center justify-between p-1.5 rounded-[6px] bg-[#121214] border border-[#27272a]">
+                          <span className="text-zinc-200 font-medium">Enterprise Admin</span>
+                          <span className="font-mono text-[9px] text-emerald-400">Full Rights</span>
+                        </div>
+                        <div className="flex items-center justify-between p-1.5 rounded-[6px] bg-[#121214] border border-[#27272a]">
+                          <span className="text-zinc-200 font-medium">Commercial Lead</span>
+                          <span className="font-mono text-[9px] text-orange-400">Stage &amp; Deal Write</span>
+                        </div>
+                        <div className="flex items-center justify-between p-1.5 rounded-[6px] bg-[#121214] border border-[#27272a]">
+                          <span className="text-zinc-200 font-medium">Member / Analyst</span>
+                          <span className="font-mono text-[9px] text-zinc-400">Read &amp; Note Only</span>
+                        </div>
+                      </div>
                     </div>
-                    <span className="font-mono text-[10px] font-bold text-amber-400 bg-amber-950/40 px-2 py-0.5 rounded-[6px] border border-amber-500/20">
-                      LOCAL-FIRST
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-2 font-mono text-[11px]">
-                    <div className="flex justify-between py-1 border-b border-[#27272a]">
-                      <span className="text-zinc-500">Engine Shard</span>
-                      <span className="font-semibold text-zinc-200">crm_deals_2026.sqlite3</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-[#27272a]">
-                      <span className="text-zinc-500">Schema Version</span>
-                      <span className="font-semibold text-zinc-200">v14.8-strict</span>
-                    </div>
-                    <div className="flex justify-between py-1 border-b border-[#27272a]">
-                      <span className="text-zinc-500">Write Latency</span>
-                      <span className="font-semibold text-orange-400">0.42 ms (In-Memory WAL)</span>
-                    </div>
-                    <div className="flex justify-between py-1">
-                      <span className="text-zinc-500">CRDT Vector Clock</span>
-                      <span className="font-semibold text-zinc-200">node-alpha #88,102</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -884,7 +880,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                       <span className="font-semibold text-xs text-zinc-100">
                         Stage Pipeline Architecture
                       </span>
-                      <span className="font-mono text-[9px] bg-[#18181b] text-zinc-400 border border-[#27272a] px-1.5 py-0.2 rounded-[4px]">
+                      <span className="font-mono text-[9px] bg-[#18181b] text-zinc-400 border border-[#27272a] px-1.5 py-0.2 rounded-[6px]">
                         System Rule
                       </span>
                     </div>
@@ -945,13 +941,13 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => {
-                      const name = prompt('New Stage Name:');
-                      if (!name) return;
+                      const newName = `New Stage 0${localStages.length + 1}`;
                       const newSt: CrmStageDefinition = {
                         id: `stage-${Date.now()}`,
                         order: localStages.length + 1,
-                        name: name.trim(),
+                        name: newName,
                         description: 'Custom CRM validation stage',
                         color: '#ea580c',
                         winProbability: 50,
@@ -963,9 +959,10 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                         webhookThreshold: 50000,
                       };
                       setLocalStages([...localStages, newSt]);
+                      handleSelectEditingStage(newSt);
                       setHasUnsavedChanges(true);
                     }}
-                    className="h-8 px-3.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-[6px] flex items-center gap-1 transition-all shadow-sm"
+                    className="h-8 px-3.5 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold rounded-[6px] flex items-center gap-1 transition-all shadow-sm cursor-pointer"
                   >
                     <span className="material-symbols-outlined text-[15px]">add</span>
                     <span>Add New Stage</span>
@@ -1022,11 +1019,11 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                                     >
                                       {st.name}
                                     </span>
-                                    <span className="font-mono text-[9px] text-zinc-500 border border-[#27272a] px-1 rounded-[3px]">
+                                    <span className="font-mono text-[9px] text-zinc-500 border border-[#27272a] px-1 rounded-[6px]">
                                       {st.isTerminal ? 'TERMINAL' : `STAGE 0${idx + 1}`}
                                     </span>
                                     {isSelected && (
-                                      <span className="font-mono text-[9px] bg-orange-950/40 text-orange-400 border border-orange-500/30 px-1 rounded-[3px] font-semibold">
+                                      <span className="font-mono text-[9px] bg-orange-950/40 text-orange-400 border border-orange-500/30 px-1 rounded-[6px] font-semibold">
                                         EDITING
                                       </span>
                                     )}
@@ -1040,7 +1037,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
 
                             <td className="py-3 px-3 text-right font-mono text-[11px]">
                               <span
-                                className={`px-1.5 py-0.5 rounded-[4px] ${
+                                className={`px-1.5 py-0.5 rounded-[6px] ${
                                   isSelected
                                     ? 'bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/20'
                                     : 'bg-[#18181b] text-zinc-300 border border-[#27272a]'
@@ -1065,7 +1062,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                                     e.stopPropagation();
                                     handleSelectEditingStage(st);
                                   }}
-                                  className={`p-1 rounded-[4px] transition-colors ${
+                                  className={`p-1 rounded-[6px] transition-colors cursor-pointer ${
                                     isSelected
                                       ? 'bg-orange-600 text-white shadow-xs'
                                       : 'hover:bg-[#18181b] text-zinc-400'
@@ -1114,7 +1111,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                           });
                           setHasUnsavedChanges(true);
                         }}
-                        className="mt-0.5 w-4 h-4 rounded-[3px] accent-orange-500"
+                        className="mt-0.5 w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                       />
                       <div className="flex flex-col">
                         <span className="font-semibold text-zinc-100">Strict Forward Motion</span>
@@ -1138,7 +1135,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                           });
                           setHasUnsavedChanges(true);
                         }}
-                        className="mt-0.5 w-4 h-4 rounded-[3px] accent-orange-500"
+                        className="mt-0.5 w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                       />
                       <div className="flex flex-col">
                         <span className="font-semibold text-zinc-100">Mandatory Stalled Deal Alert</span>
@@ -1162,7 +1159,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                           });
                           setHasUnsavedChanges(true);
                         }}
-                        className="mt-0.5 w-4 h-4 rounded-[3px] accent-orange-500"
+                        className="mt-0.5 w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                       />
                       <div className="flex flex-col">
                         <span className="font-semibold text-zinc-100">Auto-Link Engineering Deliverables</span>
@@ -1211,7 +1208,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                           key={cp.hex}
                           type="button"
                           onClick={() => setDrawerStageColor(cp.hex)}
-                          className={`w-6 h-6 rounded-[3px] transition-all flex items-center justify-center text-white ${
+                          className={`w-6 h-6 rounded-[6px] transition-all flex items-center justify-center text-white cursor-pointer ${
                             drawerStageColor.toLowerCase() === cp.hex.toLowerCase()
                               ? 'ring-2 ring-orange-500 ring-offset-1 ring-offset-zinc-900 scale-105'
                               : 'hover:opacity-80'
@@ -1232,7 +1229,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                   <div className="flex flex-col gap-1.5">
                     <div className="flex items-center justify-between font-mono text-[10px]">
                       <span className="text-zinc-400 font-medium">Win Probability Default</span>
-                      <span className="font-bold text-orange-400 bg-orange-950/40 border border-orange-500/20 px-2 py-0.5 rounded-[4px]">
+                      <span className="font-bold text-orange-400 bg-orange-950/40 border border-orange-500/20 px-2 py-0.5 rounded-[6px]">
                         {drawerStageProb}%
                       </span>
                     </div>
@@ -1282,25 +1279,53 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                         Required Gate Checklist ({drawerGates.length})
                       </label>
                       <button
-                        onClick={handleAddGate}
-                        className="font-mono text-[10px] text-orange-400 hover:underline flex items-center gap-0.5 font-medium"
+                        type="button"
+                        onClick={() => setIsAddingGate(!isAddingGate)}
+                        className="font-mono text-[10px] text-orange-400 hover:text-orange-300 flex items-center gap-0.5 font-medium cursor-pointer"
                       >
-                        <span className="material-symbols-outlined text-[13px]">add</span>
-                        <span>Add Gate</span>
+                        <span className="material-symbols-outlined text-[13px]">
+                          {isAddingGate ? 'close' : 'add'}
+                        </span>
+                        <span>{isAddingGate ? 'Cancel' : 'Add Gate'}</span>
                       </button>
                     </div>
+
+                    {isAddingGate && (
+                      <div className="flex items-center gap-1.5 p-1.5 bg-[#18181b] border border-[#27272a] rounded-[6px]">
+                        <input
+                          type="text"
+                          value={newGateText}
+                          onChange={(e) => setNewGateText(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddGate();
+                            }
+                          }}
+                          placeholder="e.g. Legal signoff received"
+                          className="flex-1 h-7 px-2 text-xs bg-[#121214] border border-[#27272a] rounded-[6px] text-zinc-100 focus:outline-none focus:border-orange-500"
+                        />
+                        <button
+                          type="button"
+                          onClick={handleAddGate}
+                          className="h-7 px-2.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-[11px] font-semibold cursor-pointer shrink-0"
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
 
                     <div className="flex flex-col gap-1.5 bg-[#18181b] border border-[#27272a] rounded-[6px] p-2">
                       {drawerGates.map((gate) => (
                         <label
                           key={gate.id}
-                          className="flex items-center gap-2 p-1.5 hover:bg-[#121214] rounded-[4px] cursor-pointer"
+                          className="flex items-center gap-2 p-1.5 hover:bg-[#121214] rounded-[6px] cursor-pointer"
                         >
                           <input
                             type="checkbox"
                             checked={gate.checked}
                             onChange={() => handleToggleGate(gate.id)}
-                            className="w-4 h-4 rounded-[3px] accent-orange-500"
+                            className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                           />
                           <span
                             className={`text-xs ${
@@ -1321,7 +1346,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                         type="checkbox"
                         checked={drawerWebhook}
                         onChange={(e) => setDrawerWebhook(e.target.checked)}
-                        className="mt-0.5 w-4 h-4 rounded-[3px] accent-orange-500"
+                        className="mt-0.5 w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                       />
                       <div className="flex flex-col text-xs">
                         <span className="font-semibold text-zinc-100">Automation Webhook</span>
@@ -1336,13 +1361,13 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
                   <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#27272a]">
                     <button
                       onClick={() => handleSelectEditingStage(activeEditingStage)}
-                      className="h-8 px-3 rounded-[6px] border border-[#27272a] bg-[#18181b] text-xs font-medium text-zinc-300 hover:bg-zinc-800"
+                      className="h-8 px-3 rounded-[6px] border border-[#27272a] bg-[#18181b] text-xs font-medium text-zinc-300 hover:bg-zinc-800 cursor-pointer"
                     >
                       Reset
                     </button>
                     <button
                       onClick={handleSaveStageDrawer}
-                      className="h-8 px-3.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center gap-1 shadow-sm active:scale-[0.98]"
+                      className="h-8 px-3.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center gap-1 shadow-sm active:scale-[0.98] cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[15px]">check</span>
                       <span>Save Stage</span>
@@ -1365,7 +1390,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
             <div className="p-8 text-center text-xs text-zinc-400 bg-[#121214] border border-[#27272a] rounded-[6px]">
               <span className="material-symbols-outlined text-3xl text-orange-400 mb-2">bolt</span>
               <p className="font-semibold text-sm text-zinc-100 font-headline">Automations &amp; SLA Hooks</p>
-              <p className="mt-1">Slack deal room notification hooks &amp; CRDT event triggers active.</p>
+              <p className="mt-1">Slack deal room notification hooks &amp; webhook event triggers active.</p>
             </div>
           )}
 
@@ -1373,7 +1398,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
             <div className="p-8 text-center text-xs text-rose-400 bg-rose-950/20 border border-rose-900/50 rounded-[6px]">
               <span className="material-symbols-outlined text-3xl text-rose-500 mb-2">warning</span>
               <p className="font-semibold text-sm text-rose-300 font-headline">Danger Zone</p>
-              <p className="mt-1 text-rose-400/80">Purge deals or delete pipeline. This requires cluster admin approval.</p>
+              <p className="mt-1 text-rose-400/80">Purge deals or delete pipeline. This requires workspace admin approval.</p>
             </div>
           )}
         </div>
@@ -1392,7 +1417,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
             <div className="flex flex-col text-xs">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-zinc-100 font-headline">Unsaved adjustments in Pipeline Settings</span>
-                <span className="font-mono text-[9px] uppercase font-bold text-orange-400 bg-orange-950/40 border border-orange-500/30 px-1.5 py-0.2 rounded-[4px]">
+                <span className="font-mono text-[9px] uppercase font-bold text-orange-400 bg-orange-950/40 border border-orange-500/30 px-1.5 py-0.2 rounded-[6px]">
                   Pending Sync
                 </span>
               </div>

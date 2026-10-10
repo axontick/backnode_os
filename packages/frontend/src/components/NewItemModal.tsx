@@ -152,17 +152,17 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
         <div className="h-1 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-500"></div>
         <div className="p-4 border-b border-[#27272a] flex items-center justify-between bg-[#121214]">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-[4px] bg-orange-600 text-white flex items-center justify-center text-xs font-bold font-mono">
+            <div className="w-7 h-7 rounded-[6px] bg-orange-600 text-white flex items-center justify-center text-xs font-bold font-mono">
               +
             </div>
             <div>
               <h2 className="text-sm font-bold text-zinc-100 font-headline">New Pipeline Item</h2>
-              <p className="text-[11px] text-zinc-400">Dispatches into active SQLite local-first sync queue</p>
+              <p className="text-[11px] text-zinc-400">Dispatches into active workspace queue</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-[4px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] transition-colors"
+            className="w-7 h-7 rounded-[6px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -343,7 +343,7 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
                 required
                 value={dealTitle}
                 onChange={(e) => setDealTitle(e.target.value)}
-                placeholder="e.g. Zenith Tech — Global Node Replication"
+                placeholder="e.g. Zenith Tech — Global Enterprise Rollout"
                 className="w-full h-8 px-2.5 rounded-[6px] border border-[#27272a] bg-[#18181b] text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
               />
             </div>

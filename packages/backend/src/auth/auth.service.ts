@@ -149,6 +149,7 @@ export class AuthService {
     const account = this.accountRepo.create({
       name: dto.accountName.trim(),
       slug,
+      ownerEmail: dto.email.toLowerCase().trim(),
     });
     await this.accountRepo.save(account);
 
@@ -162,6 +163,9 @@ export class AuthService {
       accountId: account.id,
     });
     await this.userRepo.save(user);
+
+    account.ownerId = user.id;
+    await this.accountRepo.save(account);
 
     // Provision default starter template data for the new account
     await this.provisionDefaultAccountData(account.id, dto.name.trim(), account.name, dto.email.toLowerCase().trim());
@@ -196,6 +200,17 @@ export class AuthService {
       throw new UnauthorizedException('Invalid email or password.');
     }
 
+    if (user.canLogin === false || user.status === 'DISABLED' || user.status === 'SUSPENDED') {
+      throw new UnauthorizedException('Your account login access has been disabled by workspace administration.');
+    }
+
+    const member = await this.memberRepo.findOne({
+      where: { email: user.email.toLowerCase().trim(), accountId: user.accountId },
+    });
+    if (member && (member.canLogin === false || member.status === 'Disabled')) {
+      throw new UnauthorizedException('Your operator login access has been disabled by workspace administration.');
+    }
+
     const isMatch = await bcrypt.compare(dto.password, user.passwordHash);
     if (!isMatch) {
       throw new UnauthorizedException('Invalid email or password.');
@@ -209,6 +224,10 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        status: user.status,
+        canLogin: user.canLogin,
+        allowedPages: member?.allowedPages || ['overview', 'task-spaces', 'crm-pipelines', 'contacts', 'docs', 'team', 'settings'],
+        allowedActions: member?.allowedActions || (user.role === 'VIEWER' ? ['read'] : ['read', 'write', 'delete', 'publish', 'admin']),
         accountId: user.accountId,
         account: user.account
           ? {
@@ -353,12 +372,24 @@ export class AuthService {
       throw new UnauthorizedException('User not found.');
     }
 
+    if (user.canLogin === false || user.status === 'DISABLED' || user.status === 'SUSPENDED') {
+      throw new UnauthorizedException('Your account login access has been disabled by workspace administration.');
+    }
+
+    const member = await this.memberRepo.findOne({
+      where: { email: user.email.toLowerCase().trim(), accountId: user.accountId },
+    });
+
     return {
       user: {
         id: user.id,
         email: user.email,
         name: user.name,
         role: user.role,
+        status: user.status,
+        canLogin: user.canLogin,
+        allowedPages: member?.allowedPages || ['overview', 'task-spaces', 'crm-pipelines', 'contacts', 'docs', 'team', 'settings'],
+        allowedActions: member?.allowedActions || (user.role === 'VIEWER' ? ['read'] : ['read', 'write', 'delete', 'publish', 'admin']),
         accountId: user.accountId,
         account: user.account
           ? {
@@ -391,7 +422,10 @@ export class AuthService {
       name: ownerName,
       initials,
       role: 'Workspace Owner',
-      department: 'Engineering',
+      accessLevel: 'OWNER',
+      status: 'Active',
+      email: userEmail,
+      department: 'Executive',
       activeTasks: 2,
       capacityStatus: 'Available',
       avatarBg: '#ea580c',

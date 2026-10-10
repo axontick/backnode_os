@@ -59,6 +59,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
   const [dealValue, setDealValue] = useState('');
   const [dealStage, setDealStage] = useState<CrmDeal['stage']>(defaultDealStage);
   const [dealOwner, setDealOwner] = useState('');
+  const [dealCompetitor, setDealCompetitor] = useState('');
+  const [dealLossReason, setDealLossReason] = useState('');
+  const [dealWonReason, setDealWonReason] = useState('');
+  const [dealCycleDays, setDealCycleDays] = useState('');
 
   // Reset or load data whenever modal opens or itemToEdit changes
   useEffect(() => {
@@ -83,6 +87,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setDealStage(dealToEdit.stage || defaultDealStage);
       setDealOwner(dealToEdit.owner || members[0]?.name || user?.name || '');
       setDueDate(dealToEdit.targetCloseDate || '');
+      setDealCompetitor(dealToEdit.competitor || '');
+      setDealLossReason(dealToEdit.lossReason || '');
+      setDealWonReason(dealToEdit.wonReason || '');
+      setDealCycleDays(dealToEdit.cycleDays ? String(dealToEdit.cycleDays) : '');
     } else {
       // Creation mode: initialize everything clean and empty
       setModalType(initialType);
@@ -103,6 +111,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setDealValue('');
       setDealStage(defaultDealStage);
       setDealOwner(members[0]?.name || user?.name || '');
+      setDealCompetitor('');
+      setDealLossReason('');
+      setDealWonReason('');
+      setDealCycleDays('');
     }
   }, [isOpen, taskToEdit, dealToEdit, initialType, defaultStatus, defaultDealStage, activeSpace, members, folders, user]);
 
@@ -206,6 +218,11 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           stage: dealStage,
           owner: dealOwner || 'Operator',
           targetCloseDate: dueDate || 'Q4 2026',
+          competitor: dealCompetitor.trim() || undefined,
+          lossReason: dealStage === 'Closed Lost' ? (dealLossReason.trim() || undefined) : undefined,
+          wonReason: dealStage === 'Closed Won' ? (dealWonReason.trim() || undefined) : undefined,
+          cycleDays: dealCycleDays ? Number(dealCycleDays) : undefined,
+          closedAt: dealStage === 'Closed Won' || dealStage === 'Closed Lost' ? (dealToEdit.closedAt || new Date().toISOString()) : undefined,
         };
         onUpdateDeal(updatedDeal);
       } else if (onAddDeal) {
@@ -216,9 +233,14 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           value: numVal,
           formattedValue: `$${numVal.toLocaleString()}`,
           stage: dealStage,
-          probability: dealStage === 'Closed Won' ? 100 : dealStage === 'Contract & Legal' ? 85 : 60,
+          probability: dealStage === 'Closed Won' ? 100 : dealStage === 'Closed Lost' ? 0 : dealStage === 'Contract & Legal' ? 85 : 60,
           targetCloseDate: dueDate || 'Q4 2026',
           owner: dealOwner || 'Operator',
+          competitor: dealCompetitor.trim() || undefined,
+          lossReason: dealStage === 'Closed Lost' ? (dealLossReason.trim() || undefined) : undefined,
+          wonReason: dealStage === 'Closed Won' ? (dealWonReason.trim() || undefined) : undefined,
+          cycleDays: dealCycleDays ? Number(dealCycleDays) : undefined,
+          closedAt: dealStage === 'Closed Won' || dealStage === 'Closed Lost' ? new Date().toISOString() : undefined,
         };
         onAddDeal(newDeal);
       }
@@ -245,7 +267,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           <div className="flex items-center justify-between">
             {/* If editing, show fixed badge; if creating, show segmented switcher */}
             {isEditing ? (
-              <span className="font-mono text-[10.5px] uppercase font-bold text-orange-400 bg-orange-950/40 border border-orange-500/30 px-2.5 py-1 rounded-[4px] flex items-center gap-1.5">
+              <span className="font-mono text-[10.5px] uppercase font-bold text-orange-400 bg-orange-950/40 border border-orange-500/30 px-2.5 py-1 rounded-[6px] flex items-center gap-1.5">
                 <span className="material-symbols-outlined text-[15px]">edit_note</span>
                 <span>{taskToEdit ? `Editing Task ${taskToEdit.id}` : `Editing Deal ${dealToEdit?.title}`}</span>
               </span>
@@ -254,7 +276,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setModalType('task')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[4px] text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-semibold transition-all cursor-pointer ${
                     modalType === 'task'
                       ? 'bg-orange-600 text-white shadow-sm'
                       : 'text-zinc-400 hover:text-zinc-100'
@@ -266,7 +288,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setModalType('deal')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[4px] text-xs font-semibold transition-all cursor-pointer ${
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-semibold transition-all cursor-pointer ${
                     modalType === 'deal'
                       ? 'bg-orange-600 text-white shadow-sm'
                       : 'text-zinc-400 hover:text-zinc-100'
@@ -281,10 +303,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
             <button
               type="button"
               onClick={onClose}
-              className="flex items-center gap-1 text-zinc-400 hover:text-zinc-100 p-1 rounded-[4px] hover:bg-[#18181b] transition-colors cursor-pointer"
+              className="flex items-center gap-1 text-zinc-400 hover:text-zinc-100 p-1 rounded-[6px] hover:bg-[#18181b] transition-colors cursor-pointer"
               title="Close modal (Esc)"
             >
-              <kbd className="font-mono text-[10px] bg-[#18181b] border border-[#27272a] px-1 py-0.5 rounded-[3px] text-zinc-400">
+              <kbd className="font-mono text-[10px] bg-[#18181b] border border-[#27272a] px-1 py-0.5 rounded-[6px] text-zinc-400">
                 Esc
               </kbd>
               <span className="material-symbols-outlined text-[18px]">close</span>
@@ -303,7 +325,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                   ? 'Create Task Deliverable'
                   : 'Create Enterprise CRM Deal'}
               </h2>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[10px] font-mono bg-orange-950/40 text-orange-400 border border-orange-500/20 font-medium">
+              <span className="inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-mono bg-orange-950/40 text-orange-400 border border-orange-500/20 font-medium">
                 {isEditing ? 'Live Edit' : 'Local Draft'}
               </span>
             </div>
@@ -311,8 +333,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
               <span className="material-symbols-outlined text-[14px] text-orange-500">bolt</span>
               <span>
                 {modalType === 'task'
-                  ? 'Local-first item commits directly to encrypted storage (0.2ms)'
-                  : 'Saves deal record into local SQLite replica and synchronizes with pipeline ARR'}
+                  ? 'Commits directly to persistent workspace storage'
+                  : 'Saves deal record into workspace store and synchronizes with pipeline ARR'}
               </span>
             </p>
           </div>
@@ -463,7 +485,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                       Acceptance Criteria &amp; Subtasks
                     </label>
                     {subtasks.length > 0 && (
-                      <span className="font-mono text-[10px] text-orange-400 font-medium bg-orange-950/40 px-2 py-0.5 rounded-[4px] border border-orange-500/20">
+                      <span className="font-mono text-[10px] text-orange-400 font-medium bg-orange-950/40 px-2 py-0.5 rounded-[6px] border border-orange-500/20">
                         {completedSubtasksCount} of {subtasks.length} completed ({subtasksPercent}%)
                       </span>
                     )}
@@ -490,7 +512,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                             type="checkbox"
                             checked={st.done}
                             onChange={() => handleToggleSubtask(st.id)}
-                            className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
+                            className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                           />
                           <span
                             className={`text-xs truncate ${
@@ -507,7 +529,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                           <button
                             type="button"
                             onClick={() => handleRemoveSubtask(st.id)}
-                            className="w-5 h-5 rounded-[4px] text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+                            className="w-5 h-5 rounded-[6px] text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
                             title="Remove subtask"
                           >
                             <span className="material-symbols-outlined text-[13px]">close</span>
@@ -620,6 +642,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                       <option value="Proposal Submitted">Proposal Submitted (60%)</option>
                       <option value="Contract & Legal">Contract & Legal (85%)</option>
                       <option value="Closed Won">Closed Won (100%)</option>
+                      <option value="Closed Lost">Closed Lost (0%)</option>
                     </select>
                   </div>
                   <div className="space-y-1">
@@ -639,6 +662,64 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                     </select>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
+                      Competitor (Battlecard)
+                    </label>
+                    <input
+                      type="text"
+                      value={dealCompetitor}
+                      onChange={(e) => setDealCompetitor(e.target.value)}
+                      placeholder="e.g. Salesforce, HubSpot, Linear"
+                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-orange-500 placeholder:text-zinc-600"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
+                      Sales Cycle (Days)
+                    </label>
+                    <input
+                      type="number"
+                      value={dealCycleDays}
+                      onChange={(e) => setDealCycleDays(e.target.value)}
+                      placeholder="e.g. 18"
+                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500 placeholder:text-zinc-600"
+                    />
+                  </div>
+                </div>
+
+                {dealStage === 'Closed Lost' && (
+                  <div className="space-y-1 animate-in fade-in duration-150">
+                    <label className="font-mono text-[10px] text-rose-400 uppercase font-semibold flex items-center gap-1">
+                      <span>Primary Loss Attribution Reason</span>
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={dealLossReason}
+                      onChange={(e) => setDealLossReason(e.target.value)}
+                      placeholder="e.g. Budget & Procurement Freeze, Legacy Contract Lock-in"
+                      className="w-full px-3 py-2 rounded-[6px] border border-rose-500/40 bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-rose-500 placeholder:text-zinc-600"
+                    />
+                  </div>
+                )}
+
+                {dealStage === 'Closed Won' && (
+                  <div className="space-y-1 animate-in fade-in duration-150">
+                    <label className="font-mono text-[10px] text-emerald-400 uppercase font-semibold flex items-center gap-1">
+                      <span>Primary Winning Factor</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={dealWonReason}
+                      onChange={(e) => setDealWonReason(e.target.value)}
+                      placeholder="e.g. Local-first SQLite VFS speed & privacy"
+                      className="w-full px-3 py-2 rounded-[6px] border border-emerald-500/40 bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-emerald-500 placeholder:text-zinc-600"
+                    />
+                  </div>
+                )}
 
                 <div className="space-y-1">
                   <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
@@ -694,7 +775,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                     ? 'Create Task'
                     : 'Create Deal'}
                 </span>
-                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-[4px] bg-white/20 text-white">
+                <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-[6px] bg-white/20 text-white">
                   ⌘↵
                 </span>
               </button>

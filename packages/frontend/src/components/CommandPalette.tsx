@@ -53,7 +53,7 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             placeholder="Search tasks, operators, views, commands... (Esc to dismiss)"
             className="w-full text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none bg-transparent"
           />
-          <kbd className="font-mono text-[10px] text-zinc-400 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a]">
+          <kbd className="font-mono text-[10px] text-zinc-400 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a]">
             ESC
           </kbd>
         </div>

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { CrmDeal, CrmPipeline } from '../types';
 
 interface PipelineWinLossViewProps {
@@ -18,67 +18,135 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
 }) => {
   const [filterQuarter, setFilterQuarter] = useState<'Q4 2026' | 'Q3 2026' | 'All Time'>('Q4 2026');
 
-  // Closed Won Deals
-  const wonDeals = deals.filter((d) => d.stage === 'Closed Won');
-  const wonArr = wonDeals.reduce((sum, d) => sum + d.value, 0);
-  
-  // Simulated Closed Lost deals for rich retrospective matrix
-  const lostDeals = [
-    {
-      id: 'DEAL-L01',
-      title: 'Global Telemetry Sync Engine',
-      company: 'OmniVanguard Inc.',
-      value: 85000,
-      stage: 'Closed Lost' as const,
-      competitor: 'Salesforce CRM Enterprise',
-      primaryReason: 'Incumbent contract lock-in through 2027',
-      owner: 'Sarah Jenkins',
-      cycleDays: 24,
-      date: 'Oct 02, 2026',
-    },
-    {
-      id: 'DEAL-L02',
-      title: 'Local-First POS Terminal Migration',
-      company: 'RetailHub Systems',
-      value: 40000,
-      stage: 'Closed Lost' as const,
-      competitor: 'HubSpot Sales Hub',
-      primaryReason: 'Required custom hardware peripheral driver',
-      owner: 'Alex Wong',
-      cycleDays: 14,
-      date: 'Sep 27, 2026',
-    },
-    {
-      id: 'DEAL-L03',
-      title: 'Cloud Compliance Gateway',
-      company: 'AeroDefense Labs',
-      value: 65000,
-      stage: 'Closed Lost' as const,
-      competitor: 'Internal In-House Tool',
-      primaryReason: 'Security team delayed third-party audit clearance',
-      owner: 'Ken Ray',
-      cycleDays: 31,
-      date: 'Sep 18, 2026',
-    },
-  ];
+  // Filter deals belonging to this pipeline
+  const pipelineDeals = useMemo(() => {
+    return deals.filter((d) => !pipeline?.id || !d.pipelineId || d.pipelineId === pipeline.id);
+  }, [deals, pipeline?.id]);
 
-  const lostArr = lostDeals.reduce((sum, d) => sum + d.value, 0);
-  const totalClosed = wonArr + lostArr;
-  const winRate = totalClosed > 0 ? Math.round((wonArr / totalClosed) * 100) : 68;
+  // Quarter-filtered deals
+  const quarterDeals = useMemo(() => {
+    if (filterQuarter === 'All Time') return pipelineDeals;
+    return pipelineDeals.filter((d) => {
+      const dateStr = d.closedAt || d.targetCloseDate || d.createdAt || '';
+      if (filterQuarter === 'Q4 2026') {
+        return (
+          dateStr.includes('Oct') ||
+          dateStr.includes('Nov') ||
+          dateStr.includes('Dec') ||
+          dateStr.includes('-10-') ||
+          dateStr.includes('-11-') ||
+          dateStr.includes('-12-')
+        );
+      }
+      if (filterQuarter === 'Q3 2026') {
+        return (
+          dateStr.includes('Jul') ||
+          dateStr.includes('Aug') ||
+          dateStr.includes('Sep') ||
+          dateStr.includes('-07-') ||
+          dateStr.includes('-08-') ||
+          dateStr.includes('-09-')
+        );
+      }
+      return true;
+    });
+  }, [pipelineDeals, filterQuarter]);
 
-  const competitors = [
-    { name: 'Salesforce Enterprise', won: 4, lost: 1, winRate: 80 },
-    { name: 'HubSpot Sales Hub', won: 5, lost: 1, winRate: 83 },
-    { name: 'Linear / Jira CRM', won: 3, lost: 0, winRate: 100 },
-    { name: 'Internal DIY Stack', won: 2, lost: 1, winRate: 67 },
-  ];
+  // Closed Won Deals (calculated from items)
+  const wonDeals = useMemo(() => {
+    return quarterDeals.filter((d) => d.stage === 'Closed Won' || d.stage?.toLowerCase().includes('won'));
+  }, [quarterDeals]);
 
-  const lossReasons = [
-    { reason: 'Budget & Procurement Freeze', pct: 40, count: 4, color: 'bg-rose-500' },
-    { reason: 'Legacy Contract Multi-year Lock-in', pct: 30, count: 3, color: 'bg-amber-500' },
-    { reason: 'Hardware / Legacy Driver Gap', pct: 20, count: 2, color: 'bg-blue-500' },
-    { reason: 'Extended Security Audit Timeline', pct: 10, count: 1, color: 'bg-zinc-500' },
-  ];
+  // Closed Lost Deals (calculated from items)
+  const lostDeals = useMemo(() => {
+    return quarterDeals.filter((d) => d.stage === 'Closed Lost' || d.stage?.toLowerCase().includes('lost'));
+  }, [quarterDeals]);
+
+  const wonArr = wonDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+  const lostArr = lostDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+  const totalClosedCount = wonDeals.length + lostDeals.length;
+  const winRate = totalClosedCount > 0 ? Math.round((wonDeals.length / totalClosedCount) * 100) : 0;
+
+  // Average Cycle to Win calculated dynamically from items
+  const wonDealsWithCycle = useMemo(() => {
+    return wonDeals.filter((d) => {
+      if (typeof d.cycleDays === 'number' && d.cycleDays > 0) return true;
+      if (d.createdAt && (d.closedAt || d.targetCloseDate)) return true;
+      return false;
+    });
+  }, [wonDeals]);
+
+  const avgCycleDays = useMemo(() => {
+    if (wonDealsWithCycle.length === 0) return '0';
+    const totalCycle = wonDeals.reduce((acc, d) => {
+      if (typeof d.cycleDays === 'number' && d.cycleDays > 0) return acc + d.cycleDays;
+      if (d.createdAt && (d.closedAt || d.targetCloseDate)) {
+        const diff =
+          (new Date(d.closedAt || d.targetCloseDate).getTime() - new Date(d.createdAt).getTime()) /
+          (1000 * 3600 * 24);
+        if (!isNaN(diff) && diff > 0) return acc + Math.round(diff);
+      }
+      return acc;
+    }, 0);
+    return (totalCycle / wonDealsWithCycle.length).toFixed(1);
+  }, [wonDeals, wonDealsWithCycle]);
+
+  // Competitor Head-to-Head Win Rates calculated dynamically from items
+  const competitors = useMemo(() => {
+    const map: Record<string, { name: string; won: number; lost: number }> = {};
+
+    wonDeals.forEach((d) => {
+      const comp = d.competitor?.trim();
+      if (comp) {
+        if (!map[comp]) map[comp] = { name: comp, won: 0, lost: 0 };
+        map[comp].won += 1;
+      }
+    });
+
+    lostDeals.forEach((d) => {
+      const comp = d.competitor?.trim();
+      if (comp) {
+        if (!map[comp]) map[comp] = { name: comp, won: 0, lost: 0 };
+        map[comp].lost += 1;
+      }
+    });
+
+    return Object.values(map)
+      .map((c) => {
+        const total = c.won + c.lost;
+        const rate = total > 0 ? Math.round((c.won / total) * 100) : 0;
+        return {
+          name: c.name,
+          won: c.won,
+          lost: c.lost,
+          winRate: rate,
+        };
+      })
+      .sort((a, b) => b.won + b.lost - (a.won + a.lost));
+  }, [wonDeals, lostDeals]);
+
+  // Primary Loss Attribution Reasons calculated dynamically from items
+  const lossReasons = useMemo(() => {
+    if (lostDeals.length === 0) return [];
+    const map: Record<string, number> = {};
+    lostDeals.forEach((d) => {
+      const reason = d.lossReason?.trim() || 'Unspecified Reason';
+      map[reason] = (map[reason] || 0) + 1;
+    });
+
+    const colors = ['bg-rose-500', 'bg-amber-500', 'bg-blue-500', 'bg-purple-500', 'bg-zinc-500'];
+    return Object.entries(map)
+      .map(([reason, count], idx) => {
+        const pct = Math.round((count / lostDeals.length) * 100);
+        return {
+          reason,
+          count,
+          pct,
+          color: colors[idx % colors.length],
+        };
+      })
+      .sort((a, b) => b.count - a.count);
+  }, [lostDeals]);
 
   const pipelineColor = pipeline.color && pipeline.color !== '#9900c2' ? pipeline.color : '#ea580c';
 
@@ -116,7 +184,7 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
               <button
                 key={q}
                 onClick={() => setFilterQuarter(q)}
-                className={`px-2.5 py-1 rounded-[6px] text-xs font-semibold transition-all ${
+                className={`px-2.5 py-1 rounded-[6px] text-xs font-semibold transition-all cursor-pointer ${
                   filterQuarter === q
                     ? 'bg-orange-600 text-white shadow-xs'
                     : 'text-zinc-400 hover:text-zinc-200'
@@ -129,7 +197,7 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
 
           <button
             onClick={onBackToBoard}
-            className="h-8 flex items-center gap-1.5 px-3.5 rounded-[6px] border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 text-zinc-200 font-semibold text-xs transition-all active:scale-[0.98] shadow-xs"
+            className="h-8 flex items-center gap-1.5 px-3.5 rounded-[6px] border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 text-zinc-200 font-semibold text-xs transition-all active:scale-[0.98] shadow-xs cursor-pointer"
           >
             <span className="material-symbols-outlined text-[17px] text-orange-400">view_kanban</span>
             <span>Pipeline Board</span>
@@ -137,7 +205,7 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
 
           <button
             onClick={onOpenNewDeal}
-            className="h-8 flex items-center gap-1.5 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 active:scale-[0.98] text-white font-semibold text-xs transition-all shadow-sm shadow-orange-600/20"
+            className="h-8 flex items-center gap-1.5 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 active:scale-[0.98] text-white font-semibold text-xs transition-all shadow-sm shadow-orange-600/20 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[17px]">add</span>
             <span>New Deal</span>
@@ -158,11 +226,11 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
             </span>
           </div>
           <div className="mt-2">
-            <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">{winRate}% Won</div>
+            <div className="text-xl font-bold text-zinc-100 font-mono">{winRate}% Won</div>
             <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
-              <span className="text-emerald-400 font-semibold">+4.2% QoQ Target</span>
+              <span className="text-emerald-400 font-semibold">{wonDeals.length} Won</span>
               <span>•</span>
-              <span>Industry benchmark 45%</span>
+              <span>{totalClosedCount} closed deals</span>
             </div>
           </div>
         </div>
@@ -178,11 +246,11 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
             </span>
           </div>
           <div className="mt-2">
-            <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">
+            <div className="text-xl font-bold text-zinc-100 font-mono">
               ${(wonArr / 1000).toFixed(0)}k ARR
             </div>
             <div className="text-[11px] text-zinc-400 mt-1">
-              {wonDeals.length} won contracts in {pipeline.name}
+              {wonDeals.length} won contract{wonDeals.length === 1 ? '' : 's'} in {pipeline.name}
             </div>
           </div>
         </div>
@@ -198,11 +266,11 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
             </span>
           </div>
           <div className="mt-2">
-            <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">
+            <div className="text-xl font-bold text-zinc-100 font-mono">
               ${(lostArr / 1000).toFixed(0)}k ARR
             </div>
             <div className="text-[11px] text-rose-400 mt-1 font-medium">
-              3 deals lost to competitive lock-in
+              {lostDeals.length} deal{lostDeals.length === 1 ? '' : 's'} marked lost
             </div>
           </div>
         </div>
@@ -218,8 +286,12 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
             </span>
           </div>
           <div className="mt-2">
-            <div className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">16.2 Days</div>
-            <div className="text-[11px] text-zinc-400 mt-1">2.4 days faster than Q3 average</div>
+            <div className="text-xl font-bold text-zinc-100 font-mono">{avgCycleDays} Days</div>
+            <div className="text-[11px] text-zinc-400 mt-1">
+              {wonDealsWithCycle.length > 0
+                ? `Calculated from ${wonDealsWithCycle.length} closed won cycles`
+                : 'No closed won deal cycles recorded'}
+            </div>
           </div>
         </div>
       </div>
@@ -236,31 +308,43 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
                   Competitor Head-to-Head Win Rates
                 </h3>
               </div>
-              <span className="font-mono text-[10px] text-zinc-400">Multi-bid deals</span>
+              <span className="font-mono text-[10px] text-zinc-400">
+                {competitors.length} tracked competitors
+              </span>
             </div>
 
-            <div className="space-y-3">
-              {competitors.map((comp) => (
-                <div key={comp.name} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-zinc-200">{comp.name}</span>
-                    <span className="font-mono text-[11px] font-bold text-emerald-400">
-                      {comp.winRate}% Win ({comp.won}W / {comp.lost}L)
-                    </span>
+            {competitors.length === 0 ? (
+              <div className="py-8 text-center flex flex-col items-center justify-center border border-dashed border-[#27272a] rounded-[6px] bg-[#18181b]">
+                <span className="material-symbols-outlined text-[28px] text-zinc-600 mb-1">swords</span>
+                <p className="text-xs font-semibold text-zinc-300">No competitor battlecards recorded</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5 max-w-xs">
+                  Specify a competitor on deals to track head-to-head win conversion rates.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {competitors.map((comp) => (
+                  <div key={comp.name} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-zinc-200">{comp.name}</span>
+                      <span className="font-mono text-[11px] font-bold text-emerald-400">
+                        {comp.winRate}% Win ({comp.won}W / {comp.lost}L)
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden flex">
+                      <div
+                        className="h-full bg-emerald-500 rounded-l-full transition-all duration-500"
+                        style={{ width: `${comp.winRate}%` }}
+                      ></div>
+                      <div
+                        className="h-full bg-rose-500 rounded-r-full transition-all duration-500"
+                        style={{ width: `${100 - comp.winRate}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden flex">
-                    <div
-                      className="h-full bg-emerald-500 rounded-l-full transition-all duration-500"
-                      style={{ width: `${comp.winRate}%` }}
-                    ></div>
-                    <div
-                      className="h-full bg-rose-500 rounded-r-full transition-all duration-500"
-                      style={{ width: `${100 - comp.winRate}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-4 pt-3 border-t border-[#27272a] flex items-center justify-between text-[11px] text-zinc-400">
@@ -283,37 +367,49 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
                   Primary Loss Attribution Reasons
                 </h3>
               </div>
-              <span className="font-mono text-[10px] text-rose-400 font-semibold">100% Audited</span>
+              <span className="font-mono text-[10px] text-rose-400 font-semibold">
+                {lostDeals.length > 0 ? `${lostDeals.length} Lost Deals` : '0 Lost Deals'}
+              </span>
             </div>
 
-            <div className="space-y-3">
-              {lossReasons.map((lr) => (
-                <div key={lr.reason} className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-zinc-200 font-medium">{lr.reason}</span>
-                    <span className="font-mono text-[11px] font-bold text-zinc-400">
-                      {lr.pct}% ({lr.count} deals)
-                    </span>
+            {lossReasons.length === 0 ? (
+              <div className="py-8 text-center flex flex-col items-center justify-center border border-dashed border-[#27272a] rounded-[6px] bg-[#18181b]">
+                <span className="material-symbols-outlined text-[28px] text-zinc-600 mb-1">pie_chart</span>
+                <p className="text-xs font-semibold text-zinc-300">No lost deals recorded</p>
+                <p className="text-[11px] text-zinc-500 mt-0.5 max-w-xs">
+                  When deals are moved to Closed Lost with a reason, drop-off factors will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {lossReasons.map((lr) => (
+                  <div key={lr.reason} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-zinc-200 font-medium">{lr.reason}</span>
+                      <span className="font-mono text-[11px] font-bold text-zinc-400">
+                        {lr.pct}% ({lr.count} {lr.count === 1 ? 'deal' : 'deals'})
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full ${lr.color} rounded-full transition-all duration-500`}
+                        style={{ width: `${lr.pct}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full ${lr.color} rounded-full transition-all duration-500`}
-                      style={{ width: `${lr.pct}%` }}
-                    ></div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="mt-4 pt-3 border-t border-[#27272a] text-[11px] text-zinc-400 flex items-center justify-between">
-            <span>Action item: Address EU compliance certification in Q1 roadmap</span>
-            <span className="font-mono font-semibold text-orange-400">View Spec</span>
+            <span>Dynamic attribution from actual closed lost deal post-mortems</span>
+            <span className="font-mono font-semibold text-orange-400">{pipeline.name}</span>
           </div>
         </div>
       </div>
 
-      {/* 4. Closed Deals Retrospectives Table (Won & Lost) */}
+      {/* 4. Closed Deals Retrospectives Table (Won & Lost from real items) */}
       <div className="bg-[#121214] rounded-[6px] border border-[#27272a] shadow-xs p-5">
         <div className="flex items-center justify-between pb-3 border-b border-[#27272a] mb-4">
           <div className="flex items-center gap-2">
@@ -323,7 +419,7 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
             </h3>
           </div>
           <span className="font-mono text-[11px] text-zinc-400">
-            {wonDeals.length + lostDeals.length} completed transactions
+            {totalClosedCount} completed transactions
           </span>
         </div>
 
@@ -340,53 +436,83 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-[#27272a]">
-              {/* Won Deals */}
-              {wonDeals.map((deal) => (
-                <tr
-                  key={deal.id}
-                  onClick={() => onSelectDeal(deal)}
-                  className="hover:bg-zinc-800/40 transition-colors cursor-pointer group"
-                >
-                  <td className="py-2.5">
-                    <div className="font-semibold text-zinc-100 group-hover:text-orange-400 transition-colors">
-                      {deal.title}
+              {totalClosedCount === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-zinc-500">
+                    <div className="flex flex-col items-center justify-center">
+                      <span className="material-symbols-outlined text-[28px] text-zinc-600 mb-1">inventory_2</span>
+                      <p className="text-xs font-semibold text-zinc-300">No closed deals in this pipeline</p>
+                      <p className="text-[11px] text-zinc-500 mt-0.5">
+                        Move deals to Closed Won or Closed Lost to view retrospective post-mortems.
+                      </p>
                     </div>
-                    <div className="text-[11px] text-zinc-400">{deal.company}</div>
                   </td>
-                  <td className="py-2.5">
-                    <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
-                      Closed Won
-                    </span>
-                  </td>
-                  <td className="py-2.5 font-mono font-bold text-zinc-100">
-                    ${(deal.value / 1000).toFixed(0)}k ARR
-                  </td>
-                  <td className="py-2.5 text-zinc-300">Salesforce</td>
-                  <td className="py-2.5 text-zinc-400">Local-first SQLite VFS speed &amp; data privacy</td>
-                  <td className="py-2.5 font-mono text-zinc-400">{deal.ownerInitials || 'AW'}</td>
                 </tr>
-              ))}
+              ) : (
+                <>
+                  {/* Won Deals */}
+                  {wonDeals.map((deal) => (
+                    <tr
+                      key={deal.id}
+                      onClick={() => onSelectDeal(deal)}
+                      className="hover:bg-zinc-800/40 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-2.5">
+                        <div className="font-semibold text-zinc-100 group-hover:text-orange-400 transition-colors">
+                          {deal.title}
+                        </div>
+                        <div className="text-[11px] text-zinc-400">{deal.company}</div>
+                      </td>
+                      <td className="py-2.5">
+                        <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-semibold bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
+                          Closed Won
+                        </span>
+                      </td>
+                      <td className="py-2.5 font-mono font-bold text-zinc-100">
+                        ${(deal.value / 1000).toFixed(0)}k ARR
+                      </td>
+                      <td className="py-2.5 text-zinc-300">{deal.competitor || '—'}</td>
+                      <td className="py-2.5 text-zinc-400">
+                        {deal.wonReason || 'Closed Won (Standard Conversion)'}
+                      </td>
+                      <td className="py-2.5 font-mono text-zinc-400">
+                        {deal.ownerInitials || deal.owner?.slice(0, 2).toUpperCase() || 'OP'}
+                      </td>
+                    </tr>
+                  ))}
 
-              {/* Lost Deals */}
-              {lostDeals.map((deal) => (
-                <tr key={deal.id} className="hover:bg-rose-950/20 transition-colors">
-                  <td className="py-2.5">
-                    <div className="font-semibold text-zinc-100">{deal.title}</div>
-                    <div className="text-[11px] text-zinc-400">{deal.company}</div>
-                  </td>
-                  <td className="py-2.5">
-                    <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-semibold bg-rose-950/40 text-rose-400 border border-rose-500/30">
-                      Closed Lost
-                    </span>
-                  </td>
-                  <td className="py-2.5 font-mono font-bold text-zinc-100">
-                    ${(deal.value / 1000).toFixed(0)}k ARR
-                  </td>
-                  <td className="py-2.5 text-zinc-300">{deal.competitor}</td>
-                  <td className="py-2.5 text-rose-400 font-medium">{deal.primaryReason}</td>
-                  <td className="py-2.5 font-mono text-zinc-400">{deal.owner}</td>
-                </tr>
-              ))}
+                  {/* Lost Deals */}
+                  {lostDeals.map((deal) => (
+                    <tr
+                      key={deal.id}
+                      onClick={() => onSelectDeal(deal)}
+                      className="hover:bg-rose-950/20 transition-colors cursor-pointer group"
+                    >
+                      <td className="py-2.5">
+                        <div className="font-semibold text-zinc-100 group-hover:text-rose-400 transition-colors">
+                          {deal.title}
+                        </div>
+                        <div className="text-[11px] text-zinc-400">{deal.company}</div>
+                      </td>
+                      <td className="py-2.5">
+                        <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-semibold bg-rose-950/40 text-rose-400 border border-rose-500/30">
+                          Closed Lost
+                        </span>
+                      </td>
+                      <td className="py-2.5 font-mono font-bold text-zinc-100">
+                        ${(deal.value / 1000).toFixed(0)}k ARR
+                      </td>
+                      <td className="py-2.5 text-zinc-300">{deal.competitor || '—'}</td>
+                      <td className="py-2.5 text-rose-400 font-medium">
+                        {deal.lossReason || 'Lost deal'}
+                      </td>
+                      <td className="py-2.5 font-mono text-zinc-400">
+                        {deal.ownerInitials || deal.owner?.slice(0, 2).toUpperCase() || 'OP'}
+                      </td>
+                    </tr>
+                  ))}
+                </>
+              )}
             </tbody>
           </table>
         </div>

@@ -45,6 +45,21 @@ export class TeamMember {
   @Column('varchar', { default: 'Active' })
   status?: string;
 
+  @Column('boolean', { name: 'can_login', default: true })
+  canLogin: boolean;
+
+  @Column('jsonb', {
+    name: 'allowed_pages',
+    default: ['overview', 'task-spaces', 'crm-pipelines', 'contacts', 'docs', 'team', 'settings'],
+  })
+  allowedPages: string[];
+
+  @Column('jsonb', {
+    name: 'allowed_actions',
+    default: ['read', 'write', 'delete', 'publish'],
+  })
+  allowedActions: string[];
+
   @Column('varchar', { name: 'invited_at', nullable: true })
   invitedAt?: string;
 

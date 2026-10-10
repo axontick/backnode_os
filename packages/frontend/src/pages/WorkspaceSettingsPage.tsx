@@ -239,7 +239,7 @@ export const WorkspaceSettingsPage: React.FC = () => {
                     type="button"
                     onClick={() => setSelectedColor(c.hex)}
                     style={{ backgroundColor: c.hex }}
-                    className={`w-7 h-7 rounded-[4px] transition-transform cursor-pointer ${
+                    className={`w-7 h-7 rounded-[6px] transition-transform cursor-pointer ${
                       selectedColor === c.hex
                         ? 'ring-2 ring-orange-500 ring-offset-2 ring-offset-[#121214] scale-105 shadow-sm'
                         : 'hover:scale-105 opacity-80 hover:opacity-100'

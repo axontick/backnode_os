@@ -21,7 +21,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   onRequestDelete,
   onEditTask,
 }) => {
-  const { user } = useAuth();
+  const { user, effectiveRole } = useAuth();
+  const isReadOnly = effectiveRole === 'VIEWER';
+
   const authorName = user?.name || 'Operator';
   const authorInitials = user?.name
     ? user.name
@@ -40,6 +42,8 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   const [commentText, setCommentText] = useState('');
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [isAddingSubtask, setIsAddingSubtask] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Sync title on task prop change
   React.useEffect(() => {
@@ -49,12 +53,14 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   }, [task.id]);
 
   const handleTitleBlur = () => {
+    if (isReadOnly) return;
     if (titleText.trim() && titleText !== task.title) {
       onUpdateTask({ ...task, title: titleText.trim() });
     }
   };
 
   const handleAssigneeChange = (member: TeamMember) => {
+    if (isReadOnly) return;
     const updated = {
       ...task,
       assignee: member,
@@ -74,6 +80,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   };
 
   const handleStatusChange = (status: TaskStatus) => {
+    if (isReadOnly) return;
     const updated = {
       ...task,
       status,
@@ -93,6 +100,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   };
 
   const handleToggleSubtask = (subId: string) => {
+    if (isReadOnly) return;
     const updatedSubtasks = task.subtasks.map((st) =>
       st.id === subId ? { ...st, done: !st.done } : st
     );
@@ -100,6 +108,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   };
 
   const handleAddSubtask = () => {
+    if (isReadOnly) return;
     if (!newSubtaskText.trim()) return;
     const newSt = {
       id: `sub-${Date.now()}`,
@@ -114,6 +123,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   };
 
   const handleAddComment = () => {
+    if (isReadOnly) return;
     if (!commentText.trim()) return;
     const newComment = {
       id: `act-${Date.now()}`,
@@ -136,7 +146,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   const progressPercent = totalSubtasks > 0 ? Math.round((doneSubtasksCount / totalSubtasks) * 100) : 0;
 
   return (
-    <section className="absolute top-0 right-0 bottom-0 w-[580px] max-w-[95vw] bg-[#121214] border-l border-[#27272a] shadow-2xl z-40 flex flex-col justify-between overflow-hidden text-zinc-100 animate-in slide-in-from-right duration-200">
+    <section className={`absolute top-0 right-0 bottom-0 bg-[#121214] border-l border-[#27272a] shadow-2xl z-40 flex flex-col justify-between overflow-hidden text-zinc-100 animate-in slide-in-from-right duration-200 transition-all ${
+      isFullscreen ? 'w-full' : 'w-[580px] max-w-[95vw]'
+    }`}>
       {/* Slide-Over Header */}
       <div className="border-b border-[#27272a] px-6 py-3 flex items-center justify-between bg-[#0c0a09] shrink-0">
         <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
@@ -146,42 +158,54 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           <span>/</span>
           <span className="hover:text-orange-400 cursor-pointer">{task.targetCycle.split(' - ')[0]}</span>
           <span>/</span>
-          <span className="bg-orange-950/40 text-orange-400 font-bold px-2 py-0.5 rounded-[4px] border border-orange-500/20">
+          <span className="bg-orange-950/40 text-orange-400 font-bold px-2 py-0.5 rounded-[6px] border border-orange-500/20">
             {task.id}
           </span>
+          {isReadOnly && (
+            <span className="bg-zinc-800 text-zinc-400 font-mono text-[10px] px-2 py-0.5 rounded-[6px] border border-zinc-700">
+              Read-Only
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-1 text-zinc-400">
           <button
             onClick={() => {
               navigator.clipboard?.writeText(window.location.href);
-              alert(`Permalink for ${task.id} copied to clipboard!`);
+              setCopiedLink(true);
+              setTimeout(() => setCopiedLink(false), 2000);
             }}
-            className="w-7 h-7 rounded-[4px] flex items-center justify-center hover:bg-[#18181b] hover:text-zinc-100 transition-colors"
-            title="Copy task link"
+            className="w-7 h-7 rounded-[6px] flex items-center justify-center hover:bg-[#18181b] hover:text-zinc-100 transition-colors relative cursor-pointer"
+            title={copiedLink ? 'Link copied!' : 'Copy task link'}
           >
-            <span className="material-symbols-outlined text-[17px]">link</span>
+            <span className={`material-symbols-outlined text-[17px] ${copiedLink ? 'text-emerald-400' : ''}`}>
+              {copiedLink ? 'check' : 'link'}
+            </span>
           </button>
           <button
-            onClick={() => alert(`Expanded fullscreen view for ${task.id}`)}
-            className="w-7 h-7 rounded-[4px] flex items-center justify-center hover:bg-[#18181b] hover:text-zinc-100 transition-colors"
-            title="Expand Fullscreen"
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className={`w-7 h-7 rounded-[6px] flex items-center justify-center hover:bg-[#18181b] transition-colors cursor-pointer ${
+              isFullscreen ? 'text-orange-400 bg-[#18181b]' : 'hover:text-zinc-100'
+            }`}
+            title={isFullscreen ? 'Exit Fullscreen' : 'Expand Fullscreen'}
           >
-            <span className="material-symbols-outlined text-[17px]">open_in_full</span>
+            <span className="material-symbols-outlined text-[17px]">
+              {isFullscreen ? 'close_fullscreen' : 'open_in_full'}
+            </span>
           </button>
-          {onEditTask && (
+          {onEditTask && !isReadOnly && (
             <button
               onClick={() => onEditTask(task)}
-              className="w-7 h-7 rounded-[4px] flex items-center justify-center hover:bg-orange-950/40 hover:text-orange-400 transition-colors cursor-pointer"
+              className="w-7 h-7 rounded-[6px] flex items-center justify-center hover:bg-orange-950/40 hover:text-orange-400 transition-colors cursor-pointer"
               title="Edit deliverable details in modal"
             >
               <span className="material-symbols-outlined text-[17px]">edit</span>
             </button>
           )}
-          {onRequestDelete && (
+          {onRequestDelete && !isReadOnly && (
             <button
               onClick={() => onRequestDelete(task)}
-              className="w-7 h-7 rounded-[4px] flex items-center justify-center hover:bg-rose-950/40 hover:text-rose-400 transition-colors cursor-pointer"
+              className="w-7 h-7 rounded-[6px] flex items-center justify-center hover:bg-rose-950/40 hover:text-rose-400 transition-colors cursor-pointer"
               title="Delete Deliverable Permanently..."
             >
               <span className="material-symbols-outlined text-[17px]">delete</span>
@@ -190,7 +214,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           <div className="h-4 w-px bg-zinc-800 mx-1"></div>
           <button
             onClick={onClose}
-            className="w-7 h-7 rounded-[4px] flex items-center justify-center hover:bg-[#18181b] hover:text-zinc-100 transition-colors"
+            className="w-7 h-7 rounded-[6px] flex items-center justify-center hover:bg-[#18181b] hover:text-zinc-100 transition-colors cursor-pointer"
             title="Close Panel (Esc)"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
@@ -204,7 +228,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
         <div className="flex flex-col gap-2.5">
           <div className="flex items-center flex-wrap gap-2">
             {/* Priority Badge */}
-            <span className={`font-mono text-[10px] font-semibold px-2.5 py-0.5 rounded-[4px] flex items-center gap-1 shadow-sm ${
+            <span className={`font-mono text-[10px] font-semibold px-2.5 py-0.5 rounded-[6px] flex items-center gap-1 shadow-sm ${
               task.priority === 'Urgent'
                 ? 'bg-red-950/40 text-red-400 border border-red-500/30'
                 : task.priority === 'High'
@@ -218,13 +242,13 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </span>
 
             {/* Due Date */}
-            <span className="bg-[#18181b] text-zinc-300 border border-[#27272a] font-mono text-[10px] px-2 py-0.5 rounded-[4px] flex items-center gap-1">
+            <span className="bg-[#18181b] text-zinc-300 border border-[#27272a] font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1">
               <span className="material-symbols-outlined text-[13px] text-amber-400">calendar_today</span>
               <span>Due {task.dueDate}</span>
             </span>
 
             {/* Git Branch */}
-            <span className="bg-[#18181b] text-zinc-400 border border-[#27272a] font-mono text-[10px] px-2 py-0.5 rounded-[4px] flex items-center gap-1">
+            <span className="bg-[#18181b] text-zinc-400 border border-[#27272a] font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1">
               <span className="material-symbols-outlined text-[12px]">commit</span>
               <span>{task.gitBranch}</span>
             </span>
@@ -235,9 +259,12 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             <input
               type="text"
               value={titleText}
+              disabled={isReadOnly}
               onChange={(e) => setTitleText(e.target.value)}
               onBlur={handleTitleBlur}
-              className="w-full font-bold text-lg text-zinc-100 bg-transparent border-0 border-b border-transparent hover:border-zinc-700 focus:border-orange-500 focus:ring-0 p-0 pb-1 transition-colors leading-snug cursor-text font-headline"
+              className={`w-full font-bold text-lg text-zinc-100 bg-transparent border-0 border-b border-transparent p-0 pb-1 leading-snug font-headline ${
+                isReadOnly ? 'cursor-default' : 'hover:border-zinc-700 focus:border-orange-500 focus:ring-0 cursor-text transition-colors'
+              }`}
             />
           </div>
         </div>
@@ -249,10 +276,13 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             <span className="font-mono text-[10px] text-zinc-400 font-medium">ASSIGNEE</span>
             <div
               onClick={() => {
+                if (isReadOnly) return;
                 setIsAssigneePopoverOpen(!isAssigneePopoverOpen);
                 setIsStatusPopoverOpen(false);
               }}
-              className="flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm cursor-pointer hover:border-orange-500/50 transition-all"
+              className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
+                isReadOnly ? 'cursor-default' : 'cursor-pointer hover:border-orange-500/50'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <div
@@ -268,9 +298,11 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
                   {task.assignee.name}
                 </span>
               </div>
-              <span className="material-symbols-outlined text-orange-400 text-[16px]">
-                expand_more
-              </span>
+              {!isReadOnly && (
+                <span className="material-symbols-outlined text-orange-400 text-[16px]">
+                  expand_more
+                </span>
+              )}
             </div>
           </div>
 
@@ -279,10 +311,13 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             <span className="font-mono text-[10px] text-zinc-400 font-medium">STATUS</span>
             <div
               onClick={() => {
+                if (isReadOnly) return;
                 setIsStatusPopoverOpen(!isStatusPopoverOpen);
                 setIsAssigneePopoverOpen(false);
               }}
-              className="flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm cursor-pointer hover:border-orange-500/50 transition-all"
+              className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
+                isReadOnly ? 'cursor-default' : 'cursor-pointer hover:border-orange-500/50'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
@@ -290,9 +325,11 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
                   {task.status}
                 </span>
               </div>
-              <span className="material-symbols-outlined text-orange-400 text-[16px]">
-                expand_more
-              </span>
+              {!isReadOnly && (
+                <span className="material-symbols-outlined text-orange-400 text-[16px]">
+                  expand_more
+                </span>
+              )}
             </div>
           </div>
 
@@ -300,10 +337,10 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           <div className="flex flex-col gap-1">
             <span className="font-mono text-[10px] text-zinc-400 font-medium">ESTIMATION</span>
             <div className="flex items-center gap-2">
-              <span className="bg-[#121214] border border-[#27272a] px-2 py-0.5 rounded-[4px] font-mono text-[11px] font-semibold text-zinc-200">
+              <span className="bg-[#121214] border border-[#27272a] px-2 py-0.5 rounded-[6px] font-mono text-[11px] font-semibold text-zinc-200">
                 {task.estimation.hours} hrs
               </span>
-              <span className="font-mono text-[11px] text-zinc-400 bg-[#121214] border border-[#27272a] px-2 py-0.5 rounded-[4px] font-medium">
+              <span className="font-mono text-[11px] text-zinc-400 bg-[#121214] border border-[#27272a] px-2 py-0.5 rounded-[6px] font-medium">
                 {task.estimation.points} pts
               </span>
             </div>
@@ -312,7 +349,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           {/* Target Cycle / Sprint */}
           <div className="flex flex-col gap-1">
             <span className="font-mono text-[10px] text-zinc-400 font-medium">TARGET CYCLE</span>
-            <div className="flex items-center gap-1.5 p-1 bg-[#121214] border border-[#27272a] rounded-[4px] text-xs text-zinc-200">
+            <div className="flex items-center gap-1.5 p-1 bg-[#121214] border border-[#27272a] rounded-[6px] text-xs text-zinc-200">
               <span className="material-symbols-outlined text-orange-400 text-[14px]">sprint</span>
               <span className="truncate">{task.targetCycle}</span>
             </div>
@@ -326,7 +363,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
                   <span className="material-symbols-outlined text-[14px]">handshake</span>
                   Linked CRM Deal:
                 </span>
-                <span className="bg-[#121214] hover:bg-zinc-800 border border-[#27272a] px-2.5 py-0.5 rounded-[4px] text-xs flex items-center gap-1.5 transition-colors cursor-pointer group">
+                <span className="bg-[#121214] hover:bg-zinc-800 border border-[#27272a] px-2.5 py-0.5 rounded-[6px] text-xs flex items-center gap-1.5 transition-colors cursor-pointer group">
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
                   <span className="font-semibold text-orange-400 group-hover:underline">
                     {task.linkedCrmDeal.name}
@@ -336,7 +373,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
                   </span>
                 </span>
               </div>
-              <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-2 py-0.5 rounded-[4px] font-semibold">
+              <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-2 py-0.5 rounded-[6px] font-semibold">
                 High Value
               </span>
             </div>
@@ -344,7 +381,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
         </div>
 
         {/* Popover Placements */}
-        {isAssigneePopoverOpen && (
+        {isAssigneePopoverOpen && !isReadOnly && (
           <AssigneePopover
             currentAssigneeId={task.assignee.id}
             members={members}
@@ -353,7 +390,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           />
         )}
 
-        {isStatusPopoverOpen && (
+        {isStatusPopoverOpen && !isReadOnly && (
           <StatusTransitionPopover
             currentStatus={task.status}
             timeInStage={task.timeInStage}
@@ -367,8 +404,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           <div className="flex items-center justify-between border-b border-[#27272a] pb-2">
             <div className="flex items-center gap-4">
               <button
+                type="button"
                 onClick={() => setActiveTab('spec')}
-                className={`text-xs font-semibold pb-1.5 -mb-2 flex items-center gap-1.5 transition-colors ${
+                className={`text-xs font-semibold pb-1.5 -mb-2 flex items-center gap-1.5 transition-colors cursor-pointer ${
                   activeTab === 'spec'
                     ? 'border-b-2 border-orange-500 text-orange-400'
                     : 'text-zinc-400 hover:text-zinc-100'
@@ -378,8 +416,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
                 <span>Specification</span>
               </button>
               <button
+                type="button"
                 onClick={() => setActiveTab('preview')}
-                className={`text-xs font-medium pb-1.5 -mb-2 transition-colors ${
+                className={`text-xs font-medium pb-1.5 -mb-2 transition-colors cursor-pointer ${
                   activeTab === 'preview'
                     ? 'border-b-2 border-orange-500 text-orange-400'
                     : 'text-zinc-400 hover:text-zinc-100'
@@ -391,16 +430,16 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 
             {/* Rich text mini toolbar */}
             <div className="flex items-center gap-1 text-zinc-400">
-              <button className="p-1 hover:bg-[#18181b] rounded-[4px]" title="Bold">
+              <button type="button" className="p-1 hover:bg-[#18181b] rounded-[6px]" title="Bold">
                 <span className="material-symbols-outlined text-[15px]">format_bold</span>
               </button>
-              <button className="p-1 hover:bg-[#18181b] rounded-[4px]" title="Italic">
+              <button type="button" className="p-1 hover:bg-[#18181b] rounded-[6px]" title="Italic">
                 <span className="material-symbols-outlined text-[15px]">format_italic</span>
               </button>
-              <button className="p-1 hover:bg-[#18181b] rounded-[4px]" title="Code">
+              <button type="button" className="p-1 hover:bg-[#18181b] rounded-[6px]" title="Code">
                 <span className="material-symbols-outlined text-[15px]">code</span>
               </button>
-              <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1 rounded-[3px]">
+              <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1 rounded-[6px]">
                 Markdown
               </span>
             </div>
@@ -408,7 +447,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 
           <div className="bg-[#18181b] border border-[#27272a] rounded-[6px] p-3 text-xs leading-relaxed text-zinc-200 space-y-2">
             <p className="text-zinc-300">{task.description}</p>
-            <div className="p-2.5 rounded-[4px] bg-[#121214] border-l-2 border-orange-500 text-[11px] text-zinc-400 space-y-1 font-mono">
+            <div className="p-2.5 rounded-[6px] bg-[#121214] border-l-2 border-orange-500 text-[11px] text-zinc-400 space-y-1 font-mono">
               <div className="font-semibold text-orange-400">ARCHITECTURAL REQUIREMENTS</div>
               <div>Maintain strict 6px radius standard and obsidian black/electric orange tokens.</div>
             </div>
@@ -420,7 +459,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="font-semibold text-xs text-zinc-100 font-headline">Subtasks</span>
-              <span className="bg-orange-950/40 text-orange-400 border border-orange-500/20 font-mono text-[10px] px-2 py-0.5 rounded-[4px] font-bold">
+              <span className="bg-orange-950/40 text-orange-400 border border-orange-500/20 font-mono text-[10px] px-2 py-0.5 rounded-[6px] font-bold">
                 {doneSubtasksCount} / {totalSubtasks} done
               </span>
             </div>
@@ -442,13 +481,16 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             {task.subtasks.map((st) => (
               <label
                 key={st.id}
-                className="flex items-center gap-2.5 p-1.5 rounded-[4px] hover:bg-[#121214] transition-colors cursor-pointer group"
+                className={`flex items-center gap-2.5 p-1.5 rounded-[6px] transition-colors ${
+                  isReadOnly ? 'cursor-default' : 'hover:bg-[#121214] cursor-pointer group'
+                }`}
               >
                 <input
                   type="checkbox"
+                  disabled={isReadOnly}
                   checked={st.done}
                   onChange={() => handleToggleSubtask(st.id)}
-                  className="w-4 h-4 rounded-[3px] accent-orange-500 cursor-pointer"
+                  className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                 />
                 <span
                   className={`text-xs transition-colors ${
@@ -465,38 +507,43 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               </label>
             ))}
 
-            {isAddingSubtask ? (
-              <div className="flex items-center gap-2 mt-1">
-                <input
-                  autoFocus
-                  type="text"
-                  value={newSubtaskText}
-                  onChange={(e) => setNewSubtaskText(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
-                  placeholder="Enter subtask title..."
-                  className="flex-1 bg-[#121214] border border-orange-500 rounded-[4px] px-2.5 py-1 text-xs text-zinc-100 focus:outline-none"
-                />
+            {!isReadOnly && (
+              isAddingSubtask ? (
+                <div className="flex items-center gap-2 mt-1">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={newSubtaskText}
+                    onChange={(e) => setNewSubtaskText(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAddSubtask()}
+                    placeholder="Enter subtask title..."
+                    className="flex-1 bg-[#121214] border border-orange-500 rounded-[6px] px-2.5 py-1 text-xs text-zinc-100 focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleAddSubtask}
+                    className="px-2.5 py-1 bg-orange-600 text-white text-xs font-semibold rounded-[6px] cursor-pointer"
+                  >
+                    Add
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingSubtask(false)}
+                    className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={handleAddSubtask}
-                  className="px-2.5 py-1 bg-orange-600 text-white text-xs font-semibold rounded-[4px]"
+                  type="button"
+                  onClick={() => setIsAddingSubtask(true)}
+                  className="text-left text-xs text-orange-400 hover:underline font-medium pt-1 flex items-center gap-1 cursor-pointer"
                 >
-                  Add
+                  <span className="material-symbols-outlined text-[14px]">add</span>
+                  <span>Add subtask</span>
                 </button>
-                <button
-                  onClick={() => setIsAddingSubtask(false)}
-                  className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-100"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                onClick={() => setIsAddingSubtask(true)}
-                className="text-left text-xs text-orange-400 hover:underline font-medium pt-1 flex items-center gap-1"
-              >
-                <span className="material-symbols-outlined text-[14px]">add</span>
-                <span>Add subtask</span>
-              </button>
+              )
             )}
           </div>
         </div>
@@ -549,16 +596,25 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           </div>
           <input
             type="text"
+            disabled={isReadOnly}
             value={commentText}
             onChange={(e) => setCommentText(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleAddComment()}
-            placeholder="Write a comment or type @ to mention..."
-            className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none focus:border-orange-500"
+            placeholder={isReadOnly ? 'Read-only view — comments disabled' : 'Write a comment or type @ to mention...'}
+            className={`w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-3 py-1.5 text-xs text-zinc-100 placeholder:text-zinc-500 focus:outline-none ${
+              isReadOnly ? 'opacity-60 cursor-not-allowed' : 'focus:border-orange-500'
+            }`}
           />
         </div>
         <button
+          type="button"
+          disabled={isReadOnly || !commentText.trim()}
           onClick={handleAddComment}
-          className="bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold px-3.5 py-1.5 rounded-[6px] shadow-sm flex items-center gap-1 active:scale-[0.98] transition-all"
+          className={`text-white text-xs font-semibold px-3.5 py-1.5 rounded-[6px] shadow-sm flex items-center gap-1 transition-all ${
+            isReadOnly || !commentText.trim()
+              ? 'bg-zinc-800 text-zinc-500 opacity-60 cursor-not-allowed'
+              : 'bg-orange-600 hover:bg-orange-700 active:scale-[0.98] cursor-pointer'
+          }`}
         >
           <span>Send</span>
           <span className="material-symbols-outlined text-[13px]">send</span>

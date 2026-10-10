@@ -109,7 +109,7 @@ export const NewContactModal: React.FC<NewContactModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-[4px] text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] flex items-center justify-center transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-[6px] text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] flex items-center justify-center transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>

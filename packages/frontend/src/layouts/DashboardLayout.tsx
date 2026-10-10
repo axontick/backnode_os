@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { SecurityPolicy } from '../utils/security';
 import { PrimarySidebar } from '../components/PrimarySidebar';
 import { InnerSidebar } from '../components/InnerSidebar';
 import { TopNavBar } from '../components/TopNavBar';
@@ -162,13 +164,19 @@ export const DashboardLayout: React.FC = () => {
     effectiveHub = 'contacts';
   } else if (normalizedPath.startsWith('/team')) {
     effectiveHub = 'team';
-  } else if (normalizedPath.startsWith('/replication') || normalizedPath.startsWith('/telemetry')) {
-    effectiveHub = 'replication';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
   }
 
   const showInnerSidebar = effectiveHub === 'task-spaces' || effectiveHub === 'crm';
+
+  const { user } = useAuth();
+  const currentMember = members.find(
+    (m) =>
+      (user?.email && m.email?.toLowerCase() === user.email.toLowerCase()) ||
+      m.id === user?.id
+  );
+  const hasPageClearance = SecurityPolicy.canAccessPage(user, currentMember, effectiveHub);
 
   const [isPrimarySidebarCollapsed, setIsPrimarySidebarCollapsed] = useState<boolean>(() => {
     try {
@@ -384,9 +392,55 @@ export const DashboardLayout: React.FC = () => {
           }}
         />
 
-        {/* Modular Viewport Hub Outlet */}
+        {/* Modular Viewport Hub Outlet or Access Restricted Screen */}
         <div className="flex-1 flex overflow-hidden relative">
-          <Outlet />
+          {hasPageClearance ? (
+            <Outlet />
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#09090b] text-zinc-100 select-none">
+              <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-8 max-w-lg w-full flex flex-col items-center gap-4 text-center shadow-lg">
+                <div className="w-14 h-14 rounded-[6px] bg-amber-950/40 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-xs">
+                  <span className="material-symbols-outlined text-[28px]">shield_lock</span>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <h2 className="text-base font-bold text-zinc-100 font-headline">
+                    Access Restricted — Clearance Required
+                  </h2>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    Your operator account does not currently possess authorization to access the{' '}
+                    <strong className="text-zinc-200 capitalize">{effectiveHub.replace('-', ' ')}</strong> module under active workspace ABAC policies.
+                  </p>
+                </div>
+                <div className="p-3.5 bg-[#18181b] border border-[#27272a] rounded-[6px] w-full text-left text-xs font-mono flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span>Operator:</span>
+                    <span className="text-zinc-200">{user?.name || 'Current User'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span>Security Tier:</span>
+                    <span className="text-orange-400">{currentMember?.accessLevel || user?.role || 'MEMBER'}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-zinc-400">
+                    <span>Module Gated:</span>
+                    <span className="text-zinc-200 uppercase">{effectiveHub}</span>
+                  </div>
+                </div>
+                <div className="pt-2 flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCurrentHub('overview');
+                      navigate(`${spacePrefix}/dashboard`);
+                    }}
+                    className="h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">dashboard</span>
+                    <span>Return to Dashboard</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

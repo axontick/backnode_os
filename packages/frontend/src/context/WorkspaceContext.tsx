@@ -10,6 +10,7 @@ import {
   initialDirectoryContacts,
   initialFolders,
   initialCrmPipelines,
+  initialDocs,
 } from '../mockData';
 import {
   TaskItem,
@@ -27,6 +28,8 @@ import {
   TeamMember,
   UserSpace,
   FolderChildItem,
+  DocItem,
+  DocClassification,
 } from '../types';
 import { DeletionTarget } from '../components/DeleteConfirmationModal';
 import {
@@ -78,6 +81,10 @@ interface WorkspaceContextType {
   setCrmStages: React.Dispatch<React.SetStateAction<CrmStageDefinition[]>>;
   crmSettings: CrmPipelineSettingsType;
   setCrmSettings: React.Dispatch<React.SetStateAction<CrmPipelineSettingsType>>;
+  docs: DocItem[];
+  setDocs: React.Dispatch<React.SetStateAction<DocItem[]>>;
+  activeDocId: string;
+  setActiveDocId: (id: string) => void;
 
   // Navigation
   currentHub: string;
@@ -202,7 +209,13 @@ interface WorkspaceContextType {
   handleUpdateDeal: (deal: CrmDeal) => void;
   handleCreateDeal: (deal: Partial<CrmDeal>) => void;
   handleAdvanceDealStage: (dealId: string, newStage: CrmDeal['stage']) => void;
-  handleMoveTaskStatus: (taskId: string, newStatus: TaskStatus) => void;
+  handleMoveTaskStatus: (
+    taskId: string,
+    newStatus: TaskStatus,
+    targetIndex?: number,
+    targetTaskId?: string,
+    position?: 'before' | 'after'
+  ) => void;
   handleUpdateListSettings: (newSettings: Partial<ListSettings>) => void;
   handleUpdateStatuses: (newStatuses: StatusDefinition[]) => void;
   handleUpdateCrmSettings: (newSettings: Partial<CrmPipelineSettingsType>) => void;
@@ -221,6 +234,12 @@ interface WorkspaceContextType {
   handleDeletePipelineSubFolder: (pipelineId: string, subFolderId: string) => void;
   handleConfirmDeleteItem: () => void;
   handleCreateContact: (contact: DirectoryContact) => void;
+  handleUpdateContact: (contact: DirectoryContact) => void;
+  handleDeleteContact: (contactId: string) => void;
+  handleCreateDoc: (doc?: Partial<DocItem>) => DocItem;
+  handleUpdateDoc: (id: string, updates: Partial<DocItem>) => void;
+  handleDeleteDoc: (id: string) => void;
+  handleDuplicateDoc: (id: string) => void;
 
   // Top-left User Space Dropdown & Creation
   userSpaces: UserSpace[];
@@ -240,9 +259,15 @@ interface WorkspaceContextType {
     accessLevel?: string;
     department?: string;
     capacityStatus?: string;
+    password?: string;
+    canLogin?: boolean;
+    allowedPages?: string[];
+    allowedActions?: string[];
   }) => Promise<TeamMember>;
   handleUpdateMemberAccess: (id: string, updates: Partial<TeamMember>) => Promise<void>;
   handleRemoveMember: (id: string) => Promise<void>;
+  handleChangePassword: (id: string, password: string) => Promise<void>;
+  handleToggleLogin: (id: string, canLogin?: boolean) => Promise<void>;
 
   refreshData: () => Promise<void>;
 }
@@ -274,6 +299,38 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
   const [crmView, setCrmView] = useState<'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings'>('dashboard');
   const [crmSettingsInitialTab, setCrmSettingsInitialTab] = useState<'general' | 'stages'>('general');
+
+  // Docs state
+  const [docs, setDocs] = useState<DocItem[]>(() => {
+    try {
+      const stored = localStorage.getItem('backnode_docs_collection');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse cached docs:', e);
+    }
+    return initialDocs;
+  });
+
+  const [activeDocId, setActiveDocId] = useState<string>(() => {
+    return localStorage.getItem('backnode_active_doc_id') || initialDocs[0]?.id || 'doc-arch-v2';
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('backnode_docs_collection', JSON.stringify(docs));
+    } catch (e) {
+      console.warn('Failed to persist docs:', e);
+    }
+  }, [docs]);
+
+  useEffect(() => {
+    if (activeDocId) {
+      localStorage.setItem('backnode_active_doc_id', activeDocId);
+    }
+  }, [activeDocId]);
 
   // Navigation state
   const [currentHub, setCurrentHub] = useState<string>('overview');
@@ -565,15 +622,32 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     accessLevel?: string;
     department?: string;
     capacityStatus?: string;
+    password?: string;
+    canLogin?: boolean;
+    allowedPages?: string[];
+    allowedActions?: string[];
   }) => {
-    const newMemberData: Partial<TeamMember> = {
+    const defaultPages = ['overview', 'tasks', 'crm', 'contacts', 'docs', 'team', 'settings'];
+    const defaultActions =
+      data.accessLevel === 'VIEWER'
+        ? ['read']
+        : data.accessLevel === 'ADMIN' || data.accessLevel === 'OWNER'
+        ? ['read', 'write', 'delete', 'publish', 'admin']
+        : ['read', 'write', 'delete', 'publish'];
+
+    const canLogin = data.canLogin !== undefined ? Boolean(data.canLogin) : true;
+
+    const newMemberData: any = {
       id: `mem-${Date.now()}`,
       name: data.name.trim(),
       email: data.email.trim(),
       initials: data.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2),
       role: data.role || (data.accessLevel === 'ADMIN' ? 'Workspace Admin' : 'Product Operator'),
       accessLevel: data.accessLevel || 'MEMBER',
-      status: 'Invited',
+      status: canLogin ? 'Active' : 'Disabled',
+      canLogin,
+      allowedPages: data.allowedPages || defaultPages,
+      allowedActions: data.allowedActions || defaultActions,
       department: (data.department as any) || 'Engineering',
       activeTasks: 0,
       capacityStatus: (data.capacityStatus as any) || 'Available',
@@ -582,21 +656,30 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       invitedAt: new Date().toISOString(),
     };
 
+    if (data.password && data.password.trim()) {
+      newMemberData.password = data.password.trim();
+    }
+
     try {
       const created = await membersApi.create(newMemberData);
       setMembers((prev) => [...prev, created]);
-      showToast(`Invitation dispatched to ${data.email}`);
+      showToast(`Operator "${data.name}" added to workspace!`);
       return created;
-    } catch (err) {
+    } catch (err: any) {
       console.warn('Backend unavailable, saving locally:', err);
       const fallbackMember = newMemberData as TeamMember;
       setMembers((prev) => [...prev, fallbackMember]);
-      showToast(`Invitation dispatched to ${data.email}`);
+      showToast(`Operator "${data.name}" added locally`);
       return fallbackMember;
     }
   };
 
   const handleUpdateMemberAccess = async (id: string, updates: Partial<TeamMember>) => {
+    const target = members.find((m) => m.id === id);
+    if (target?.accessLevel === 'OWNER') {
+      showToast('Workspace Owner role cannot be modified or demoted.');
+      return;
+    }
     try {
       await membersApi.update(id, updates);
     } catch (err) {
@@ -605,17 +688,64 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setMembers((prev) =>
       prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
     );
-    showToast('Member access level updated');
+    showToast(`Access updated for ${target?.name || 'operator'}`);
+  };
+
+  const handleChangePassword = async (id: string, password: string) => {
+    const target = members.find((m) => m.id === id);
+    if (!password || password.length < 6) {
+      showToast('Password must be at least 6 characters long.');
+      throw new Error('Password must be at least 6 characters long');
+    }
+    try {
+      await membersApi.changePassword(id, password);
+      showToast(`Password updated successfully for ${target?.name || 'operator'}`);
+    } catch (err: any) {
+      console.error('Failed to change password:', err);
+      showToast(err?.response?.data?.message || 'Failed to update password');
+      throw err;
+    }
+  };
+
+  const handleToggleLogin = async (id: string, canLogin?: boolean) => {
+    const target = members.find((m) => m.id === id);
+    if (target?.accessLevel === 'OWNER' && canLogin === false) {
+      showToast('Workspace Owner login access cannot be disabled.');
+      return;
+    }
+    const nextCanLogin = canLogin !== undefined ? Boolean(canLogin) : !(target?.canLogin ?? true);
+    try {
+      await membersApi.toggleLogin(id, nextCanLogin);
+    } catch (err: any) {
+      console.warn('Failed to toggle login on backend, applying locally:', err);
+    }
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id === id
+          ? {
+              ...m,
+              canLogin: nextCanLogin,
+              status: nextCanLogin ? 'Active' : 'Disabled',
+            }
+          : m
+      )
+    );
+    showToast(`Login access ${nextCanLogin ? 'enabled' : 'disabled'} for ${target?.name || 'operator'}`);
   };
 
   const handleRemoveMember = async (id: string) => {
+    const target = members.find((m) => m.id === id);
+    if (target?.accessLevel === 'OWNER') {
+      showToast('Workspace Owner cannot be removed from the workspace.');
+      return;
+    }
     try {
       await membersApi.delete(id);
     } catch (err) {
       console.warn('Backend unavailable for member delete, removing locally:', err);
     }
     setMembers((prev) => prev.filter((m) => m.id !== id));
-    showToast('Member access revoked');
+    showToast('Member removed and login credentials revoked');
   };
 
   const showToast = (msg: string) => {
@@ -1044,10 +1174,40 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     handleUpdateDeal(updatedDeal);
   };
 
-  const handleMoveTaskStatus = (taskId: string, newStatus: TaskStatus) => {
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t))
-    );
+  const handleMoveTaskStatus = (
+    taskId: string,
+    newStatus: TaskStatus,
+    targetIndex?: number,
+    targetTaskId?: string,
+    position?: 'before' | 'after'
+  ) => {
+    setTasks((prev) => {
+      const task = prev.find((t) => t.id === taskId);
+      if (!task) return prev;
+
+      const updatedTask = { ...task, status: newStatus };
+      const withoutTask = prev.filter((t) => t.id !== taskId);
+
+      if (targetTaskId) {
+        const destIndex = withoutTask.findIndex((t) => t.id === targetTaskId);
+        if (destIndex !== -1) {
+          const insertAt = position === 'after' ? destIndex + 1 : destIndex;
+          const copy = [...withoutTask];
+          copy.splice(insertAt, 0, updatedTask);
+          return copy;
+        }
+      }
+
+      if (typeof targetIndex === 'number' && targetIndex >= 0) {
+        const sameStatusTasks = withoutTask.filter((t) => t.status === newStatus);
+        const otherTasks = withoutTask.filter((t) => t.status !== newStatus);
+        sameStatusTasks.splice(targetIndex, 0, updatedTask);
+        return [...otherTasks, ...sameStatusTasks];
+      }
+
+      return [...withoutTask, updatedTask];
+    });
+
     tasksApi.update(taskId, { status: newStatus }).catch((err) => {
       console.error('Failed to move task status in DB:', err);
     });
@@ -1358,6 +1518,87 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setIsNewContactModalOpen(false);
   };
 
+  const handleUpdateContact = (updatedContact: DirectoryContact) => {
+    setDirectoryContacts((prev) =>
+      prev.map((c) => (c.id === updatedContact.id ? updatedContact : c))
+    );
+    contactsApi.update(updatedContact.id, updatedContact).catch((err) => {
+      console.error('Failed to update contact in DB:', err);
+    });
+    showToast(`Contact "${updatedContact.name}" updated`);
+  };
+
+  const handleDeleteContact = (contactId: string) => {
+    const target = directoryContacts.find((c) => c.id === contactId);
+    setDirectoryContacts((prev) => prev.filter((c) => c.id !== contactId));
+    contactsApi.delete(contactId).catch((err) => {
+      console.error('Failed to delete contact in DB:', err);
+    });
+    showToast(`Contact "${target?.name || contactId}" removed from directory`);
+  };
+
+  const handleCreateDoc = (partialDoc?: Partial<DocItem>): DocItem => {
+    const newDoc: DocItem = {
+      id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      title: partialDoc?.title || 'Untitled Architecture RFC',
+      content:
+        partialDoc?.content ||
+        '# New Document\n\nStart typing documentation, specifications, architecture notes, or RFCs here...',
+      classification: partialDoc?.classification || 'Internal',
+      tags: partialDoc?.tags && partialDoc.tags.length > 0 ? partialDoc.tags : ['Specification'],
+      authorName: user?.name || 'Current Operator',
+      authorInitials: (user?.name || 'CO')
+        .split(' ')
+        .map((n) => n[0])
+        .join('')
+        .substring(0, 2)
+        .toUpperCase(),
+      authorDepartment: 'Engineering',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      folderId: partialDoc?.folderId,
+      spaceId: partialDoc?.spaceId || activeSpace,
+      ...partialDoc,
+    };
+    setDocs((prev) => [newDoc, ...prev]);
+    setActiveDocId(newDoc.id);
+    showToast(`Document "${newDoc.title}" created`);
+    return newDoc;
+  };
+
+  const handleUpdateDoc = (id: string, updates: Partial<DocItem>) => {
+    setDocs((prev) =>
+      prev.map((doc) =>
+        doc.id === id ? { ...doc, ...updates, updatedAt: new Date().toISOString() } : doc
+      )
+    );
+  };
+
+  const handleDeleteDoc = (id: string) => {
+    const target = docs.find((d) => d.id === id);
+    const remaining = docs.filter((d) => d.id !== id);
+    setDocs(remaining);
+    if (activeDocId === id) {
+      setActiveDocId(remaining[0]?.id || '');
+    }
+    showToast(`Deleted document ${target?.title ? `"${target.title}"` : ''}`);
+  };
+
+  const handleDuplicateDoc = (id: string) => {
+    const target = docs.find((d) => d.id === id);
+    if (!target) return;
+    const duplicated: DocItem = {
+      ...target,
+      id: `doc-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      title: `${target.title} (Copy)`,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    setDocs((prev) => [duplicated, ...prev]);
+    setActiveDocId(duplicated.id);
+    showToast(`Duplicated "${target.title}"`);
+  };
+
   return (
     <WorkspaceContext.Provider
       value={{
@@ -1514,6 +1755,16 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleDeletePipelineSubFolder,
         handleConfirmDeleteItem,
         handleCreateContact,
+        handleUpdateContact,
+        handleDeleteContact,
+        docs,
+        setDocs,
+        activeDocId,
+        setActiveDocId,
+        handleCreateDoc,
+        handleUpdateDoc,
+        handleDeleteDoc,
+        handleDuplicateDoc,
         userSpaces,
         activeUserSpaceId,
         setActiveUserSpaceId,
@@ -1525,6 +1776,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleInviteMember,
         handleUpdateMemberAccess,
         handleRemoveMember,
+        handleChangePassword,
+        handleToggleLogin,
         refreshData: loadData,
       }}
     >

@@ -9,6 +9,7 @@ import {
   DirectoryContact,
   SpaceFolder,
   CrmPipeline,
+  DocItem,
 } from './types';
 
 export const initialTeamMembers: TeamMember[] = [
@@ -1021,6 +1022,11 @@ export const initialCrmDeals: CrmDeal[] = [
     stage: 'Closed Won',
     probability: 100,
     targetCloseDate: 'Oct 12, 2026',
+    competitor: 'Salesforce Enterprise',
+    wonReason: 'Local-first SQLite VFS speed & zero cloud egress',
+    cycleDays: 14,
+    closedAt: '2026-10-12',
+    createdAt: '2026-09-28',
     contact: {
       name: 'Dr. Aris',
       title: 'Chief Medical Officer',
@@ -1045,6 +1051,11 @@ export const initialCrmDeals: CrmDeal[] = [
     stage: 'Closed Won',
     probability: 100,
     targetCloseDate: 'Sep 30, 2026',
+    competitor: 'HubSpot Sales Hub',
+    wonReason: 'Encrypted offline WAL sync performance SLA',
+    cycleDays: 21,
+    closedAt: '2026-09-30',
+    createdAt: '2026-09-09',
     contact: {
       name: 'Alexander Wong',
       title: 'Managing Director',
@@ -1057,6 +1068,96 @@ export const initialCrmDeals: CrmDeal[] = [
     owner: 'Alexander W.',
     ownerInitials: 'AW',
     tags: ['Completed'],
+    linkedTasks: [],
+    history: [],
+  },
+  {
+    id: 'DEAL-388',
+    title: 'OmniVanguard Telemetry Sync',
+    company: 'OmniVanguard Inc.',
+    value: 85000,
+    formattedValue: '$85,000',
+    stage: 'Closed Lost',
+    probability: 0,
+    targetCloseDate: 'Oct 02, 2026',
+    competitor: 'Salesforce Enterprise',
+    lossReason: 'Incumbent contract lock-in through 2027',
+    cycleDays: 24,
+    closedAt: '2026-10-02',
+    createdAt: '2026-09-08',
+    contact: {
+      name: 'Ken Ray',
+      title: 'VP Security Ops',
+      email: 'ken.ray@omnivanguard.io',
+      phone: '+1 (555) 777-8899',
+      location: 'Dallas TX',
+      role: 'Decision Maker',
+      initials: 'KR',
+    },
+    owner: 'Sarah Jenkins',
+    ownerInitials: 'SJ',
+    tags: ['Lost Deal'],
+    pipelineId: 'pipe-enterprise',
+    linkedTasks: [],
+    history: [],
+  },
+  {
+    id: 'DEAL-387',
+    title: 'RetailHub POS Migration',
+    company: 'RetailHub Systems',
+    value: 40000,
+    formattedValue: '$40,000',
+    stage: 'Closed Lost',
+    probability: 0,
+    targetCloseDate: 'Sep 27, 2026',
+    competitor: 'HubSpot Sales Hub',
+    lossReason: 'Required custom hardware peripheral driver',
+    cycleDays: 14,
+    closedAt: '2026-09-27',
+    createdAt: '2026-09-13',
+    contact: {
+      name: 'Alex Wong',
+      title: 'Director of Hardware',
+      email: 'alex@retailhub.com',
+      phone: '+1 (555) 444-3322',
+      location: 'Chicago IL',
+      role: 'Technical Lead',
+      initials: 'AW',
+    },
+    owner: 'Alex Wong',
+    ownerInitials: 'AW',
+    tags: ['Lost Deal'],
+    pipelineId: 'pipe-enterprise',
+    linkedTasks: [],
+    history: [],
+  },
+  {
+    id: 'DEAL-386',
+    title: 'AeroDefense Compliance Gateway',
+    company: 'AeroDefense Labs',
+    value: 65000,
+    formattedValue: '$65,000',
+    stage: 'Closed Lost',
+    probability: 0,
+    targetCloseDate: 'Sep 18, 2026',
+    competitor: 'Internal DIY Stack',
+    lossReason: 'Security team delayed third-party audit clearance',
+    cycleDays: 31,
+    closedAt: '2026-09-18',
+    createdAt: '2026-08-18',
+    contact: {
+      name: 'Dr. Evelyn Vance',
+      title: 'Chief Compliance Officer',
+      email: 'evelyn@aerodefense.org',
+      phone: '+1 (555) 111-2233',
+      location: 'Washington DC',
+      role: 'Security Council',
+      initials: 'EV',
+    },
+    owner: 'Ken Ray',
+    ownerInitials: 'KR',
+    tags: ['Lost Deal'],
+    pipelineId: 'pipe-enterprise',
     linkedTasks: [],
     history: [],
   },
@@ -1337,5 +1438,151 @@ export const initialCrmPipelines: CrmPipeline[] = [
     totalValue: 180000,
   },
 ];
+
+export const initialDocs: DocItem[] = [
+  {
+    id: 'doc-arch-v2',
+    title: 'Backnode OS 2.0 System Architecture & Unified State Engine',
+    classification: 'Internal',
+    tags: ['Architecture', 'Engine', 'V2'],
+    authorName: 'Ken Ray',
+    authorInitials: 'KR',
+    authorDepartment: 'Engineering',
+    createdAt: '2026-03-01T10:00:00.000Z',
+    updatedAt: '2026-03-28T14:30:00.000Z',
+    content: `# Backnode OS 2.0 System Architecture
+
+## Executive Summary
+Backnode OS is engineered as an ultra-high performance, distributed task execution and multi-pipeline CRM operating environment. This document defines the primary data flow, optimistic state machine, and edge synchronization architecture.
+
+## Core Pillars
+- **Zero Latency Reactive State**: All write mutations apply optimistically in memory within 4ms before streaming to SQLite and PostgreSQL persistence layers.
+- **Strict 6px Geometrical Design**: The entire canvas adheres strictly to the Obsidian Black and Electric Orange token system with rigid 6px corner radiuses.
+- **Dual-Tier Navigation Rails**: Independent primary major hub navigation (220px) coupled with contextual child folder / pipeline drilldown (240px).
+
+## Technical Implementation Details
+\`\`\`typescript
+interface StateEngineConfig {
+  syncIntervalMs: number;
+  batchMutationSize: number;
+  optimisticRollback: boolean;
+  securityEnforcement: 'STRICT_ABAC' | 'RBAC_HYBRID';
+}
+\`\`\`
+
+## Security & Access Control Requirements
+> All state transactions require cryptographic verification against active RBAC credentials and contextual ABAC attributes (department, data classification level, and explicit owner grants).
+
+## Action Items & Milestones
+- [x] Finalize Obsidian Black (#09090b) color tokens and eliminate legacy purple styling
+- [x] Standardize all buttons and modal containers to 6px border radius
+- [ ] Connect distributed event streaming with automated failover
+- [ ] Implement bi-directional CRM deal and task deliverable cross-linking
+`,
+  },
+  {
+    id: 'doc-sec-rbac',
+    title: 'Enterprise Security, RBAC & ABAC Policy Directive',
+    classification: 'Confidential',
+    tags: ['Security', 'RBAC', 'ABAC', 'Compliance'],
+    authorName: 'Mikhail K.',
+    authorInitials: 'MK',
+    authorDepartment: 'Engineering',
+    createdAt: '2026-03-10T09:15:00.000Z',
+    updatedAt: '2026-03-29T11:45:00.000Z',
+    content: `# Enterprise Security & Access Control Directive
+
+## Overview
+This specification codifies the dual Role-Based Access Control (RBAC) and Attribute-Based Access Control (ABAC) security matrix across the Backnode OS cluster.
+
+## Role Hierarchies (RBAC)
+1. **OWNER**: Full administrative jurisdiction over tenant workspaces, billing, master credentials, and member revocation.
+2. **ADMIN**: Full operational authority over Task Spaces, CRM Pipelines, Contacts, and member invitation.
+3. **MEMBER**: Standard write access to assigned spaces, tasks, CRM deals, and internal documentation.
+4. **VIEWER**: Strict read-only observation mode. All creation, editing, status mutation, and deletion interfaces are disabled or hidden.
+
+## Attribute-Based Rules (ABAC)
+- **Document Classification**:
+  - *Public*: Accessible to any authenticated cluster user.
+  - *Internal*: Accessible across the organization; editable by Members, Admins, and Owners.
+  - *Confidential*: Restricted to matching department members or administrative personnel.
+  - *Restricted*: Strictly restricted to the document creator and workspace Owners.
+
+\`\`\`json
+{
+  "policy": "departmental_boundary_enforcement",
+  "default_action": "DENY",
+  "audit_logging": true
+}
+\`\`\`
+
+> [!IMPORTANT]
+> Any elevation of privileges must be authorized through cryptographic multi-party signature protocols.
+`,
+  },
+  {
+    id: 'doc-design-tokens',
+    title: 'Obsidian & Electric Orange UI Design System Specification',
+    classification: 'Public',
+    tags: ['Design System', 'Tokens', 'UI/UX'],
+    authorName: 'Alex Wong',
+    authorInitials: 'AW',
+    authorDepartment: 'Design',
+    createdAt: '2026-03-05T08:00:00.000Z',
+    updatedAt: '2026-03-27T16:20:00.000Z',
+    content: `# Backnode OS UI Design System Specification
+
+## Visual Hierarchy & Color Tokens
+Our aesthetic philosophy centers around high-contrast technical instrumentation for mission-critical software operators.
+
+### Palette Tokens
+- **Canvas Base**: Pure Obsidian Pitch Black \`#09090b\`
+- **Surface Elevation 1**: Deep Obsidian \`#121214\`
+- **Surface Elevation 2**: Raised Component Panel \`#18181b\`
+- **Primary Electric Orange**: \`#ea580c\` (Active states, primary CTAs)
+- **Vibrant Accent Orange**: \`#f97316\` (Live telemetry indicators, notification dots)
+- **Structural Stone Borders**: \`#27272a\`
+
+## Geometric Invariants
+> **RULE:** Every card, button, modal dialog, input field, tab pill, and dropdown **MUST** use exactly \`rounded-[6px]\`.
+> Banned: \`rounded-lg\`, \`rounded-xl\`, \`rounded-2xl\`.
+> Circular exceptions: User avatars (\`rounded-full\`) and status pulse dots.
+
+## Bento Grid Standard
+All dashboards must employ the Bento Grid layout pattern with modular spans:
+- \`col-span-1 row-span-1\`: Compact KPI tile
+- \`col-span-2 row-span-1\`: Progress banner or velocity sparkline
+- \`col-span-2 row-span-2\`: Activity streams & Kanban columns
+`,
+  },
+  {
+    id: 'doc-crm-strategy',
+    title: 'Q3 Sales Pipeline Strategy & Enterprise Expansion Plan',
+    classification: 'Restricted',
+    tags: ['CRM', 'Strategy', 'Revenue', 'Sales'],
+    authorName: 'Sarah Jenkins',
+    authorInitials: 'SJ',
+    authorDepartment: 'Sales',
+    createdAt: '2026-03-15T12:00:00.000Z',
+    updatedAt: '2026-03-29T09:00:00.000Z',
+    content: `# Q3 Enterprise Sales Pipeline Strategy
+
+## Target Milestones
+- **Annual Recurring Revenue Target**: $4.8M
+- **Average Deal Velocity**: Under 28 days for Enterprise Tier
+- **Target Pipeline Win Rate**: > 38%
+
+## Key Enterprise Opportunities
+1. **Apex Defense Systems**: Cloud Node Replication & Air-Gapped Deployment ($180,000 ARR)
+2. **NovaPay Global**: High-throughput transaction settlement pipeline ($95,000 ARR)
+3. **Hyperion Satellite**: Distributed ground-station synchronization ($65,000 ARR)
+
+## Deal Stage Governance
+- Every deal transitioning to *Contract & Legal* requires executive sign-off and mutual NDA verification.
+- Stalled deals past 14 days trigger automatic operator notifications in the CRM dashboard.
+`,
+  },
+];
+
 
 

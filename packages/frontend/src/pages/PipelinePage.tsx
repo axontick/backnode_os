@@ -121,6 +121,7 @@ export const PipelinePage: React.FC = () => {
           const pipeId = pipelineId || targetPipeline?.id || 'pipe-enterprise';
           navigate(`${spacePrefix}/crm/pipelines/${pipeId}/${view || 'board'}`);
         }}
+        onAdvanceDealStage={handleAdvanceDealStage}
       />
 
       {/* Deal Inspector Slide-Over */}

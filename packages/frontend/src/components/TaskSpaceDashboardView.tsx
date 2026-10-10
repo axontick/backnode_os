@@ -246,7 +246,7 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
                           <h3 className="font-bold text-sm text-zinc-100 tracking-tight font-headline truncate">
                             {folder.name}
                           </h3>
-                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-[4px] bg-zinc-800 text-zinc-400 font-semibold shrink-0">
+                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] bg-zinc-800 text-zinc-400 font-semibold shrink-0">
                             {folder.items?.length || 0} {folder.items?.length === 1 ? 'list' : 'lists'}
                           </span>
                         </div>
@@ -359,14 +359,14 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
                                 {subItem.name}
                               </span>
                               {subItem.status && (
-                                <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-[4px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/20">
+                                <span className="font-mono text-[9px] px-1.5 py-0.2 rounded-[6px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/20">
                                   {subItem.status}
                                 </span>
                               )}
                             </div>
 
                             <div className="flex items-center gap-2 shrink-0">
-                              <span className="font-mono text-[10px] text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded-[4px]">
+                              <span className="font-mono text-[10px] text-zinc-400 bg-zinc-800 px-1.5 py-0.5 rounded-[6px]">
                                 {subItem.taskCount} tasks
                               </span>
                               <span className="material-symbols-outlined text-[16px] text-zinc-500 group-hover:text-orange-400 transition-colors">

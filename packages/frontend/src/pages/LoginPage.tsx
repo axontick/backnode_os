@@ -5,15 +5,25 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { BacknodeLogo } from '../components/BacknodeLogo';
 
 export const LoginPage: React.FC = () => {
-  const { login, isAuthenticated } = useAuth();
+  const { login, forgotPassword, resetPassword, isAuthenticated } = useAuth();
   const { activeUserSpaceId, userSpaces } = useWorkspace();
   const navigate = useNavigate();
 
   const spaceId = activeUserSpaceId || userSpaces[0]?.id || 'space-main';
 
+  // Mode: login | forgot | reset
+  const [viewMode, setViewMode] = useState<'login' | 'forgot' | 'reset'>('login');
+
+  // Form states
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [resetToken, setResetToken] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
+  // UI state
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // If already authenticated, redirect to space dashboard
@@ -28,6 +38,7 @@ export const LoginPage: React.FC = () => {
       return;
     }
     setError(null);
+    setSuccessMessage(null);
     setIsSubmitting(true);
     try {
       await login({
@@ -37,6 +48,68 @@ export const LoginPage: React.FC = () => {
       navigate(`/space/${spaceId}/dashboard`);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Authentication failed. Please verify your credentials.';
+      setError(Array.isArray(msg) ? msg.join(', ') : msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleForgotPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) {
+      setError('Please enter your account email address.');
+      return;
+    }
+    setError(null);
+    setSuccessMessage(null);
+    setIsSubmitting(true);
+    try {
+      const res = await forgotPassword(email.trim());
+      setSuccessMessage(res.message || 'Password reset link has been dispatched.');
+      if (res.devToken) {
+        setResetToken(res.devToken);
+        // Advance to reset step with token pre-filled for convenience in development/testing
+        setTimeout(() => {
+          setViewMode('reset');
+        }, 1200);
+      }
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to request password reset.';
+      setError(Array.isArray(msg) ? msg.join(', ') : msg);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetToken || !newPassword) {
+      setError('Please provide the reset token and your new password.');
+      return;
+    }
+    if (newPassword.length < 6) {
+      setError('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+    setError(null);
+    setSuccessMessage(null);
+    setIsSubmitting(true);
+    try {
+      const res = await resetPassword({
+        token: resetToken.trim(),
+        newPassword,
+      });
+      setSuccessMessage(res.message || 'Password successfully updated! You can now sign in.');
+      setPassword(newPassword);
+      setTimeout(() => {
+        setViewMode('login');
+      }, 1500);
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message || 'Failed to reset password. The token may be expired or invalid.';
       setError(Array.isArray(msg) ? msg.join(', ') : msg);
     } finally {
       setIsSubmitting(false);
@@ -81,18 +154,35 @@ export const LoginPage: React.FC = () => {
 
         {/* Tab Header / Navigation */}
         <div className="flex px-6 pt-3 border-b border-[#27272a] bg-[#0c0a09]/50">
-          <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-orange-400 border-b-2 border-orange-500 bg-orange-950/20 rounded-t-[6px]">
+          <button
+            type="button"
+            onClick={() => {
+              setViewMode('login');
+              setError(null);
+              setSuccessMessage(null);
+            }}
+            className={`px-4 py-2 text-xs font-semibold uppercase tracking-wider transition-colors cursor-pointer ${
+              viewMode === 'login'
+                ? 'text-orange-400 border-b-2 border-orange-500 bg-orange-950/20 rounded-t-[6px]'
+                : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
             Sign In
-          </div>
+          </button>
           <Link
             to="/register"
             className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-zinc-400 hover:text-zinc-200 transition-colors"
           >
             Register
           </Link>
+          {viewMode !== 'login' && (
+            <div className="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-orange-400 border-b-2 border-orange-500 bg-orange-950/20 rounded-t-[6px]">
+              {viewMode === 'forgot' ? 'Forgot Password' : 'Reset Password'}
+            </div>
+          )}
         </div>
 
-        {/* Error Alert */}
+        {/* Alerts */}
         {error && (
           <div className="mx-6 mt-4 p-3 rounded-[6px] bg-red-950/60 border border-red-800/60 text-red-200 text-xs flex items-start gap-2 animate-in fade-in duration-150">
             <span className="text-red-400 font-bold">⚠️</span>
@@ -100,54 +190,204 @@ export const LoginPage: React.FC = () => {
           </div>
         )}
 
+        {successMessage && (
+          <div className="mx-6 mt-4 p-3 rounded-[6px] bg-emerald-950/60 border border-emerald-800/60 text-emerald-200 text-xs flex items-start gap-2 animate-in fade-in duration-150">
+            <span className="text-emerald-400 font-bold">✓</span>
+            <span className="flex-1">{successMessage}</span>
+          </div>
+        )}
+
         {/* Form Body */}
         <div className="p-6">
-          <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
-                Work Email
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="operator@company.com"
-                className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
-                required
-              />
-            </div>
+          {viewMode === 'login' && (
+            <form onSubmit={handleLoginSubmit} className="flex flex-col gap-4">
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
+                  Work Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="operator@company.com"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
+                  required
+                />
+              </div>
 
-            <div>
-              <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••••••"
-                className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
-                required
-              />
-            </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                    Password
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setViewMode('forgot');
+                      setError(null);
+                      setSuccessMessage(null);
+                    }}
+                    className="text-[11px] text-orange-400 hover:text-orange-300 hover:underline cursor-pointer"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••••••"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
+                  required
+                />
+              </div>
 
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="mt-2 w-full py-2.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-            >
-              {isSubmitting ? <span>Logging in...</span> : <span>Login to Backnode OS</span>}
-            </button>
-
-            <div className="text-center pt-2">
-              <Link
-                to="/register"
-                className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="mt-2 w-full py-2.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-semibold shadow-sm transition-all active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
               >
-                Need an account? <span className="underline font-semibold text-orange-400 hover:text-orange-300">Register</span>
-              </Link>
-            </div>
-          </form>
+                {isSubmitting ? <span>Logging in...</span> : <span>Login to Backnode OS</span>}
+              </button>
+
+              <div className="text-center pt-2">
+                <Link
+                  to="/register"
+                  className="text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+                >
+                  Need an account? <span className="underline font-semibold text-orange-400 hover:text-orange-300">Register</span>
+                </Link>
+              </div>
+            </form>
+          )}
+
+          {viewMode === 'forgot' && (
+            <form onSubmit={handleForgotPasswordSubmit} className="flex flex-col gap-4">
+              <div className="text-xs text-zinc-400 leading-relaxed">
+                Enter your registered work email. We will generate a cryptographic password reset token to authorize credential updates.
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
+                  Work Email
+                </label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="operator@company.com"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('login');
+                    setError(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="w-1/3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 text-xs font-semibold text-zinc-300 cursor-pointer transition-colors"
+                >
+                  Back
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-2/3 py-2.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? <span>Dispatching...</span> : <span>Send Reset Token</span>}
+                </button>
+              </div>
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('reset');
+                    setError(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="text-xs text-orange-400 hover:text-orange-300 hover:underline cursor-pointer"
+                >
+                  Already have a reset token? Enter it here →
+                </button>
+              </div>
+            </form>
+          )}
+
+          {viewMode === 'reset' && (
+            <form onSubmit={handleResetPasswordSubmit} className="flex flex-col gap-4">
+              <div className="text-xs text-zinc-400 leading-relaxed">
+                Provide your password reset token and choose a new secure password.
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
+                  Reset Token
+                </label>
+                <input
+                  type="text"
+                  value={resetToken}
+                  onChange={(e) => setResetToken(e.target.value)}
+                  placeholder="Paste 64-char reset token"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[12px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="At least 6 characters"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Re-type password"
+                  className="w-full px-3 py-2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-100 text-[13px] placeholder-zinc-500 focus:outline-none focus:border-orange-500 focus:ring-1 focus:ring-orange-500 transition-colors font-mono"
+                  required
+                />
+              </div>
+
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setViewMode('login');
+                    setError(null);
+                    setSuccessMessage(null);
+                  }}
+                  className="w-1/3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 text-xs font-semibold text-zinc-300 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-2/3 py-2.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white text-xs font-semibold shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  {isSubmitting ? <span>Updating...</span> : <span>Update Password</span>}
+                </button>
+              </div>
+            </form>
+          )}
         </div>
 
         {/* Footer Security Badges */}

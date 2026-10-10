@@ -86,10 +86,10 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             type="button"
             onClick={onClose}
             aria-label="Close modal"
-            className="flex items-center gap-1 text-zinc-400 hover:text-zinc-100 p-1 rounded-[4px] hover:bg-[#18181b] transition-colors cursor-pointer"
+            className="flex items-center gap-1 text-zinc-400 hover:text-zinc-100 p-1 rounded-[6px] hover:bg-[#18181b] transition-colors cursor-pointer"
             title="Close modal"
           >
-            <kbd className="font-mono text-[9px] bg-[#18181b] border border-[#27272a] px-1 py-0.5 rounded-[3px] text-zinc-400 font-medium">
+            <kbd className="font-mono text-[9px] bg-[#18181b] border border-[#27272a] px-1 py-0.5 rounded-[6px] text-zinc-400 font-medium">
               Esc
             </kbd>
             <span className="material-symbols-outlined text-[18px]" aria-hidden="true">close</span>
@@ -103,7 +103,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               {/* Impact Description & Folder Identifier */}
               <div className="text-zinc-300 text-[13px] leading-relaxed">
                 Are you sure you want to delete folder{' '}
-                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a] font-mono text-[12px]">
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
                   {activeTarget.item.name}
                 </span>
                 ? This will permanently remove the folder and its{' '}
@@ -124,7 +124,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             <>
               <div className="text-zinc-300 text-[13px] leading-relaxed">
                 Are you sure you want to delete sub-folder{' '}
-                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a] font-mono text-[12px]">
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
                   {activeTarget.item.name}
                 </span>
                 ? This will permanently remove this sub-folder section and its{' '}
@@ -144,7 +144,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             <>
               <div className="text-zinc-300 text-[13px] leading-relaxed">
                 Are you sure you want to delete pipeline sub-folder{' '}
-                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a] font-mono text-[12px]">
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
                   {activeTarget.item.name}
                 </span>
                 ?
@@ -164,7 +164,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               {/* Impact Description & Pipeline Identifier */}
               <div className="text-zinc-300 text-[13px] leading-relaxed">
                 Are you sure you want to delete sales pipeline{' '}
-                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a] font-mono text-[12px]">
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
                   {activeTarget.item.name}
                 </span>
                 ? Its{' '}
@@ -186,7 +186,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               {/* Impact Description & Deliverable Identifier */}
               <div className="text-zinc-300 text-[13px] leading-relaxed">
                 Are you sure you want to delete deliverable{' '}
-                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[4px] border border-[#27272a] font-mono text-[12px]">
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
                   {activeTarget.item.id} — {activeTarget.item.title}
                 </span>
                 ?
@@ -263,7 +263,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               className="border border-[#27272a] bg-[#121214] hover:bg-zinc-800 rounded-[6px] px-4 py-1.5 text-zinc-300 text-xs font-medium transition-all active:scale-[0.98] flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
               <span>Cancel</span>
-              <kbd className="font-mono text-[9px] text-zinc-400 bg-[#18181b] border border-[#27272a] px-1 rounded-[3px]">
+              <kbd className="font-mono text-[9px] text-zinc-400 bg-[#18181b] border border-[#27272a] px-1 rounded-[6px]">
                 Esc
               </kbd>
             </button>

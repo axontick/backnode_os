@@ -12,6 +12,8 @@ import {
   ListSettings,
   LoginDto,
   SignupDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
   AuthResponse,
   User,
   UserSpace,
@@ -48,6 +50,14 @@ export const authApi = {
   },
   signup: async (dto: SignupDto): Promise<AuthResponse> => {
     const res = await apiClient.post<AuthResponse>('/auth/signup', dto);
+    return res.data;
+  },
+  forgotPassword: async (dto: ForgotPasswordDto): Promise<{ message: string; devToken?: string }> => {
+    const res = await apiClient.post<{ message: string; devToken?: string }>('/auth/forgot-password', dto);
+    return res.data;
+  },
+  resetPassword: async (dto: ResetPasswordDto): Promise<{ message: string }> => {
+    const res = await apiClient.post<{ message: string }>('/auth/reset-password', dto);
     return res.data;
   },
   getMe: async (): Promise<User> => {
@@ -157,6 +167,14 @@ export const membersApi = {
   },
   delete: async (id: string): Promise<{ id: string; success: boolean }> => {
     const res = await apiClient.delete<{ id: string; success: boolean }>(`/members/${id}`);
+    return res.data;
+  },
+  changePassword: async (id: string, password: string): Promise<{ success: boolean; message: string }> => {
+    const res = await apiClient.patch<{ success: boolean; message: string }>(`/members/${id}/password`, { password });
+    return res.data;
+  },
+  toggleLogin: async (id: string, canLogin?: boolean): Promise<TeamMember> => {
+    const res = await apiClient.patch<TeamMember>(`/members/${id}/toggle-login`, { canLogin });
     return res.data;
   },
 };

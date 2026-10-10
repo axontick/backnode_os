@@ -57,6 +57,11 @@ export class DealsService {
       history = [],
       pipelineId = 'pipe-enterprise',
       subFolderId = null,
+      competitor = null,
+      lossReason = null,
+      wonReason = null,
+      cycleDays = 0,
+      closedAt = null,
     } = data;
 
     const deal = this.dealRepo.create({
@@ -73,6 +78,11 @@ export class DealsService {
       ownerInitials,
       tags,
       nextStep,
+      competitor: competitor || undefined,
+      lossReason: lossReason || undefined,
+      wonReason: wonReason || undefined,
+      cycleDays: Number(cycleDays) || 0,
+      closedAt: closedAt || undefined,
       linkedTasks,
       history,
       pipelineId,
@@ -103,6 +113,11 @@ export class DealsService {
     if (data.ownerInitials !== undefined) deal.ownerInitials = data.ownerInitials;
     if (data.tags !== undefined) deal.tags = data.tags;
     if (data.nextStep !== undefined) deal.nextStep = data.nextStep;
+    if (data.competitor !== undefined) deal.competitor = data.competitor;
+    if (data.lossReason !== undefined) deal.lossReason = data.lossReason;
+    if (data.wonReason !== undefined) deal.wonReason = data.wonReason;
+    if (data.cycleDays !== undefined) deal.cycleDays = Number(data.cycleDays) || 0;
+    if (data.closedAt !== undefined) deal.closedAt = data.closedAt;
     if (data.linkedTasks !== undefined) deal.linkedTasks = data.linkedTasks;
     if (data.history !== undefined) deal.history = data.history;
     if (data.pipelineId !== undefined) deal.pipelineId = data.pipelineId;

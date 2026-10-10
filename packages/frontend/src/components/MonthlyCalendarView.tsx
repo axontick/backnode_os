@@ -1,39 +1,56 @@
 import React, { useState } from 'react';
 import { TaskItem } from '../types';
+import { useAuth } from '../context/AuthContext';
+import {
+  formatMonthYear,
+  formatDateDisplay,
+  formatDateIso,
+  parseTaskDueDate,
+  generateMonthGrid,
+  CalendarGridCell,
+} from '../utils/dateUtils';
 
 interface MonthlyCalendarViewProps {
   tasks: TaskItem[];
   onSelectTask: (task: TaskItem) => void;
-  onOpenCreateTask: () => void;
+  onOpenCreateTask: (defaultDate?: string) => void;
   onNavigateToView: (view: 'board' | 'list' | 'table' | 'timeline' | 'calendar' | 'docs') => void;
+  onUpdateTask?: (task: TaskItem) => void;
 }
 
 export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
   tasks,
   onSelectTask,
   onOpenCreateTask,
+  onUpdateTask,
 }) => {
-  // Requirement: Do not open any task hover state until the user hovers!
+  const { effectiveRole } = useAuth();
+  const isReadOnly = effectiveRole === 'VIEWER';
+
+  // Base state defaults to October 2026 sprint horizon, with fully reactive dynamic date engine
+  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 9, 14));
+  const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null);
+  const [dragOverDateStr, setDragOverDateStr] = useState<string | null>(null);
   const [hoveredTask, setHoveredTask] = useState<TaskItem | null>(null);
   const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
 
-  // Group tasks by day in October 2026 (1 to 31)
-  const tasksByDay: Record<number, TaskItem[]> = {};
+  // Month grid cells for current active month
+  const calendarCells = generateMonthGrid(currentDate.getFullYear(), currentDate.getMonth());
+
+  // Group tasks by resolved ISO date string
+  const tasksByDateStr: Record<string, TaskItem[]> = {};
 
   tasks.forEach((task, index) => {
-    let day = ((index * 3 + 2) % 30) + 1; // default fallback distributed in month
+    // If task has dueDate, parse it; fallback to distributed day in Oct 2026
+    const fallbackDay = ((index * 3 + 2) % 28) + 1;
+    const fallbackDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), fallbackDay);
+    const resolvedDate = parseTaskDueDate(task.dueDate, fallbackDate);
+    const dateStr = formatDateIso(resolvedDate);
 
-    if (task.dueDate) {
-      const match = task.dueDate.match(/\b([1-9]|[12][0-9]|3[01])\b/);
-      if (match) {
-        day = parseInt(match[1], 10);
-      }
+    if (!tasksByDateStr[dateStr]) {
+      tasksByDateStr[dateStr] = [];
     }
-
-    if (!tasksByDay[day]) {
-      tasksByDay[day] = [];
-    }
-    tasksByDay[day].push(task);
+    tasksByDateStr[dateStr].push(task);
   });
 
   const getStatusDot = (status: TaskItem['status']) => {
@@ -62,26 +79,37 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
     }
   };
 
-  // 35 Calendar Cells for October 2026:
-  // Week 1: Sep 28, 29, 30, Oct 1, 2, 3, 4
-  // Week 2: Oct 5-11
-  // Week 3: Oct 12-18 (Oct 14 is TODAY)
-  // Week 4: Oct 19-25
-  // Week 5: Oct 26-Nov 1
-  const calendarDays = [
-    { dayNumber: 28, isCurrentMonth: false },
-    { dayNumber: 29, isCurrentMonth: false },
-    { dayNumber: 30, isCurrentMonth: false },
-    ...Array.from({ length: 31 }, (_, i) => ({ dayNumber: i + 1, isCurrentMonth: true })),
-    { dayNumber: 1, isCurrentMonth: false },
-  ];
+  // Month navigation handlers
+  const handlePrevMonth = () => {
+    setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate((prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date(2026, 9, 14));
+  };
+
+  // Drag and drop reschedule commit
+  const handleDropOnCell = (cell: CalendarGridCell) => {
+    if (!draggedTaskId || !onUpdateTask) return;
+    const task = tasks.find((t) => t.id === draggedTaskId);
+    if (!task) return;
+
+    const newDueDate = formatDateDisplay(cell.date);
+    onUpdateTask({ ...task, dueDate: newDueDate });
+    setDraggedTaskId(null);
+    setDragOverDateStr(null);
+  };
 
   const urgentCount = tasks.filter((t) => t.priority === 'Urgent').length;
   const doneCount = tasks.filter((t) => t.status === 'Done').length;
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden select-none text-xs">
-      {/* Calendar Controls & Month Switcher Bar */}
+      {/* 1. Calendar Controls & Month Switcher Bar */}
       <div className="px-6 py-2 bg-[#121214] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11">
         {/* Left: View Title & Record Count */}
         <div className="flex items-center gap-2">
@@ -97,16 +125,20 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
           <div className="flex items-center bg-[#18181b] border border-[#27272a] rounded-[6px] px-2 py-0.5 shadow-sm">
             <button
               type="button"
-              className="p-1 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-[4px] transition-colors flex items-center cursor-pointer"
+              onClick={handlePrevMonth}
+              className="p-1 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-[6px] transition-colors flex items-center cursor-pointer"
+              title="Previous Month"
             >
               <span className="material-symbols-outlined text-[16px]">chevron_left</span>
             </button>
-            <span className="font-bold px-2.5 tracking-tight text-zinc-100 font-mono text-[11px]">
-              October 2026
+            <span className="font-bold px-2.5 tracking-tight text-zinc-100 font-mono text-[11px] min-w-[110px] text-center">
+              {formatMonthYear(currentDate)}
             </span>
             <button
               type="button"
-              className="p-1 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-[4px] transition-colors flex items-center cursor-pointer"
+              onClick={handleNextMonth}
+              className="p-1 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-100 rounded-[6px] transition-colors flex items-center cursor-pointer"
+              title="Next Month"
             >
               <span className="material-symbols-outlined text-[16px]">chevron_right</span>
             </button>
@@ -114,22 +146,27 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
 
           <button
             type="button"
+            onClick={handleToday}
             className="px-2.5 py-1 text-xs font-medium border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 rounded-[6px] shadow-sm text-zinc-200 transition-colors cursor-pointer"
+            title="Reset to Today"
           >
             Today
           </button>
 
-          <div className="h-4 w-px bg-[#27272a]"></div>
-
-          {/* Primary CTA */}
-          <button
-            type="button"
-            onClick={onOpenCreateTask}
-            className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs px-3.5 py-1.5 rounded-[6px] shadow-sm active:scale-[0.98] transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">add</span>
-            <span>Create Task</span>
-          </button>
+          {!isReadOnly && (
+            <>
+              <div className="h-4 w-px bg-[#27272a]"></div>
+              {/* Primary CTA */}
+              <button
+                type="button"
+                onClick={() => onOpenCreateTask()}
+                className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white font-medium text-xs px-3.5 py-1.5 rounded-[6px] shadow-sm active:scale-[0.98] transition-all cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">add</span>
+                <span>Create Task</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -144,79 +181,138 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
         <div className="text-zinc-600">SUN</div>
       </div>
 
-      {/* 2. Monthly Calendar Grid (5 Weeks x 7 Columns) */}
-      <div className="flex-1 grid grid-cols-7 grid-rows-5 gap-px bg-[#27272a] p-px overflow-y-auto relative">
-        {calendarDays.map((cell, idx) => {
-          const isToday = cell.isCurrentMonth && cell.dayNumber === 14;
-          const dayTasks = cell.isCurrentMonth ? tasksByDay[cell.dayNumber] || [] : [];
+      {/* 2. Monthly Calendar Grid (5 or 6 Weeks x 7 Columns) */}
+      <div className="flex-1 grid grid-cols-7 gap-px bg-[#27272a] p-px overflow-y-auto relative auto-rows-fr">
+        {calendarCells.map((cell, idx) => {
+          const dayTasks = tasksByDateStr[cell.dateStr] || [];
           const isWeekend = idx % 7 === 5 || idx % 7 === 6;
-
-          if (!cell.isCurrentMonth) {
-            return (
-              <div
-                key={`other-${idx}`}
-                className="bg-[#121214]/60 p-2 flex flex-col justify-between opacity-30 select-none min-h-[90px]"
-              >
-                <span className="font-mono text-[11px] text-zinc-500">{cell.dayNumber}</span>
-              </div>
-            );
-          }
+          const isDragOver = dragOverDateStr === cell.dateStr;
 
           return (
             <div
-              key={`day-${cell.dayNumber}`}
-              className={`p-2 flex flex-col gap-1.5 transition-colors relative min-h-[90px] overflow-hidden ${
-                isToday
+              key={cell.dateStr + '-' + idx}
+              onDragOver={(e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragOverDateStr !== cell.dateStr) {
+                  setDragOverDateStr(cell.dateStr);
+                }
+              }}
+              onDragLeave={(e) => {
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                if (dragOverDateStr === cell.dateStr) {
+                  setDragOverDateStr(null);
+                }
+              }}
+              onDrop={(e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                handleDropOnCell(cell);
+              }}
+              onClick={(e) => {
+                if (e.target === e.currentTarget && !isReadOnly) {
+                  onOpenCreateTask(cell.dateStr);
+                }
+              }}
+              className={`p-2 flex flex-col gap-1.5 transition-all relative min-h-[100px] overflow-hidden group/cell ${
+                isDragOver
+                  ? 'border-2 border-orange-500 bg-orange-950/40 ring-1 ring-orange-500/50 shadow-md'
+                  : cell.isToday
                   ? 'bg-[#18181b] border border-orange-500/60 shadow-xs'
+                  : !cell.isCurrentMonth
+                  ? 'bg-[#121214]/50 opacity-40 hover:opacity-60'
                   : isWeekend
-                  ? 'bg-[#0c0a09]/70 hover:bg-[#121214]'
+                  ? 'bg-[#0c0a09]/80 hover:bg-[#121214]'
                   : 'bg-[#121214] hover:bg-[#18181b]/70'
               }`}
             >
               {/* Day Header */}
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between pointer-events-none">
                 <span
                   className={`font-mono text-[11px] font-semibold ${
-                    isToday ? 'text-orange-400 font-bold' : isWeekend ? 'text-zinc-500' : 'text-zinc-200'
+                    cell.isToday
+                      ? 'text-orange-400 font-bold'
+                      : isWeekend
+                      ? 'text-zinc-500'
+                      : cell.isCurrentMonth
+                      ? 'text-zinc-200'
+                      : 'text-zinc-600'
                   }`}
                 >
                   {String(cell.dayNumber).padStart(2, '0')}
                 </span>
-                {isToday && (
-                  <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 rounded-[4px] bg-orange-600 text-white shadow-xs">
-                    TODAY
-                  </span>
-                )}
+
+                <div className="flex items-center gap-1 pointer-events-auto">
+                  {cell.isToday && (
+                    <span className="font-mono text-[9px] font-bold px-1.5 py-0.2 rounded-[6px] bg-orange-600 text-white shadow-xs">
+                      TODAY
+                    </span>
+                  )}
+                  {!isReadOnly && cell.isCurrentMonth && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onOpenCreateTask(cell.dateStr);
+                      }}
+                      className="opacity-0 group-hover/cell:opacity-100 p-0.5 hover:bg-zinc-800 text-zinc-500 hover:text-orange-400 rounded-[6px] transition-all cursor-pointer flex items-center"
+                      title={`Add task for ${formatDateDisplay(cell.date)}`}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">add</span>
+                    </button>
+                  )}
+                </div>
               </div>
 
               {/* Day Tasks List */}
               <div className="flex-1 flex flex-col gap-1 overflow-y-auto custom-scrollbar">
-                {dayTasks.map((t) => (
-                  <div
-                    key={t.id}
-                    onClick={() => onSelectTask(t)}
-                    onMouseEnter={(e) => {
-                      const rect = e.currentTarget.getBoundingClientRect();
-                      setHoverPosition({ x: rect.left, y: rect.bottom + 4 });
-                      setHoveredTask(t);
-                    }}
-                    onMouseLeave={() => {
-                      setHoveredTask(null);
-                      setHoverPosition(null);
-                    }}
-                    className="px-2 py-1 rounded-[6px] bg-[#18181b] border border-[#27272a] text-[11px] flex items-center justify-between gap-1.5 hover:border-orange-500/60 hover:bg-orange-950/20 cursor-pointer transition-all shadow-xs group"
-                  >
-                    <div className="flex items-center gap-1.5 truncate min-w-0">
-                      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${getStatusDot(t.status)}`} />
-                      <span className="truncate font-medium text-zinc-200 group-hover:text-zinc-100">
-                        {t.title}
+                {dayTasks.map((t) => {
+                  const isThisDragging = draggedTaskId === t.id;
+
+                  return (
+                    <div
+                      key={t.id}
+                      draggable={!isReadOnly}
+                      onDragStart={(e) => {
+                        if (isReadOnly) return;
+                        e.dataTransfer.setData('text/plain', t.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                        setDraggedTaskId(t.id);
+                      }}
+                      onDragEnd={() => {
+                        setDraggedTaskId(null);
+                        setDragOverDateStr(null);
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectTask(t);
+                      }}
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoverPosition({ x: rect.left, y: rect.bottom + 4 });
+                        setHoveredTask(t);
+                      }}
+                      onMouseLeave={() => {
+                        setHoveredTask(null);
+                        setHoverPosition(null);
+                      }}
+                      className={`px-2 py-1 rounded-[6px] bg-[#18181b] border border-[#27272a] text-[11px] flex items-center justify-between gap-1.5 hover:border-orange-500/60 hover:bg-orange-950/20 transition-all shadow-xs group ${
+                        isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
+                      } ${isThisDragging ? 'opacity-30 ring-1 ring-orange-500' : ''}`}
+                    >
+                      <div className="flex items-center gap-1.5 truncate min-w-0">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${getStatusDot(t.status)}`} />
+                        <span className="truncate font-medium text-zinc-200 group-hover:text-zinc-100">
+                          {t.title}
+                        </span>
+                      </div>
+                      <span className="font-mono text-[9px] text-zinc-500 group-hover:text-orange-400 shrink-0">
+                        {t.id}
                       </span>
                     </div>
-                    <span className="font-mono text-[9px] text-zinc-500 group-hover:text-orange-400 shrink-0">
-                      {t.id}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );
@@ -237,7 +333,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
           <div className="flex items-start justify-between pb-2 border-b border-[#27272a]">
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[10px] text-orange-400 bg-orange-950/50 border border-orange-500/30 px-2 py-0.5 rounded-[4px] font-semibold">
+                <span className="font-mono text-[10px] text-orange-400 bg-orange-950/50 border border-orange-500/30 px-2 py-0.5 rounded-[6px] font-semibold">
                   {hoveredTask.id}
                 </span>
                 <span className={`w-1.5 h-1.5 rounded-full ${getStatusDot(hoveredTask.status)}`} />
@@ -247,7 +343,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                 {hoveredTask.title}
               </h4>
             </div>
-            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded-[4px] font-semibold ${getPriorityBadge(hoveredTask.priority)}`}>
+            <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded-[6px] font-semibold ${getPriorityBadge(hoveredTask.priority)}`}>
               {hoveredTask.priority}
             </span>
           </div>
@@ -277,7 +373,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
           </div>
 
           <div className="pt-2 border-t border-[#27272a] text-[10px] font-mono text-zinc-500 text-center">
-            Click deliverable to open detail inspector
+            Click deliverable to open detail inspector • Drag to reschedule
           </div>
         </div>
       )}
@@ -301,10 +397,10 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
         </div>
 
         <div className="flex items-center gap-2 text-zinc-500">
-          <span className="material-symbols-outlined text-[13px] text-emerald-400">bolt</span>
-          <span>Local Sync: <strong className="text-zinc-200">Synchronized</strong></span>
+          <span className="material-symbols-outlined text-[13px] text-emerald-400">calendar_month</span>
+          <span>Schedule Engine: <strong className="text-zinc-200">Interactive</strong></span>
           <span className="text-zinc-700">|</span>
-          <span>Query Engine: <strong className="text-orange-400 font-mono">0.08ms</strong> latency</span>
+          <span>Drag &amp; Drop: <strong className="text-orange-400 font-mono">Active</strong></span>
         </div>
       </footer>
     </div>

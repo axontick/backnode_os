@@ -2,7 +2,7 @@ export type PriorityLevel = 'Urgent' | 'High' | 'Medium' | 'Low';
 
 export type TaskStatus = 'Backlog' | 'In Progress' | 'In Review' | 'Blocked' | 'Done';
 
-export type UserRole = 'OWNER' | 'ADMIN' | 'MEMBER';
+export type UserRole = 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
 
 export interface Account {
   id: string;
@@ -10,6 +10,8 @@ export interface Account {
   slug: string;
   color?: string;
   icon?: string;
+  ownerEmail?: string;
+  ownerId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -20,6 +22,10 @@ export interface User {
   name: string;
   role: UserRole | string;
   accountId: string;
+  status?: 'ACTIVE' | 'DISABLED' | 'SUSPENDED' | string;
+  canLogin?: boolean;
+  allowedPages?: string[];
+  allowedActions?: string[];
   account?: Account;
   createdAt?: string;
   updatedAt?: string;
@@ -74,8 +80,11 @@ export interface TeamMember {
   accountId?: string;
   email?: string;
   accessLevel?: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER' | string;
-  status?: 'Active' | 'Invited' | 'Suspended' | string;
+  status?: 'Active' | 'Invited' | 'Suspended' | 'Disabled' | string;
   invitedAt?: string;
+  canLogin?: boolean;
+  allowedPages?: string[];
+  allowedActions?: ('read' | 'write' | 'delete' | 'publish' | 'admin' | string)[];
 }
 
 export interface SubtaskItem {
@@ -235,7 +244,7 @@ export interface CrmDeal {
   company: string;
   value: number;
   formattedValue: string;
-  stage: 'Qualified Lead' | 'Discovery & Demo' | 'Proposal Submitted' | 'Contract & Legal' | 'Closed Won';
+  stage: 'Qualified Lead' | 'Discovery & Demo' | 'Proposal Submitted' | 'Contract & Legal' | 'Closed Won' | 'Closed Lost' | string;
   probability: number;
   targetCloseDate: string;
   contact: {
@@ -253,6 +262,12 @@ export interface CrmDeal {
   nextStep?: string;
   pipelineId?: string;
   subFolderId?: string;
+  competitor?: string;
+  lossReason?: string;
+  wonReason?: string;
+  cycleDays?: number;
+  closedAt?: string;
+  createdAt?: string;
   linkedTasks: CrmLinkedTask[];
   history: CrmHistoryEvent[];
   accountId?: string;
@@ -327,5 +342,20 @@ export interface DirectoryContact {
   accountId?: string;
 }
 
+export type DocClassification = 'Public' | 'Internal' | 'Confidential' | 'Restricted';
 
-
+export interface DocItem {
+  id: string;
+  title: string;
+  content: string;
+  folderId?: string;
+  spaceId?: string;
+  tags: string[];
+  classification: DocClassification;
+  authorName: string;
+  authorInitials: string;
+  authorDepartment?: string;
+  createdAt: string;
+  updatedAt: string;
+  accountId?: string;
+}

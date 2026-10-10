@@ -92,7 +92,7 @@ export const NewListModal: React.FC<NewListModalProps> = ({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 rounded-[4px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] transition-colors cursor-pointer"
+            className="w-7 h-7 rounded-[6px] flex items-center justify-center text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] transition-colors cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
@@ -187,7 +187,7 @@ export const NewListModal: React.FC<NewListModalProps> = ({
                     </span>
                   </div>
                 </div>
-                <span className="font-mono text-[10px] px-2 py-0.5 rounded-[4px] bg-zinc-800 text-zinc-400">
+                <span className="font-mono text-[10px] px-2 py-0.5 rounded-[6px] bg-zinc-800 text-zinc-400">
                   {selectedFolder.items?.length || 0} existing lists
                 </span>
               </div>
