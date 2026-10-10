@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   CrmDeal,
   CrmPipeline,
@@ -22,8 +22,8 @@ interface PipelineCrmViewProps {
   onSelectDeal: (deal: CrmDeal) => void;
   onOpenNewDeal: (stage?: CrmDeal['stage']) => void;
   onOpenSettings?: (tab?: 'general' | 'stages') => void;
-  currentView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
-  onSelectView?: (view: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings') => void;
+  currentView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived';
+  onSelectView?: (view: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived') => void;
   crmSettings?: CrmPipelineSettingsType;
   crmStages?: CrmStageDefinition[];
   onUpdateCrmSettings?: (newSettings: CrmPipelineSettingsType) => void;
@@ -36,6 +36,7 @@ interface PipelineCrmViewProps {
   activePipelineSubFolderId?: string | null;
   onClearSubFolderFilter?: () => void;
   onAdvanceDealStage?: (dealId: string, newStage: CrmDeal['stage']) => void;
+  onUpdateDeal?: (deal: CrmDeal) => void;
 }
 
 export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
@@ -62,6 +63,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   activePipelineSubFolderId,
   onClearSubFolderFilter,
   onAdvanceDealStage,
+  onUpdateDeal,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
@@ -76,17 +78,103 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   const [isSortDropdownOpen, setIsSortDropdownOpen] = useState(false);
   const [isStageFilterOpen, setIsStageFilterOpen] = useState(false);
   const [isOwnerFilterOpen, setIsOwnerFilterOpen] = useState(false);
+  const [lastActiveView, setLastActiveView] = useState<'board' | 'list' | 'table'>('board');
 
-  // Fallback pipeline object if not provided
-  const activePipeline: CrmPipeline = pipeline || {
-    id: 'pipe-enterprise',
-    name: 'Enterprise Deals 2026',
-    description: 'High ARR strategic software licenses and cloud migration contracts.',
-    icon: 'leaderboard',
-    color: '#ea580c',
-    dealCount: deals.length,
-    totalValue: deals.reduce((sum, d) => sum + d.value, 0),
-  };
+  useEffect(() => {
+    if (currentView === 'board' || currentView === 'list' || currentView === 'table') {
+      setLastActiveView(currentView);
+    }
+  }, [currentView]);
+
+  const groupDropdownRef = useRef<HTMLDivElement>(null);
+  const sortDropdownRef = useRef<HTMLDivElement>(null);
+  const stageFilterRef = useRef<HTMLDivElement>(null);
+  const ownerFilterRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on outside click, blur/focusout, or Escape key
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (groupDropdownRef.current && !groupDropdownRef.current.contains(target)) {
+        setIsGroupDropdownOpen(false);
+      }
+      if (sortDropdownRef.current && !sortDropdownRef.current.contains(target)) {
+        setIsSortDropdownOpen(false);
+      }
+      if (stageFilterRef.current && !stageFilterRef.current.contains(target)) {
+        setIsStageFilterOpen(false);
+      }
+      if (ownerFilterRef.current && !ownerFilterRef.current.contains(target)) {
+        setIsOwnerFilterOpen(false);
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsGroupDropdownOpen(false);
+        setIsSortDropdownOpen(false);
+        setIsStageFilterOpen(false);
+        setIsOwnerFilterOpen(false);
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      const target = e.relatedTarget as Node | null;
+      if (groupDropdownRef.current && target && !groupDropdownRef.current.contains(target)) {
+        setIsGroupDropdownOpen(false);
+      }
+      if (sortDropdownRef.current && target && !sortDropdownRef.current.contains(target)) {
+        setIsSortDropdownOpen(false);
+      }
+      if (stageFilterRef.current && target && !stageFilterRef.current.contains(target)) {
+        setIsStageFilterOpen(false);
+      }
+      if (ownerFilterRef.current && target && !ownerFilterRef.current.contains(target)) {
+        setIsOwnerFilterOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('focusout', handleFocusOut);
+    };
+  }, []);
+
+  // Pipeline matching deals
+  const targetPipelineId = pipeline?.id || 'pipe-enterprise';
+  const pipelineDeals = deals.filter(
+    (d) =>
+      !targetPipelineId ||
+      d.pipelineId === targetPipelineId ||
+      (!d.pipelineId && targetPipelineId === 'pipe-enterprise')
+  );
+
+  // Active (non-archived) deals for all calculations, pipeline board, list, and table
+  const activePipelineDeals = pipelineDeals.filter((d) => !d.isArchived);
+
+  // Dedicated archived deals
+  const archivedDeals = pipelineDeals.filter((d) => Boolean(d.isArchived));
+
+  // Pipeline object reflecting active deal calculations
+  const activePipeline: CrmPipeline = pipeline
+    ? {
+        ...pipeline,
+        dealCount: activePipelineDeals.length,
+        totalValue: activePipelineDeals.reduce((sum, d) => sum + d.value, 0),
+      }
+    : {
+        id: 'pipe-enterprise',
+        name: 'Enterprise Deals 2026',
+        description: 'High ARR strategic software licenses and cloud migration contracts.',
+        icon: 'leaderboard',
+        color: '#ea580c',
+        dealCount: activePipelineDeals.length,
+        totalValue: activePipelineDeals.reduce((sum, d) => sum + d.value, 0),
+      };
 
   const stages: {
     name: CrmDeal['stage'];
@@ -99,45 +187,47 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
       name: 'Qualified Lead',
       title: 'Qualified Lead',
       dotColor: 'bg-zinc-500',
-      totalFormatted: '$85k',
+      totalFormatted: `$${Math.round(
+        activePipelineDeals.filter((d) => d.stage === 'Qualified Lead').reduce((sum, d) => sum + d.value, 0) / 1000
+      )}k`,
     },
     {
       name: 'Discovery & Demo',
       title: 'Discovery & Demo',
       dotColor: 'bg-blue-500',
-      totalFormatted: '$145k',
+      totalFormatted: `$${Math.round(
+        activePipelineDeals.filter((d) => d.stage === 'Discovery & Demo').reduce((sum, d) => sum + d.value, 0) / 1000
+      )}k`,
     },
     {
       name: 'Proposal Submitted',
       title: 'Proposal Submitted',
       dotColor: 'bg-orange-500',
-      totalFormatted: '$160k',
+      totalFormatted: `$${Math.round(
+        activePipelineDeals.filter((d) => d.stage === 'Proposal Submitted').reduce((sum, d) => sum + d.value, 0) / 1000
+      )}k`,
       isHighlighted: true,
     },
     {
       name: 'Contract & Legal',
       title: 'Contract Review',
       dotColor: 'bg-amber-500',
-      totalFormatted: '$110k',
+      totalFormatted: `$${Math.round(
+        activePipelineDeals.filter((d) => d.stage === 'Contract & Legal').reduce((sum, d) => sum + d.value, 0) / 1000
+      )}k`,
     },
     {
       name: 'Closed Won',
       title: 'Closed Won',
       dotColor: 'bg-emerald-500',
-      totalFormatted: '$40k',
+      totalFormatted: `$${Math.round(
+        activePipelineDeals.filter((d) => d.stage === 'Closed Won').reduce((sum, d) => sum + d.value, 0) / 1000
+      )}k`,
     },
   ];
 
-  // Pipeline matching deals
-  const pipelineDeals = deals.filter(
-    (d) =>
-      !activePipeline.id ||
-      d.pipelineId === activePipeline.id ||
-      (!d.pipelineId && activePipeline.id === 'pipe-enterprise')
-  );
-
-  // Unique owners for owner filter and owner grouping
-  const allOwners = Array.from(new Set(pipelineDeals.map((d) => d.owner)));
+  // Unique owners for owner filter and owner grouping based strictly on active deals
+  const allOwners = Array.from(new Set(activePipelineDeals.map((d) => d.owner)));
 
   // Active CRM Sub-folder if filtered (recursively resolved at any depth)
   const activePipelineSubFolder = findPipelineSubFolder(
@@ -145,8 +235,8 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     activePipelineSubFolderId
   );
 
-  // Filter deals
-  const filteredDeals = pipelineDeals.filter((d) => {
+  // Filter active deals
+  const filteredDeals = activePipelineDeals.filter((d) => {
     // Search query: checks internal search or top bar global search
     const activeSearch = searchFilter.trim() || globalSearchQuery?.trim() || '';
     if (activeSearch) {
@@ -177,6 +267,22 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     if (quickActionFilter === 'proposal' && d.stage !== 'Proposal Submitted' && d.stage !== 'Discovery & Demo') return false;
     if (quickActionFilter === 'won' && d.stage !== 'Closed Won') return false;
 
+    return true;
+  });
+
+  // Filter archived deals
+  const filteredArchivedDeals = archivedDeals.filter((d) => {
+    const activeSearch = searchFilter.trim() || globalSearchQuery?.trim() || '';
+    if (activeSearch) {
+      const q = activeSearch.toLowerCase();
+      const matchesSearch =
+        d.title.toLowerCase().includes(q) ||
+        d.company.toLowerCase().includes(q) ||
+        (d.contact?.name && d.contact.name.toLowerCase().includes(q)) ||
+        d.owner.toLowerCase().includes(q) ||
+        (d.tags && d.tags.some((tg) => tg.toLowerCase().includes(q)));
+      if (!matchesSearch) return false;
+    }
     return true;
   });
 
@@ -228,7 +334,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     activePipelineSubFolderId
   );
 
-  const handleClearCrmFilters = () => {
+  const handleClearCrmFilters = (restoreView = true) => {
     setSearchFilter('');
     setQuickActionFilter(null);
     setStageFilter(null);
@@ -239,12 +345,15 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
     if (onClearGlobalFilters) {
       onClearGlobalFilters();
     }
+    if (restoreView && currentView === 'archived' && onSelectView) {
+      onSelectView(lastActiveView || 'board');
+    }
   };
 
   // Dynamic Board Columns depending on groupBy ('stage' | 'owner' | 'probability')
   const boardColumns =
     groupBy === 'owner'
-      ? allOwners.map((ownerName, idx) => ({
+      ? (allOwners.length > 0 ? allOwners : ['Unassigned']).map((ownerName, idx) => ({
           key: ownerName,
           title: ownerName,
           dotColor:
@@ -343,6 +452,20 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               <span>Board</span>
             </button>
             <button
+              onClick={() => onSelectView?.('list')}
+              className="py-2.5 flex items-center gap-1.5 text-zinc-400 hover:text-zinc-100 transition-colors h-full"
+            >
+              <span className="material-symbols-outlined text-[16px]">format_list_bulleted</span>
+              <span>List</span>
+            </button>
+            <button
+              onClick={() => onSelectView?.('table')}
+              className="py-2.5 flex items-center gap-1.5 text-zinc-400 hover:text-zinc-100 transition-colors h-full"
+            >
+              <span className="material-symbols-outlined text-[16px]">table_chart</span>
+              <span>Table</span>
+            </button>
+            <button
               onClick={() => onSelectView?.('analytics')}
               className="py-2.5 flex items-center gap-1.5 border-b-2 border-orange-500 text-orange-400 font-semibold transition-colors h-full"
             >
@@ -355,6 +478,18 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             >
               <span className="material-symbols-outlined text-[16px]">tune</span>
               <span>Pipeline Settings</span>
+            </button>
+            <button
+              onClick={() => onSelectView?.('archived')}
+              className="py-2.5 flex items-center gap-1.5 text-zinc-400 hover:text-zinc-100 transition-colors h-full"
+            >
+              <span className="material-symbols-outlined text-[16px]">archive</span>
+              <span>Archived</span>
+              {archivedDeals.length > 0 && (
+                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-400 font-bold">
+                  {archivedDeals.length}
+                </span>
+              )}
             </button>
           </div>
         </div>
@@ -519,13 +654,29 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
               <span className="material-symbols-outlined text-[16px]">tune</span>
               <span>Pipeline Settings</span>
             </button>
+            <button
+              onClick={() => onSelectView && onSelectView('archived')}
+              className={`py-2.5 flex items-center gap-1.5 transition-colors h-full ${
+                currentView === 'archived'
+                  ? 'border-b-2 border-orange-500 text-orange-400 font-semibold'
+                  : 'text-zinc-400 hover:text-zinc-100'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">archive</span>
+              <span>Archived</span>
+              {archivedDeals.length > 0 && (
+                <span className="font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] bg-orange-950/40 border border-orange-500/30 text-orange-400 font-bold">
+                  {archivedDeals.length}
+                </span>
+              )}
+            </button>
           </div>
         </div>
 
         {/* Sub-controls Right Side with Interactive Dropdowns */}
         <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-400">
           {/* Group By Dropdown */}
-          <div className="relative">
+          <div ref={groupDropdownRef} className="relative">
             <button
               onClick={() => setIsGroupDropdownOpen(!isGroupDropdownOpen)}
               className="h-7 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-200 font-semibold flex items-center gap-1 hover:border-orange-500/40 transition-colors cursor-pointer"
@@ -569,7 +720,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           </div>
 
           {/* Sort By Dropdown */}
-          <div className="relative">
+          <div ref={sortDropdownRef} className="relative">
             <button
               onClick={() => setIsSortDropdownOpen(!isSortDropdownOpen)}
               className="h-7 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-200 font-semibold flex items-center gap-1 hover:border-orange-500/40 transition-colors cursor-pointer"
@@ -649,16 +800,38 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
 
           {/* All Deals Pill */}
           <button
-            onClick={handleClearCrmFilters}
+            onClick={() => {
+              handleClearCrmFilters(true);
+              if (currentView === 'archived' && onSelectView) {
+                onSelectView(lastActiveView || 'board');
+              }
+            }}
             className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
-              !hasActiveCrmFilters
+              !hasActiveCrmFilters && currentView !== 'archived'
                 ? 'bg-orange-600 text-white border-orange-600 font-semibold shadow-xs'
                 : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
             }`}
           >
             <span className="leading-none">All Deals</span>
-            <span className="font-mono text-[10px] opacity-80 leading-none">({pipelineDeals.length})</span>
+            <span className="font-mono text-[10px] opacity-80 leading-none">({activePipelineDeals.length})</span>
           </button>
+
+          {/* Archived Deals Pill */}
+          {archivedDeals.length > 0 && (
+            <button
+              onClick={() => onSelectView && onSelectView('archived')}
+              className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
+                currentView === 'archived'
+                  ? 'bg-orange-600 text-white border-orange-600 font-semibold shadow-xs'
+                  : 'bg-[#18181b] border-[#27272a] text-orange-400 hover:bg-orange-950/30 hover:border-orange-500/40'
+              }`}
+              title="View archived deals"
+            >
+              <span className="material-symbols-outlined text-[13px] leading-none shrink-0">archive</span>
+              <span className="leading-none">Archived</span>
+              <span className="font-mono text-[10px] opacity-90 leading-none font-bold">({archivedDeals.length})</span>
+            </button>
+          )}
 
           {/* Active Sub-Folder Pill */}
           {activePipelineSubFolder && (
@@ -681,6 +854,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {/* High Value (>$100k) */}
           <button
             onClick={() => {
+              if (currentView === 'archived' && onSelectView) {
+                onSelectView(lastActiveView || 'board');
+              }
               setQuickActionFilter(quickActionFilter === 'high-value' ? null : 'high-value');
             }}
             className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
@@ -696,6 +872,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {/* Proposal / Demo */}
           <button
             onClick={() => {
+              if (currentView === 'archived' && onSelectView) {
+                onSelectView(lastActiveView || 'board');
+              }
               setQuickActionFilter(quickActionFilter === 'proposal' ? null : 'proposal');
             }}
             className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
@@ -711,6 +890,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {/* Closing Soon */}
           <button
             onClick={() => {
+              if (currentView === 'archived' && onSelectView) {
+                onSelectView(lastActiveView || 'board');
+              }
               setQuickActionFilter(quickActionFilter === 'closing-soon' ? null : 'closing-soon');
             }}
             className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
@@ -726,6 +908,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {/* Closed Won */}
           <button
             onClick={() => {
+              if (currentView === 'archived' && onSelectView) {
+                onSelectView(lastActiveView || 'board');
+              }
               setQuickActionFilter(quickActionFilter === 'won' ? null : 'won');
             }}
             className={`h-7 flex items-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors cursor-pointer ${
@@ -739,7 +924,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           </button>
 
           {/* Filter by Stage Dropdown */}
-          <div className="relative">
+          <div ref={stageFilterRef} className="relative">
             <button
               onClick={() => setIsStageFilterOpen(!isStageFilterOpen)}
               className={`h-7 flex items-center gap-1 px-2.5 rounded-[6px] text-[11px] border transition-colors cursor-pointer ${
@@ -765,6 +950,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                     <button
                       key={stg}
                       onClick={() => {
+                        if (currentView === 'archived' && onSelectView) {
+                          onSelectView(lastActiveView || 'board');
+                        }
                         setStageFilter(stg === 'All' ? null : stg);
                         setIsStageFilterOpen(false);
                       }}
@@ -784,7 +972,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           </div>
 
           {/* Filter by Owner Dropdown */}
-          <div className="relative">
+          <div ref={ownerFilterRef} className="relative">
             <button
               onClick={() => setIsOwnerFilterOpen(!isOwnerFilterOpen)}
               className={`h-7 flex items-center gap-1 px-2.5 rounded-[6px] text-[11px] border transition-colors cursor-pointer ${
@@ -810,6 +998,9 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                     <button
                       key={ow}
                       onClick={() => {
+                        if (currentView === 'archived' && onSelectView) {
+                          onSelectView(lastActiveView || 'board');
+                        }
                         setOwnerFilter(ow === 'All' ? null : ow);
                         setIsOwnerFilterOpen(false);
                       }}
@@ -831,7 +1022,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
           {/* Reset Filters Button */}
           {hasActiveCrmFilters && (
             <button
-              onClick={handleClearCrmFilters}
+              onClick={() => handleClearCrmFilters()}
               className="h-7 flex items-center gap-1 text-[11px] font-mono text-orange-400 hover:underline px-2 cursor-pointer"
               title="Reset all filters"
             >
@@ -902,14 +1093,56 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
 
         <div className="hidden lg:block h-4 w-px bg-[#27272a] shrink-0"></div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
-          <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
+        <button
+          type="button"
+          onClick={() => {
+            if (currentView === 'archived' && onSelectView) {
+              handleClearCrmFilters(true);
+              onSelectView(lastActiveView || 'board');
+            }
+          }}
+          className={`flex items-center gap-2.5 shrink-0 px-2 py-1 rounded-[6px] transition-all text-left ${
+            currentView === 'archived'
+              ? 'bg-[#18181b] hover:bg-orange-950/40 border border-[#27272a] hover:border-orange-500/30 cursor-pointer group'
+              : ''
+          }`}
+          title={currentView === 'archived' ? 'Click to view active deals board' : undefined}
+        >
+          <div className={`font-mono text-[10px] uppercase font-semibold ${currentView === 'archived' ? 'text-zinc-400 group-hover:text-orange-400' : 'text-zinc-400'}`}>
             Active Deals
           </div>
-          <div className="font-mono text-base font-bold text-zinc-100">
-            {displayedDeals.length} of {pipelineDeals.length} deals
+          <div className="font-mono text-base font-bold text-zinc-100 flex items-center gap-1.5">
+            {hasActiveCrmFilters ? (
+              <span>{displayedDeals.length} of {activePipelineDeals.length} deals</span>
+            ) : (
+              <span>{activePipelineDeals.length} deals</span>
+            )}
+            {currentView === 'archived' && (
+              <span className="material-symbols-outlined text-[14px] text-orange-400">arrow_forward</span>
+            )}
           </div>
-        </div>
+        </button>
+
+        {archivedDeals.length > 0 && (
+          <>
+            <div className="hidden lg:block h-4 w-px bg-[#27272a] shrink-0"></div>
+            <button
+              type="button"
+              onClick={() => onSelectView && onSelectView('archived')}
+              className="flex items-center gap-2 shrink-0 px-2.5 py-1 rounded-[6px] bg-[#18181b] hover:bg-orange-950/40 border border-[#27272a] hover:border-orange-500/30 transition-all cursor-pointer group"
+              title="Click to view archived deals"
+            >
+              <div className="font-mono text-[10px] text-zinc-400 uppercase font-semibold group-hover:text-orange-400 transition-colors flex items-center gap-1">
+                <span className="material-symbols-outlined text-[14px] text-orange-400">archive</span>
+                <span>Archived</span>
+              </div>
+              <div className="font-mono text-base font-bold text-orange-400 group-hover:text-orange-300 transition-colors flex items-center gap-1">
+                <span>{archivedDeals.length}</span>
+                <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+              </div>
+            </button>
+          </>
+        )}
 
         <div className="hidden lg:block h-4 w-px bg-[#27272a] shrink-0"></div>
 
@@ -937,114 +1170,403 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
         </div>
       </section>
 
-      {/* Main Content Area: Kanban Board, List View, or Table View */}
-      {displayedDeals.length === 0 ? (
-        <div className="flex-1 p-12 flex flex-col items-center justify-center text-center bg-[#09090b]">
-          <div className="w-12 h-12 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-center mb-3 text-orange-400">
-            <span className="material-symbols-outlined text-[24px]">filter_alt_off</span>
-          </div>
-          <h3 className="font-semibold text-sm text-zinc-100 mb-1">No deals match your criteria</h3>
-          <p className="text-xs text-zinc-400 max-w-sm mb-4">
-            Try adjusting your search query or clearing quick filters to view active opportunities.
-          </p>
-          <button
-            onClick={handleClearCrmFilters}
-            className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs"
-          >
-            Reset All Filters
-          </button>
-        </div>
-      ) : currentView === 'list' ? (
+      {/* Main Content Area: Kanban Board, List View, Table View, or Archived View */}
+      {currentView === 'archived' ? (
         <div className="flex-1 p-6 overflow-y-auto bg-[#09090b] custom-scrollbar">
-          <div className="bg-[#121214] rounded-[6px] border border-[#27272a] overflow-hidden shadow-xs divide-y divide-[#27272a]">
-            {displayedDeals.map((deal) => {
-              const isSelected = deal.id === selectedDealId;
-              return (
-                <div
-                  key={deal.id}
-                  onClick={() => onSelectDeal(deal)}
-                  className={`p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-zinc-800/40 transition-colors ${
-                    isSelected ? 'bg-orange-950/30 border-l-2 border-orange-500' : ''
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="w-7 h-7 rounded-full bg-[#18181b] border border-[#27272a] text-zinc-200 font-mono text-xs flex items-center justify-center font-bold shrink-0">
-                      {deal.contact.initials}
-                    </span>
-                    <div className="truncate">
-                      <div className="font-semibold text-xs text-zinc-100 truncate">{deal.title}</div>
-                      <div className="text-[11px] text-zinc-400 truncate">
-                        {deal.company} • {deal.contact.name} • {deal.owner}
+          {/* Archived Header & Explanatory Banner */}
+          <div className="mb-5 flex flex-col md:flex-row md:items-center justify-between gap-4 p-4 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-xs">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-[6px] bg-orange-950/40 border border-orange-500/30 flex items-center justify-center text-orange-400 shrink-0">
+                <span className="material-symbols-outlined text-[20px]">archive</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-100 font-headline flex items-center gap-2">
+                  <span>Archived Commercial Opportunities</span>
+                  <span className="font-mono text-xs px-2 py-0.5 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-300 font-semibold">
+                    {filteredArchivedDeals.length} {filteredArchivedDeals.length === 1 ? 'deal' : 'deals'}
+                  </span>
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5 font-body">
+                  Archived deals are safely stored and completely excluded from active pipeline forecasts, win rates, and stage metrics. You can unarchive any item to return it directly back to its active stage.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => onSelectView && onSelectView(lastActiveView || 'board')}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 border border-[#27272a] text-zinc-300 hover:text-zinc-100 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Back to Pipeline {lastActiveView === 'table' ? 'Table' : lastActiveView === 'list' ? 'List' : 'Board'}</span>
+              </button>
+            </div>
+          </div>
+
+          {filteredArchivedDeals.length === 0 ? (
+            <div className="p-12 flex flex-col items-center justify-center text-center bg-[#121214] border border-[#27272a] rounded-[6px]">
+              <div className="w-12 h-12 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-center mb-3 text-zinc-500">
+                <span className="material-symbols-outlined text-[24px]">inventory_2</span>
+              </div>
+              <h4 className="font-semibold text-sm text-zinc-200 mb-1">No archived deals</h4>
+              <p className="text-xs text-zinc-400 max-w-sm">
+                Opportunities that you archive from the pipeline board, list view, or deal inspector will appear here.
+              </p>
+              <button
+                type="button"
+                onClick={() => onSelectView && onSelectView(lastActiveView || 'board')}
+                className="mt-4 px-3.5 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer shadow-xs"
+              >
+                <span className="material-symbols-outlined text-[15px]">arrow_back</span>
+                <span>Back to Active Deals</span>
+              </button>
+            </div>
+          ) : (
+            <div className="bg-[#121214] rounded-[6px] border border-[#27272a] overflow-hidden shadow-xs divide-y divide-[#27272a]">
+              {filteredArchivedDeals.map((deal) => {
+                const isSelected = deal.id === selectedDealId;
+                return (
+                  <div
+                    key={deal.id}
+                    onClick={() => onSelectDeal(deal)}
+                    className={`p-4 flex flex-col md:flex-row md:items-center justify-between gap-4 cursor-pointer hover:bg-zinc-800/40 transition-colors ${
+                      isSelected ? 'bg-orange-950/30 border-l-2 border-orange-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <span className="w-8 h-8 rounded-full bg-[#18181b] border border-[#27272a] text-zinc-400 font-mono text-xs flex items-center justify-center font-bold shrink-0">
+                        {deal.contact?.initials || 'CD'}
+                      </span>
+                      <div className="truncate">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-xs text-zinc-100 truncate">{deal.title}</span>
+                          <span className="font-mono text-[9px] uppercase px-1.5 py-0.2 rounded-[6px] bg-zinc-800 text-zinc-400 font-semibold border border-zinc-700">
+                            Archived
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-zinc-400 truncate mt-0.5">
+                          {deal.company} • Contact: {deal.contact?.name || 'Unassigned'} • Owner: {deal.owner}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0 flex-wrap justify-between md:justify-end">
+                      <span className="font-mono text-xs px-2.5 py-0.5 rounded-[6px] bg-[#18181b] text-zinc-300 font-medium border border-[#27272a]">
+                        Stage: {deal.stage}
+                      </span>
+                      <div className="text-right">
+                        <div className="font-mono text-xs font-bold text-zinc-100">{deal.formattedValue}</div>
+                        <div className="font-mono text-[10px] text-zinc-400">{deal.probability}% prob</div>
+                      </div>
+                      <span className="font-mono text-[10px] text-zinc-400 hidden lg:inline">
+                        Close: {deal.targetCloseDate}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {onUpdateDeal && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onUpdateDeal({ ...deal, isArchived: false });
+                            }}
+                            className="flex items-center gap-1 px-3 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs transition-colors shadow-xs cursor-pointer"
+                            title="Restore deal back to active pipeline"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">unarchive</span>
+                            <span>Unarchive</span>
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onSelectDeal(deal);
+                          }}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 border border-[#27272a] text-zinc-300 hover:text-zinc-100 text-xs font-medium transition-colors cursor-pointer"
+                          title="Inspect deal details"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">visibility</span>
+                          <span>Inspect</span>
+                        </button>
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-6 shrink-0">
-                    <span className="font-mono text-xs px-2.5 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30">
-                      {deal.stage}
-                    </span>
-                    <div className="text-right">
-                      <div className="font-mono text-xs font-bold text-zinc-100">{deal.formattedValue}</div>
-                      <div className="font-mono text-[10px] text-zinc-400">{deal.probability}% prob</div>
-                    </div>
-                    <span className="font-mono text-[10px] text-zinc-400 hidden md:inline">
-                      {deal.targetCloseDate}
-                    </span>
-                    <span className="material-symbols-outlined text-[16px] text-zinc-400">chevron_right</span>
-                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      ) : currentView === 'list' ? (
+        displayedDeals.length === 0 ? (
+          <div className="flex-1 p-12 flex flex-col items-center justify-center text-center bg-[#09090b]">
+            {hasActiveCrmFilters ? (
+              <>
+                <div className="w-12 h-12 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-center mb-3 text-orange-400">
+                  <span className="material-symbols-outlined text-[24px]">filter_alt_off</span>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : currentView === 'table' ? (
-        <div className="flex-1 p-6 overflow-auto bg-[#09090b] custom-scrollbar">
-          <div className="bg-[#121214] rounded-[6px] border border-[#27272a] overflow-hidden shadow-xs">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-[#18181b] border-b border-[#27272a] font-mono text-[11px] text-zinc-400">
-                  <th className="p-3 font-semibold">Deal Title</th>
-                  <th className="p-3 font-semibold">Account</th>
-                  <th className="p-3 font-semibold">Value</th>
-                  <th className="p-3 font-semibold">Stage</th>
-                  <th className="p-3 font-semibold">Probability</th>
-                  <th className="p-3 font-semibold">Close Date</th>
-                  <th className="p-3 font-semibold">Owner</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#27272a] font-sans">
-                {displayedDeals.map((deal) => {
-                  const isSelected = deal.id === selectedDealId;
-                  return (
-                    <tr
-                      key={deal.id}
-                      onClick={() => onSelectDeal(deal)}
-                      className={`cursor-pointer hover:bg-zinc-800/40 transition-colors ${
-                        isSelected ? 'bg-orange-950/30' : ''
-                      }`}
+                <h3 className="font-semibold text-sm text-zinc-100 mb-1">No deals match your criteria</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mb-4">
+                  Try adjusting your search query or clearing quick filters to view active opportunities.
+                </p>
+                <button
+                  onClick={() => handleClearCrmFilters()}
+                  className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              </>
+            ) : archivedDeals.length > 0 ? (
+              <>
+                <div className="w-12 h-12 rounded-[6px] bg-orange-950/40 border border-orange-500/30 flex items-center justify-center mb-3 text-orange-400">
+                  <span className="material-symbols-outlined text-[24px]">archive</span>
+                </div>
+                <h3 className="font-semibold text-sm text-zinc-100 mb-1">All deals in this pipeline are archived</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mb-4">
+                  You have {archivedDeals.length} archived {archivedDeals.length === 1 ? 'deal' : 'deals'}. They are preserved in your archive and can be restored anytime.
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onSelectView && onSelectView('archived')}
+                    className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">inventory_2</span>
+                    <span>View Archived Deals ({archivedDeals.length})</span>
+                  </button>
+                  {!isReadOnly && onOpenNewDeal && (
+                    <button
+                      onClick={() => onOpenNewDeal()}
+                      className="px-3.5 py-1.5 bg-[#18181b] hover:bg-zinc-800 border border-[#27272a] text-zinc-200 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer"
                     >
-                      <td className="p-3 font-semibold text-zinc-100">{deal.title}</td>
-                      <td className="p-3 text-zinc-400">{deal.company}</td>
-                      <td className="p-3 font-mono font-bold text-zinc-100">{deal.formattedValue}</td>
-                      <td className="p-3">
-                        <span className="font-mono text-[10px] px-2 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30">
-                          {deal.stage}
-                        </span>
-                      </td>
-                      <td className="p-3 font-mono text-zinc-400">{deal.probability}%</td>
-                      <td className="p-3 font-mono text-zinc-400">{deal.targetCloseDate}</td>
-                      <td className="p-3 text-zinc-400">{deal.owner}</td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      + Create New Deal
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-center mb-3 text-zinc-500">
+                  <span className="material-symbols-outlined text-[24px]">leaderboard</span>
+                </div>
+                <h3 className="font-semibold text-sm text-zinc-100 mb-1">No deals in this pipeline yet</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mb-4">
+                  Get started by adding your first deal to track opportunities across your sales cycle.
+                </p>
+                {!isReadOnly && onOpenNewDeal && (
+                  <button
+                    onClick={() => onOpenNewDeal()}
+                    className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs cursor-pointer"
+                  >
+                    + Add First Deal
+                  </button>
+                )}
+              </>
+            )}
           </div>
-        </div>
+        ) : (
+          <div className="flex-1 p-6 overflow-y-auto bg-[#09090b] custom-scrollbar">
+            <div className="bg-[#121214] rounded-[6px] border border-[#27272a] overflow-hidden shadow-xs divide-y divide-[#27272a]">
+              {displayedDeals.map((deal) => {
+                const isSelected = deal.id === selectedDealId;
+                return (
+                  <div
+                    key={deal.id}
+                    onClick={() => onSelectDeal(deal)}
+                    className={`p-4 flex items-center justify-between gap-4 cursor-pointer hover:bg-zinc-800/40 transition-colors ${
+                      isSelected ? 'bg-orange-950/30 border-l-2 border-orange-500' : ''
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-7 h-7 rounded-full bg-[#18181b] border border-[#27272a] text-zinc-200 font-mono text-xs flex items-center justify-center font-bold shrink-0">
+                        {deal.contact.initials}
+                      </span>
+                      <div className="truncate">
+                        <div className="font-semibold text-xs text-zinc-100 truncate">{deal.title}</div>
+                        <div className="text-[11px] text-zinc-400 truncate">
+                          {deal.company} • {deal.contact.name} • {deal.owner}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      <span className="font-mono text-xs px-2.5 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30">
+                        {deal.stage}
+                      </span>
+                      <div className="text-right">
+                        <div className="font-mono text-xs font-bold text-zinc-100">{deal.formattedValue}</div>
+                        <div className="font-mono text-[10px] text-zinc-400">{deal.probability}% prob</div>
+                      </div>
+                      <span className="font-mono text-[10px] text-zinc-400 hidden md:inline">
+                        {deal.targetCloseDate}
+                      </span>
+                      {onUpdateDeal && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onUpdateDeal({ ...deal, isArchived: true });
+                          }}
+                          className="p-1.5 rounded-[6px] text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors cursor-pointer"
+                          title="Archive deal"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">archive</span>
+                        </button>
+                      )}
+                      <span className="material-symbols-outlined text-[16px] text-zinc-400">chevron_right</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )
+      ) : currentView === 'table' ? (
+        displayedDeals.length === 0 ? (
+          <div className="flex-1 p-12 flex flex-col items-center justify-center text-center bg-[#09090b]">
+            {hasActiveCrmFilters ? (
+              <>
+                <div className="w-12 h-12 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-center mb-3 text-orange-400">
+                  <span className="material-symbols-outlined text-[24px]">filter_alt_off</span>
+                </div>
+                <h3 className="font-semibold text-sm text-zinc-100 mb-1">No deals match your criteria</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mb-4">
+                  Try adjusting your search query or clearing quick filters to view active opportunities.
+                </p>
+                <button
+                  onClick={() => handleClearCrmFilters()}
+                  className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs cursor-pointer"
+                >
+                  Reset All Filters
+                </button>
+              </>
+            ) : archivedDeals.length > 0 ? (
+              <>
+                <div className="w-12 h-12 rounded-[6px] bg-orange-950/40 border border-orange-500/30 flex items-center justify-center mb-3 text-orange-400">
+                  <span className="material-symbols-outlined text-[24px]">archive</span>
+                </div>
+                <h3 className="font-semibold text-sm text-zinc-100 mb-1">All deals in this pipeline are archived</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mb-4">
+                  You have {archivedDeals.length} archived {archivedDeals.length === 1 ? 'deal' : 'deals'}. They are preserved in your archive and can be restored anytime.
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => onSelectView && onSelectView('archived')}
+                    className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">inventory_2</span>
+                    <span>View Archived Deals ({archivedDeals.length})</span>
+                  </button>
+                  {!isReadOnly && onOpenNewDeal && (
+                    <button
+                      onClick={() => onOpenNewDeal()}
+                      className="px-3.5 py-1.5 bg-[#18181b] hover:bg-zinc-800 border border-[#27272a] text-zinc-200 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      + Create New Deal
+                    </button>
+                  )}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="w-12 h-12 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-center mb-3 text-zinc-500">
+                  <span className="material-symbols-outlined text-[24px]">table_chart</span>
+                </div>
+                <h3 className="font-semibold text-sm text-zinc-100 mb-1">No deals in this pipeline yet</h3>
+                <p className="text-xs text-zinc-400 max-w-sm mb-4">
+                  Get started by adding your first deal to track opportunities across your sales cycle.
+                </p>
+                {!isReadOnly && onOpenNewDeal && (
+                  <button
+                    onClick={() => onOpenNewDeal()}
+                    className="px-3.5 py-1.5 bg-orange-600 text-white rounded-[6px] text-xs font-semibold hover:bg-orange-500 transition-colors shadow-xs cursor-pointer"
+                  >
+                    + Add First Deal
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="flex-1 p-6 overflow-auto bg-[#09090b] custom-scrollbar">
+            <div className="bg-[#121214] rounded-[6px] border border-[#27272a] overflow-hidden shadow-xs">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-[#18181b] border-b border-[#27272a] font-mono text-[11px] text-zinc-400">
+                    <th className="p-3 font-semibold">Deal Title</th>
+                    <th className="p-3 font-semibold">Account</th>
+                    <th className="p-3 font-semibold">Value</th>
+                    <th className="p-3 font-semibold">Stage</th>
+                    <th className="p-3 font-semibold">Probability</th>
+                    <th className="p-3 font-semibold">Close Date</th>
+                    <th className="p-3 font-semibold">Owner</th>
+                    <th className="p-3 font-semibold text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#27272a] font-sans">
+                  {displayedDeals.map((deal) => {
+                    const isSelected = deal.id === selectedDealId;
+                    return (
+                      <tr
+                        key={deal.id}
+                        onClick={() => onSelectDeal(deal)}
+                        className={`cursor-pointer hover:bg-zinc-800/40 transition-colors ${
+                          isSelected ? 'bg-orange-950/30' : ''
+                        }`}
+                      >
+                        <td className="p-3 font-semibold text-zinc-100">{deal.title}</td>
+                        <td className="p-3 text-zinc-400">{deal.company}</td>
+                        <td className="p-3 font-mono font-bold text-zinc-100">{deal.formattedValue}</td>
+                        <td className="p-3">
+                          <span className="font-mono text-[10px] px-2 py-0.5 rounded-[6px] bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30">
+                            {deal.stage}
+                          </span>
+                        </td>
+                        <td className="p-3 font-mono text-zinc-400">{deal.probability}%</td>
+                        <td className="p-3 font-mono text-zinc-400">{deal.targetCloseDate}</td>
+                        <td className="p-3 text-zinc-400">{deal.owner}</td>
+                        <td className="p-3 text-right">
+                          {onUpdateDeal && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onUpdateDeal({ ...deal, isArchived: true });
+                              }}
+                              className="p-1 rounded-[6px] text-zinc-500 hover:text-rose-400 hover:bg-zinc-800 transition-colors cursor-pointer"
+                              title="Archive deal"
+                            >
+                              <span className="material-symbols-outlined text-[15px]">archive</span>
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )
       ) : (
         /* Main Content Area: Deal Pipeline Board (Columns grouped by groupBy) */
-        <div className="flex-1 p-6 overflow-x-auto overflow-y-hidden bg-[#09090b]">
-          <div className="flex gap-4 min-w-[1540px] h-full items-start">
+        <div className="flex-1 p-6 overflow-x-auto overflow-y-hidden bg-[#09090b] flex flex-col">
+          {/* Top Banner if filters match 0 active deals */}
+          {hasActiveCrmFilters && displayedDeals.length === 0 && (
+            <div className="mb-4 min-w-[1540px] p-3 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-between gap-4 shrink-0">
+              <div className="flex items-center gap-2.5 text-xs text-zinc-300">
+                <span className="material-symbols-outlined text-orange-400 text-[18px]">filter_alt_off</span>
+                <span>No active deals match your current search or quick filters.</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => handleClearCrmFilters()}
+                className="px-3 py-1 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white font-semibold text-xs transition-colors cursor-pointer"
+              >
+                Reset All Filters
+              </button>
+            </div>
+          )}
+
+          <div className="flex gap-4 min-w-[1540px] flex-1 items-start">
             {boardColumns.map((col) => {
               const colDeals = displayedDeals.filter(col.filterDeals);
               const colValueSum = colDeals.reduce((sum, d) => sum + d.value, 0);
@@ -1119,7 +1641,12 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                     }}
                     className="flex flex-col gap-2.5 overflow-y-auto pr-1 flex-1 custom-scrollbar min-h-[120px]"
                   >
-                    {colDeals.map((deal) => {
+                    {colDeals.length === 0 ? (
+                      <div className="h-24 rounded-[6px] border border-dashed border-[#27272a] flex flex-col items-center justify-center text-center p-2.5 text-zinc-500">
+                        <span className="material-symbols-outlined text-[18px] opacity-40 mb-1">inbox</span>
+                        <span className="text-[11px]">No deals</span>
+                      </div>
+                    ) : colDeals.map((deal) => {
                       const isSelected = deal.id === selectedDealId;
                       const isFeatured = deal.id === 'DEAL-402';
 
@@ -1215,30 +1742,45 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                               <span className="text-zinc-500 font-mono text-[9px]">{deal.id}</span>
                             )}
 
-                            {!isReadOnly && onAdvanceDealStage && deal.stage !== 'Closed Won' && (
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const stageSeq: CrmDeal['stage'][] = [
-                                    'Qualified Lead',
-                                    'Discovery & Demo',
-                                    'Proposal Submitted',
-                                    'Contract & Legal',
-                                    'Closed Won',
-                                  ];
-                                  const curIdx = stageSeq.indexOf(deal.stage);
-                                  if (curIdx >= 0 && curIdx < stageSeq.length - 1) {
-                                    onAdvanceDealStage(deal.id, stageSeq[curIdx + 1]);
-                                  }
-                                }}
-                                className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-[6px] bg-[#121214] hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 border border-[#27272a] hover:border-orange-500/30 transition-all cursor-pointer ml-auto"
-                                title="Advance to next sales stage"
-                              >
-                                <span>Next Stage</span>
-                                <span className="material-symbols-outlined text-[11px]">arrow_forward</span>
-                              </button>
-                            )}
+                            <div className="flex items-center gap-1 ml-auto">
+                              {onUpdateDeal && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onUpdateDeal({ ...deal, isArchived: true });
+                                  }}
+                                  className="p-1 rounded-[6px] text-zinc-500 hover:text-rose-400 hover:bg-[#121214] transition-colors cursor-pointer"
+                                  title="Archive deal"
+                                >
+                                  <span className="material-symbols-outlined text-[13px]">archive</span>
+                                </button>
+                              )}
+                              {!isReadOnly && onAdvanceDealStage && deal.stage !== 'Closed Won' && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const stageSeq: CrmDeal['stage'][] = [
+                                      'Qualified Lead',
+                                      'Discovery & Demo',
+                                      'Proposal Submitted',
+                                      'Contract & Legal',
+                                      'Closed Won',
+                                    ];
+                                    const curIdx = stageSeq.indexOf(deal.stage);
+                                    if (curIdx >= 0 && curIdx < stageSeq.length - 1) {
+                                      onAdvanceDealStage(deal.id, stageSeq[curIdx + 1]);
+                                    }
+                                  }}
+                                  className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-[6px] bg-[#121214] hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 border border-[#27272a] hover:border-orange-500/30 transition-all cursor-pointer"
+                                  title="Advance to next sales stage"
+                                >
+                                  <span>Next Stage</span>
+                                  <span className="material-symbols-outlined text-[11px]">arrow_forward</span>
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );

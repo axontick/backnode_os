@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import type { ListSettings } from '../types';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { TaskSpaceViewsBar } from '../components/TaskSpaceViewsBar';
 import { KanbanBoard } from '../components/KanbanBoard';
@@ -110,6 +111,17 @@ export const ListPage: React.FC = () => {
 
   const currentListItem = listId ? findListItemById(folders, listId) : undefined;
 
+  const effectiveListSettings: ListSettings = useMemo(() => {
+    if (!currentListItem) return listSettings;
+    return {
+      ...listSettings,
+      listId: currentListItem.id,
+      name: currentListItem.name || listSettings.name,
+      icon: currentListItem.icon || listSettings.icon || 'format_list_bulleted',
+      color: currentListItem.color || listSettings.color || '#ea580c',
+    };
+  }, [listSettings, currentListItem]);
+
   // Filter tasks specific to this list
   const listTasks = filteredTasks.filter((t) => {
     if (!listId) return true;
@@ -184,6 +196,7 @@ export const ListPage: React.FC = () => {
             selectedTaskId={selectedTaskId}
             onSelectTask={(t) => setSelectedTaskId(t.id)}
             onQuickStatusChange={(taskId, status) => handleMoveTaskStatus(taskId, status)}
+            onMoveTaskStatus={handleMoveTaskStatus}
             onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
           />
         )}
@@ -197,6 +210,7 @@ export const ListPage: React.FC = () => {
             onRequestDeleteTask={(t) => setTaskToDelete(t)}
             onNavigateToView={(v) => handleSelectView(v)}
             onEditTask={handleOpenEditTask}
+            onMoveTaskStatus={handleMoveTaskStatus}
             activeStatusRoute={statusView}
             onSelectStatusRoute={handleSelectStatusRoute}
           />
@@ -231,7 +245,7 @@ export const ListPage: React.FC = () => {
 
         {view === 'settings' && (
           <TaskSpaceSettings
-            settings={listSettings}
+            settings={effectiveListSettings}
             statuses={statuses}
             onUpdateSettings={handleUpdateListSettings}
             onUpdateStatuses={handleUpdateStatuses}

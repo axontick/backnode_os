@@ -1,4 +1,5 @@
 import {
+  Department,
   TeamMember,
   TaskItem,
   StatusDefinition,
@@ -11,6 +12,69 @@ import {
   CrmPipeline,
   DocItem,
 } from './types';
+
+export const initialDepartments: Department[] = [
+  {
+    id: 'dept-eng',
+    name: 'Engineering',
+    code: 'ENG',
+    description: 'Core software architecture, platform infrastructure, and distributed replication engines.',
+    color: '#ea580c',
+    icon: 'terminal',
+    headMemberId: 'mem-2',
+    isDefault: true,
+  },
+  {
+    id: 'dept-prod',
+    name: 'Product',
+    code: 'PROD',
+    description: 'Product lifecycle, roadmapping, functional specifications, and sprint triage.',
+    color: '#0284c7',
+    icon: 'inventory_2',
+    headMemberId: '',
+    isDefault: false,
+  },
+  {
+    id: 'dept-design',
+    name: 'Design',
+    code: 'DSGN',
+    description: 'User experience ergonomics, visual tokens, interface layout, and motion systems.',
+    color: '#ec4899',
+    icon: 'palette',
+    headMemberId: 'mem-1',
+    isDefault: false,
+  },
+  {
+    id: 'dept-ops',
+    name: 'Operations',
+    code: 'OPS',
+    description: 'Cloud reliability, automated deployment telemetry, compliance, and workspace workflows.',
+    color: '#10b981',
+    icon: 'settings_suggest',
+    headMemberId: 'mem-5',
+    isDefault: false,
+  },
+  {
+    id: 'dept-sales',
+    name: 'Sales',
+    code: 'SALES',
+    description: 'Enterprise revenue pipelines, deal negotiations, commercial contracts, and CRM accounts.',
+    color: '#f59e0b',
+    icon: 'trending_up',
+    headMemberId: '',
+    isDefault: false,
+  },
+  {
+    id: 'dept-exec',
+    name: 'Executive',
+    code: 'EXEC',
+    description: 'Strategic governance, corporate jurisdiction, board oversight, and executive management.',
+    color: '#6366f1',
+    icon: 'corporate_fare',
+    headMemberId: 'mem-1',
+    isDefault: false,
+  },
+];
 
 export const initialTeamMembers: TeamMember[] = [
   {
@@ -559,7 +623,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
 
 export const initialListSettings: ListSettings = {
   name: 'Sprint 14 - Q4 Infra',
-  listId: 'TS-8820',
+  listId: 'sprint-14',
   description: 'Core infrastructure, local replication queues, protocol buffers, and zero-latency caching deliverables for Q4 release.',
   color: '#ea580c',
   icon: 'terminal',
@@ -1312,8 +1376,8 @@ export const initialFolders: SpaceFolder[] = [
     color: '#ea580c',
     description: 'Core runtime architecture, replication VFS, and sprint deliverables.',
     items: [
-      { id: 'sprint-14', name: 'Sprint 14 - Q4 Infra', taskCount: 14, status: 'Active', active: true },
-      { id: 'security-audits', name: 'Security Audits', taskCount: 6, status: 'In Review' },
+      { id: 'sprint-14', name: 'Sprint 14 - Q4 Infra', taskCount: 14, status: 'Active', active: true, icon: 'terminal', color: '#ea580c' },
+      { id: 'security-audits', name: 'Security Audits', taskCount: 6, status: 'In Review', icon: 'security', color: '#06b6d4' },
     ],
     subFolders: [
       {
@@ -1324,8 +1388,8 @@ export const initialFolders: SpaceFolder[] = [
         description: 'VFS engine internals and local-first CRDT protocols.',
         parentId: 'fld-engineering',
         items: [
-          { id: 'core-replication', name: 'Core Engine Replicas', taskCount: 8, status: 'Planned' },
-          { id: 'vfs-sqlite-driver', name: 'VFS SQLite Driver', taskCount: 5, status: 'Active' },
+          { id: 'core-replication', name: 'Core Engine Replicas', taskCount: 8, status: 'Planned', icon: 'memory', color: '#f59e0b' },
+          { id: 'vfs-sqlite-driver', name: 'VFS SQLite Driver', taskCount: 5, status: 'Active', icon: 'database', color: '#10b981' },
         ],
       },
     ],
@@ -1337,8 +1401,8 @@ export const initialFolders: SpaceFolder[] = [
     color: '#3B82F6',
     description: 'Contracted client SLA commitments and enterprise proof-of-concept pipelines.',
     items: [
-      { id: 'client-deliverables', name: 'Acme Corp Milestone Alpha', taskCount: 4, status: 'In Execution' },
-      { id: 'globalbank-sla', name: 'GlobalBank SOC-2 Audit SLA', taskCount: 3, status: 'Pending Review' },
+      { id: 'client-deliverables', name: 'Acme Corp Milestone Alpha', taskCount: 4, status: 'In Execution', icon: 'rocket_launch', color: '#3b82f6' },
+      { id: 'globalbank-sla', name: 'GlobalBank SOC-2 Audit SLA', taskCount: 3, status: 'Pending Review', icon: 'verified', color: '#64748b' },
     ],
     subFolders: [
       {
@@ -1349,7 +1413,7 @@ export const initialFolders: SpaceFolder[] = [
         description: 'Pilots and customer trials with strict SLAs.',
         parentId: 'fld-client-deliverables',
         items: [
-          { id: 'poc-hyperion-pos', name: 'Hyperion Edge POS Rollout', taskCount: 3, status: 'Active' },
+          { id: 'poc-hyperion-pos', name: 'Hyperion Edge POS Rollout', taskCount: 3, status: 'Active', icon: 'hub', color: '#3b82f6' },
         ],
       },
     ],
@@ -1361,8 +1425,8 @@ export const initialFolders: SpaceFolder[] = [
     color: '#EF4444',
     description: 'High-priority regressions, query timeout tickets, and replication conflict triage.',
     items: [
-      { id: 'bugs-triages', name: 'P0 Immediate Blockers', taskCount: 2, status: 'Hotfix' },
-      { id: 'reported-triages', name: 'Reported Edge Defects', taskCount: 5, status: 'Triage Queue' },
+      { id: 'bugs-triages', name: 'P0 Immediate Blockers', taskCount: 2, status: 'Hotfix', icon: 'bug_report', color: '#ef4444' },
+      { id: 'reported-triages', name: 'Reported Edge Defects', taskCount: 5, status: 'Triage Queue', icon: 'warning', color: '#f59e0b' },
     ],
   },
   {
@@ -1372,7 +1436,7 @@ export const initialFolders: SpaceFolder[] = [
     color: '#EC4899',
     description: 'Design system components, 1920x1080 token mapping, and operator UX flows.',
     items: [
-      { id: 'design-system-v3', name: 'Design Tokens & Bento Matrix', taskCount: 6, status: 'In Progress' },
+      { id: 'design-system-v3', name: 'Design Tokens & Bento Matrix', taskCount: 6, status: 'In Progress', icon: 'palette', color: '#ec4899' },
     ],
   },
   {
@@ -1382,7 +1446,7 @@ export const initialFolders: SpaceFolder[] = [
     color: '#10B981',
     description: 'Node cluster health, automated deployment pipelines, and backup cadence.',
     items: [
-      { id: 'infra-scaling', name: 'Cluster Sharding Baseline', taskCount: 3, status: 'Scheduled' },
+      { id: 'infra-scaling', name: 'Cluster Sharding Baseline', taskCount: 3, status: 'Scheduled', icon: 'layers', color: '#10b981' },
     ],
   },
 ];

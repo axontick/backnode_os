@@ -17,24 +17,26 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
   onNavigateToBoard,
   onOpenAddPipeline,
 }) => {
-  const totalPipeline = deals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+  const activeDeals = deals.filter((d) => !d.isArchived);
+
+  const totalPipeline = activeDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
   const weightedForecast = Math.round(
-    deals.reduce((sum, d) => sum + (Number(d.value) || 0) * ((Number(d.probability) || 0) / 100), 0)
+    activeDeals.reduce((sum, d) => sum + (Number(d.value) || 0) * ((Number(d.probability) || 0) / 100), 0)
   );
 
-  const closedWonDeals = deals.filter((d) => d.stage === 'Closed Won' || d.stage?.toLowerCase().includes('won'));
-  const closedLostDeals = deals.filter((d) => d.stage === 'Closed Lost' || d.stage?.toLowerCase().includes('lost'));
+  const closedWonDeals = activeDeals.filter((d) => d.stage === 'Closed Won' || d.stage?.toLowerCase().includes('won'));
+  const closedLostDeals = activeDeals.filter((d) => d.stage === 'Closed Lost' || d.stage?.toLowerCase().includes('lost'));
   const totalClosed = closedWonDeals.length + closedLostDeals.length;
   const winRate = totalClosed > 0 
     ? Math.round((closedWonDeals.length / totalClosed) * 100) 
-    : deals.length > 0 
-      ? Math.round((closedWonDeals.length / deals.length) * 100)
+    : activeDeals.length > 0 
+      ? Math.round((closedWonDeals.length / activeDeals.length) * 100)
       : 0;
 
-  const dealsWithCycle = deals.filter(
+  const dealsWithCycle = activeDeals.filter(
     (d) => (typeof d.cycleDays === 'number' && d.cycleDays > 0) || (d.createdAt && (d.closedAt || d.targetCloseDate))
   );
-  const totalCycleDays = deals.reduce((acc, d) => {
+  const totalCycleDays = activeDeals.reduce((acc, d) => {
     if (typeof d.cycleDays === 'number' && d.cycleDays > 0) return acc + d.cycleDays;
     if (d.createdAt && (d.closedAt || d.targetCloseDate)) {
       const diff =
@@ -170,10 +172,10 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
               <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
                 <span className="text-emerald-400 font-semibold flex items-center gap-0.5">
                   <span className="material-symbols-outlined text-[12px]">payments</span>
-                  {deals.filter((d) => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost').length} in pipeline
+                  {activeDeals.filter((d) => d.stage !== 'Closed Won' && d.stage !== 'Closed Lost').length} in pipeline
                 </span>
                 <span>•</span>
-                <span>{deals.length} opportunities</span>
+                <span>{activeDeals.length} opportunities</span>
               </div>
             </div>
           </div>
@@ -195,7 +197,7 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
               <div className="flex items-center gap-2 mt-1 text-[11px] text-zinc-400">
                 <span className="text-blue-400 font-semibold">Probability adjusted</span>
                 <span>•</span>
-                <span>{deals.length > 0 ? `${deals.length} opportunities` : 'No opportunities'}</span>
+                <span>{activeDeals.length > 0 ? `${activeDeals.length} opportunities` : 'No opportunities'}</span>
               </div>
             </div>
           </div>
@@ -261,7 +263,7 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             {stages.map((st) => {
-              const stageDeals = deals.filter((d) => d.stage === st.name);
+              const stageDeals = activeDeals.filter((d) => d.stage === st.name);
               const stageTotal = stageDeals.reduce((sum, d) => sum + d.value, 0);
               const percentage = totalPipeline > 0 ? Math.round((stageTotal / totalPipeline) * 100) : 0;
 
@@ -317,12 +319,12 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
               onClick={onNavigateToBoard}
               className="text-xs font-semibold text-orange-400 hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <span>See all {deals.length} deals</span>
+              <span>See all {activeDeals.length} deals</span>
               <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
             </button>
           </div>
 
-          {deals.length === 0 ? (
+          {activeDeals.length === 0 ? (
             <div className="p-8 text-center border border-dashed border-[#27272a] rounded-[6px] bg-[#18181b] flex flex-col items-center justify-center">
               <span className="material-symbols-outlined text-[32px] text-zinc-600">payments</span>
               <p className="text-xs font-semibold text-zinc-300 mt-2">No deals in pipeline</p>
@@ -330,7 +332,7 @@ export const CrmDashboardView: React.FC<CrmDashboardViewProps> = ({
             </div>
           ) : (
             <div className="space-y-2">
-              {deals.slice(0, 5).map((deal) => (
+              {activeDeals.slice(0, 5).map((deal) => (
                 <div
                   key={deal.id}
                   onClick={() => onSelectDeal(deal)}

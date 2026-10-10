@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { SpaceFolder, SpaceSubFolder, CrmPipeline, CrmPipelineSubFolder } from '../types';
 import { ActionContextMenu } from './ActionContextMenu';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 import { SecurityPolicy } from '../utils/security';
 
 export interface InnerSidebarProps {
@@ -29,12 +30,12 @@ export interface InnerSidebarProps {
   pipelines?: CrmPipeline[];
   activePipelineId?: string;
   activePipelineSubFolderId?: string | null;
-  crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
+  crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived';
   onSelectPipeline?: (pipelineId: string) => void;
   onSelectPipelineSubFolder?: (pipelineId: string, subFolderId: string) => void;
   onSelectCrmDashboard?: () => void;
   onSelectCrmBoard?: () => void;
-  onSelectPipelineView?: (pipelineId: string, view: 'board' | 'analytics' | 'settings') => void;
+  onSelectPipelineView?: (pipelineId: string, view: 'board' | 'analytics' | 'settings' | 'archived') => void;
   onOpenAddPipeline?: () => void;
   onEditPipeline?: (pipeline: CrmPipeline) => void;
   onDeletePipeline?: (pipeline: CrmPipeline) => void;
@@ -82,6 +83,7 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
 }) => {
   const navigate = useNavigate();
   const { spaceId } = useParams<{ spaceId?: string }>();
+  const { listSettings } = useWorkspace();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
   const isExpanded = !!expandedSubFolderIds[subFolder.id] || Boolean(filterText);
   const hasItems = subFolder.items && subFolder.items.length > 0;
@@ -197,8 +199,9 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
               })
               .map((subItem) => {
                 const isActive = activeSpace === subItem.id && currentView !== 'dashboard';
+                const isMatchingListSettings = listSettings && (subItem.id === listSettings.listId || (isActive && (listSettings.icon || listSettings.color)));
                 const lower = (subItem.name + ' ' + subItem.id).toLowerCase();
-                const spaceIcon = lower.includes('infra') || lower.includes('devops')
+                const spaceIcon = (subItem as any).icon || (isMatchingListSettings && listSettings?.icon ? listSettings.icon : null) || (lower.includes('infra') || lower.includes('devops')
                   ? 'terminal'
                   : lower.includes('client') || lower.includes('deliverable')
                   ? 'inventory_2'
@@ -208,7 +211,8 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                   ? 'palette'
                   : lower.includes('sprint') || lower.includes('backlog')
                   ? 'checklist'
-                  : 'tag';
+                  : 'format_list_bulleted');
+                const spaceColor = (subItem as any).color || (isMatchingListSettings && listSettings?.color ? listSettings.color : null);
 
                 return (
                   <button
@@ -224,8 +228,9 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                     <div className="flex items-center gap-1.5 truncate">
                       <span
                         className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${
-                          isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300'
+                          spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300')
                         }`}
+                        style={spaceColor ? { color: spaceColor } : undefined}
                       >
                         {spaceIcon}
                       </span>
@@ -501,6 +506,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const { effectiveRole } = useAuth();
+  const { listSettings, crmSettings, deals } = useWorkspace();
   const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
   const { spaceId } = useParams<{ spaceId?: string }>();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
@@ -824,8 +830,9 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                 })
                                 .map((subItem) => {
                                   const isActive = activeSpace === subItem.id && currentView !== 'dashboard';
+                                  const isMatchingListSettings = listSettings && (subItem.id === listSettings.listId || (isActive && (listSettings.icon || listSettings.color)));
                                   const lower = (subItem.name + ' ' + subItem.id).toLowerCase();
-                                  const spaceIcon = lower.includes('infra') || lower.includes('devops')
+                                  const spaceIcon = (subItem as any).icon || (isMatchingListSettings && listSettings?.icon ? listSettings.icon : null) || (lower.includes('infra') || lower.includes('devops')
                                     ? 'terminal'
                                     : lower.includes('client') || lower.includes('deliverable')
                                     ? 'inventory_2'
@@ -835,7 +842,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                     ? 'palette'
                                     : lower.includes('sprint') || lower.includes('backlog')
                                     ? 'checklist'
-                                    : 'tag';
+                                    : 'format_list_bulleted');
+                                  const spaceColor = (subItem as any).color || (isMatchingListSettings && listSettings?.color ? listSettings.color : null);
 
                                   return (
                                     <button
@@ -851,8 +859,9 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                       <div className="flex items-center gap-1.5 truncate">
                                         <span
                                           className={`material-symbols-outlined text-[14px] shrink-0 transition-colors ${
-                                            isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300'
+                                            spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300')
                                           }`}
+                                          style={spaceColor ? { color: spaceColor } : undefined}
                                         >
                                           {spaceIcon}
                                         </span>
@@ -976,11 +985,18 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                           >
                             <span
                               className="material-symbols-outlined text-[14px] shrink-0"
-                              style={{ color: pipe.color && pipe.color !== '#9900c2' ? pipe.color : '#ea580c' }}
+                              style={{
+                                color:
+                                  (pipe.id === activePipelineId && crmSettings?.accentColor) ||
+                                  (pipe.color && pipe.color !== '#9900c2' ? pipe.color : '#ea580c'),
+                              }}
                             >
-                              {!pipe.icon || pipe.icon === 'building' ? 'leaderboard' : pipe.icon}
+                              {(pipe.id === activePipelineId && crmSettings?.icon) ||
+                                (!pipe.icon || pipe.icon === 'building' ? 'leaderboard' : pipe.icon)}
                             </span>
-                            <span className="truncate font-medium">{pipe.name}</span>
+                            <span className="truncate font-medium">
+                              {(pipe.id === activePipelineId && crmSettings?.name) || pipe.name}
+                            </span>
                           </button>
 
                           <div className="flex items-center gap-2 shrink-0 ml-2">
@@ -1058,23 +1074,55 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                               </div>
                             </button>
 
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'analytics');
-                              }}
-                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-                                crmView === 'analytics'
-                                  ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
-                                  : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                              }`}
-                            >
-                              <div className="flex items-center gap-1.5 truncate">
-                                <span className="material-symbols-outlined text-[13px] text-emerald-400">leaderboard</span>
-                                <span className="truncate">Win/Loss Analytics</span>
-                              </div>
-                              <span className="text-[9.5px] font-mono text-emerald-400 font-semibold">68%</span>
-                            </button>
+                            {(() => {
+                              const pipeDeals = (deals || []).filter(
+                                (d) =>
+                                  (d.pipelineId === pipe.id || (!d.pipelineId && pipe.id === 'pipe-enterprise')) &&
+                                  !d.isArchived
+                              );
+                              const hasData = pipeDeals.length > 0;
+                              let winRatePct: number | null = null;
+                              if (hasData) {
+                                const wonCount = pipeDeals.filter(
+                                  (d) => d.stage === 'Closed Won' || d.stage?.toLowerCase().includes('won')
+                                ).length;
+                                const lostCount = pipeDeals.filter(
+                                  (d) => d.stage === 'Closed Lost' || d.stage?.toLowerCase().includes('lost')
+                                ).length;
+                                const closedCount = wonCount + lostCount;
+                                winRatePct = closedCount > 0
+                                  ? Math.round((wonCount / closedCount) * 100)
+                                  : Math.round((wonCount / pipeDeals.length) * 100);
+                              }
+
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'analytics');
+                                  }}
+                                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
+                                    crmView === 'analytics'
+                                      ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <span className="material-symbols-outlined text-[13px] text-emerald-400">leaderboard</span>
+                                    <span className="truncate">Win/Loss Analytics</span>
+                                  </div>
+                                  {winRatePct !== null && (
+                                    <span
+                                      className={`text-[9.5px] font-mono font-semibold ${
+                                        winRatePct > 0 ? 'text-emerald-400' : 'text-zinc-500'
+                                      }`}
+                                    >
+                                      {winRatePct}%
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })()}
 
                             <button
                               type="button"
@@ -1095,6 +1143,38 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                 Edit
                               </span>
                             </button>
+
+                            {/* Archived Deals Sub-view */}
+                            {(() => {
+                              const pipeArchivedCount = (deals || []).filter(
+                                (d) =>
+                                  (d.pipelineId === pipe.id || (!d.pipelineId && pipe.id === 'pipe-enterprise')) &&
+                                  Boolean(d.isArchived)
+                              ).length;
+                              return (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'archived');
+                                  }}
+                                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
+                                    crmView === 'archived' && !activePipelineSubFolderId
+                                      ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                      : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-1.5 truncate">
+                                    <span className="material-symbols-outlined text-[13px]">archive</span>
+                                    <span className="truncate">Archived Deals</span>
+                                  </div>
+                                  {pipeArchivedCount > 0 && (
+                                    <span className="text-[9.5px] font-mono px-1.5 py-0.2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-orange-400 font-bold">
+                                      {pipeArchivedCount}
+                                    </span>
+                                  )}
+                                </button>
+                              );
+                            })()}
 
                             {/* Sub-Folders Section */}
                             <div className="mt-2 pt-2 border-t border-[#27272a] flex flex-col gap-1">

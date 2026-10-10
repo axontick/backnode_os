@@ -36,13 +36,14 @@ export const RegisterPage: React.FC = () => {
     setError(null);
     setIsSubmitting(true);
     try {
-      await signup({
+      const res = await signup({
         name: name.trim(),
         accountName: accountName.trim(),
         email: email.trim(),
         password,
       });
-      navigate(`/space/${spaceId}/dashboard`);
+      const targetSpace = res?.user?.accountId || res?.user?.account?.id || spaceId;
+      navigate(`/space/${targetSpace}/dashboard`);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Account registration failed';
       setError(Array.isArray(msg) ? msg.join(', ') : msg);

@@ -12,7 +12,10 @@ export const RootSpaceRedirect: React.FC = () => {
   const location = useLocation();
   const { activeUserSpaceId, userSpaces, folders } = useWorkspace();
 
-  const spaceId = activeUserSpaceId || userSpaces[0]?.id || 'space-main';
+  const spaceId =
+    (activeUserSpaceId && activeUserSpaceId !== 'space-main')
+      ? activeUserSpaceId
+      : userSpaces.find((s) => s.id && s.id !== 'space-main')?.id || 'space-main';
   const pathname = location.pathname;
 
   if (pathname === '/' || pathname === '') {

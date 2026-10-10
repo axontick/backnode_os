@@ -14,6 +14,7 @@ import {
   CrmPipelineSettings,
   DirectoryContact,
   User,
+  Department,
 } from '../entities';
 import { CurrentUserPayload } from '../auth/current-user.decorator';
 
@@ -30,6 +31,8 @@ export class WorkspaceService {
     private readonly accountRepo: Repository<Account>,
     @InjectRepository(TeamMember)
     private readonly memberRepo: Repository<TeamMember>,
+    @InjectRepository(Department)
+    private readonly departmentRepo: Repository<Department>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
   ) { }
@@ -335,6 +338,7 @@ export class WorkspaceService {
   async updateListSettings(accountId: string, data: any) {
     const settings = await this.getListSettings(accountId);
 
+    if (data.listId !== undefined) settings.listId = data.listId;
     if (data.name !== undefined) settings.name = data.name;
     if (data.description !== undefined) settings.description = data.description;
     if (data.color !== undefined) settings.color = data.color;
@@ -348,5 +352,169 @@ export class WorkspaceService {
     if (data.autoArchiveDone !== undefined) settings.autoArchiveDone = data.autoArchiveDone;
 
     return this.listSettingsRepo.save(settings);
+  }
+
+  // Departments Management
+  async getDepartments(accountId: string) {
+    let depts = await this.departmentRepo.find({
+      where: { accountId },
+      order: { order: 'ASC', createdAt: 'ASC' },
+    });
+
+    if (depts.length === 0) {
+      const defaults = [
+        {
+          id: `dept-eng-${accountId.slice(0, 6)}`,
+          name: 'Engineering',
+          code: 'ENG',
+          color: '#ea580c',
+          icon: 'terminal',
+          description: 'Core software architecture, platform infrastructure, and distributed replication engines.',
+          isDefault: true,
+          order: 1,
+          accountId,
+        },
+        {
+          id: `dept-prod-${accountId.slice(0, 6)}`,
+          name: 'Product',
+          code: 'PROD',
+          color: '#0284c7',
+          icon: 'inventory_2',
+          description: 'Product lifecycle, roadmapping, functional specifications, and sprint triage.',
+          isDefault: false,
+          order: 2,
+          accountId,
+        },
+        {
+          id: `dept-design-${accountId.slice(0, 6)}`,
+          name: 'Design',
+          code: 'DSGN',
+          color: '#ec4899',
+          icon: 'palette',
+          description: 'User experience ergonomics, visual tokens, interface layout, and motion systems.',
+          isDefault: false,
+          order: 3,
+          accountId,
+        },
+        {
+          id: `dept-ops-${accountId.slice(0, 6)}`,
+          name: 'Operations',
+          code: 'OPS',
+          color: '#10b981',
+          icon: 'settings_suggest',
+          description: 'Cloud reliability, automated deployment telemetry, compliance, and workspace workflows.',
+          isDefault: false,
+          order: 4,
+          accountId,
+        },
+        {
+          id: `dept-sales-${accountId.slice(0, 6)}`,
+          name: 'Sales',
+          code: 'SALES',
+          color: '#f59e0b',
+          icon: 'trending_up',
+          description: 'Enterprise revenue pipelines, deal negotiations, commercial contracts, and CRM accounts.',
+          isDefault: false,
+          order: 5,
+          accountId,
+        },
+        {
+          id: `dept-exec-${accountId.slice(0, 6)}`,
+          name: 'Executive',
+          code: 'EXEC',
+          color: '#6366f1',
+          icon: 'corporate_fare',
+          description: 'Strategic governance, corporate jurisdiction, board oversight, and executive management.',
+          isDefault: false,
+          order: 6,
+          accountId,
+        },
+      ];
+
+      for (const d of defaults) {
+        const item = this.departmentRepo.create(d);
+        await this.departmentRepo.save(item);
+      }
+
+      depts = await this.departmentRepo.find({
+        where: { accountId },
+        order: { order: 'ASC', createdAt: 'ASC' },
+      });
+    }
+
+    return depts;
+  }
+
+  async createDepartment(accountId: string, data: any) {
+    const code = (data.code || data.name.slice(0, 4)).trim().toUpperCase();
+    const count = await this.departmentRepo.count({ where: { accountId } });
+
+    if (data.isDefault) {
+      await this.departmentRepo.update({ accountId }, { isDefault: false });
+    }
+
+    const dept = this.departmentRepo.create({
+      id: data.id || `dept-${Date.now().toString(36)}`,
+      name: data.name.trim(),
+      code,
+      description: data.description || '',
+      color: data.color || '#ea580c',
+      icon: data.icon || 'domain',
+      headMemberId: data.headMemberId || null,
+      isDefault: !!data.isDefault,
+      order: data.order ?? count + 1,
+      accountId,
+    });
+
+    return this.departmentRepo.save(dept);
+  }
+
+  async updateDepartment(accountId: string, id: string, data: any) {
+    const dept = await this.departmentRepo.findOne({ where: { id, accountId } });
+    if (!dept) {
+      throw new NotFoundException(`Department ${id} not found in this account`);
+    }
+
+    const oldName = dept.name;
+
+    if (data.name !== undefined) dept.name = data.name.trim();
+    if (data.code !== undefined) dept.code = data.code.trim().toUpperCase();
+    if (data.description !== undefined) dept.description = data.description;
+    if (data.color !== undefined) dept.color = data.color;
+    if (data.icon !== undefined) dept.icon = data.icon;
+    if (data.headMemberId !== undefined) dept.headMemberId = data.headMemberId;
+    if (data.order !== undefined) dept.order = data.order;
+    if (data.isDefault !== undefined) {
+      if (data.isDefault) {
+        await this.departmentRepo.update({ accountId }, { isDefault: false });
+      }
+      dept.isDefault = data.isDefault;
+    }
+
+    const saved = await this.departmentRepo.save(dept);
+
+    // If department name was renamed, update members assigned to old department name
+    if (data.name && oldName !== dept.name) {
+      await this.memberRepo.update({ accountId, department: oldName }, { department: dept.name });
+    }
+
+    return saved;
+  }
+
+  async deleteDepartment(accountId: string, id: string, reassignToDeptName?: string) {
+    const dept = await this.departmentRepo.findOne({ where: { id, accountId } });
+    if (!dept) {
+      throw new NotFoundException(`Department ${id} not found in this account`);
+    }
+
+    if (reassignToDeptName) {
+      await this.memberRepo.update(
+        { accountId, department: dept.name },
+        { department: reassignToDeptName },
+      );
+    }
+
+    await this.departmentRepo.remove(dept);
+    return { id, success: true };
   }
 }

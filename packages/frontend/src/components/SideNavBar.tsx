@@ -19,7 +19,7 @@ export interface SideNavBarProps {
   onDeleteFolder?: (folder: SpaceFolder) => void;
   currentView?: string;
   onSelectDashboard?: () => void;
-  crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
+  crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived';
   onSelectCrmDashboard?: () => void;
   onSelectCrmBoard?: () => void;
   pipelines?: CrmPipeline[];

@@ -351,10 +351,17 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
                           >
                             <div className="flex items-center gap-2 truncate">
                               <span
-                                className={`w-1.5 h-1.5 rounded-full ${
-                                  subItem.active ? 'bg-orange-500 animate-pulse' : 'bg-zinc-500'
-                                }`}
+                                className="w-1.5 h-1.5 rounded-full shrink-0"
+                                style={{ backgroundColor: subItem.color || (subItem.active ? '#ea580c' : '#71717a') }}
                               />
+                              {subItem.icon && (
+                                <span
+                                  className="material-symbols-outlined text-[13px] shrink-0"
+                                  style={{ color: subItem.color || '#ea580c' }}
+                                >
+                                  {subItem.icon}
+                                </span>
+                              )}
                               <span className="font-medium text-xs text-zinc-200 truncate group-hover:text-orange-400 transition-colors">
                                 {subItem.name}
                               </span>

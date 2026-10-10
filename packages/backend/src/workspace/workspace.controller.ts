@@ -108,4 +108,36 @@ export class WorkspaceController {
   ) {
     return this.workspaceService.updateListSettings(user.accountId, data);
   }
+
+  // Departments
+  @Get('departments')
+  async getDepartments(@CurrentUser() user: CurrentUserPayload) {
+    return this.workspaceService.getDepartments(user.accountId);
+  }
+
+  @Post('departments')
+  async createDepartment(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() data: any,
+  ) {
+    return this.workspaceService.createDepartment(user.accountId, data);
+  }
+
+  @Patch('departments/:id')
+  async updateDepartment(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() data: any,
+  ) {
+    return this.workspaceService.updateDepartment(user.accountId, id, data);
+  }
+
+  @Delete('departments/:id')
+  async deleteDepartment(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() body: { reassignToDeptName?: string },
+  ) {
+    return this.workspaceService.deleteDepartment(user.accountId, id, body?.reassignToDeptName);
+  }
 }

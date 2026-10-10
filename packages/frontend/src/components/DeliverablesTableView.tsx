@@ -10,6 +10,13 @@ export interface DeliverablesTableViewProps {
   onRequestDeleteTask: (task: TaskItem) => void;
   onNavigateToView: (view: 'board' | 'list' | 'table' | 'timeline' | 'calendar' | 'docs') => void;
   onEditTask?: (task: TaskItem) => void;
+  onMoveTaskStatus?: (
+    taskId: string,
+    newStatus: TaskStatus,
+    targetIndex?: number,
+    targetTaskId?: string,
+    position?: 'before' | 'after'
+  ) => void;
   activeStatusRoute?: string;
   onSelectStatusRoute?: (statusSlug: string) => void;
 }
@@ -22,6 +29,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   onRequestDeleteTask,
   onNavigateToView,
   onEditTask,
+  onMoveTaskStatus,
   activeStatusRoute,
   onSelectStatusRoute,
 }) => {
@@ -32,6 +40,9 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   const [density, setDensity] = useState<'compact' | 'comfortable'>('compact');
   const [filterQuery, setFilterQuery] = useState('');
   const [localStatusFilter, setLocalStatusFilter] = useState<string>('All');
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [dragOverTabSlug, setDragOverTabSlug] = useState<string | null>(null);
 
   // Map route slug to TaskStatus
   const statusSlugToStatus: Record<string, string> = {
@@ -268,11 +279,11 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
           </span>
           {[
             { label: 'All Records', slug: 'all', count: tasks.length },
-            { label: 'In Progress', slug: 'in-progress', count: inProgressCount },
-            { label: 'In Review', slug: 'in-review', count: inReviewCount },
-            { label: 'Done', slug: 'done', count: doneCount },
-            { label: 'Blocked', slug: 'blocked', count: tasks.filter((t) => t.status === 'Blocked').length },
-            { label: 'Backlog', slug: 'backlog', count: backlogCount },
+            { label: 'In Progress', slug: 'in-progress', count: inProgressCount, status: 'In Progress' as TaskStatus },
+            { label: 'In Review', slug: 'in-review', count: inReviewCount, status: 'In Review' as TaskStatus },
+            { label: 'Done', slug: 'done', count: doneCount, status: 'Done' as TaskStatus },
+            { label: 'Blocked', slug: 'blocked', count: tasks.filter((t) => t.status === 'Blocked').length, status: 'Blocked' as TaskStatus },
+            { label: 'Backlog', slug: 'backlog', count: backlogCount, status: 'Backlog' as TaskStatus },
           ].map((tab) => {
             const isActive =
               (effectiveStatus === 'All' && tab.slug === 'all') ||
@@ -281,10 +292,39 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
               (effectiveStatus === 'Done' && tab.slug === 'done') ||
               (effectiveStatus === 'Blocked' && tab.slug === 'blocked') ||
               (effectiveStatus === 'Backlog' && tab.slug === 'backlog');
+            const isDragOverThisTab = dragOverTabSlug === tab.slug;
+
             return (
               <button
                 key={tab.slug}
                 type="button"
+                onDragOver={(e) => {
+                  if (!isReadOnly && draggingTaskId && tab.status) {
+                    e.preventDefault();
+                    e.dataTransfer.dropEffect = 'move';
+                    if (dragOverTabSlug !== tab.slug) {
+                      setDragOverTabSlug(tab.slug);
+                    }
+                  }
+                }}
+                onDragLeave={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                  if (dragOverTabSlug === tab.slug) {
+                    setDragOverTabSlug(null);
+                  }
+                }}
+                onDrop={(e) => {
+                  if (!isReadOnly && tab.status) {
+                    e.preventDefault();
+                    const sourceTaskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+                    if (sourceTaskId) {
+                      onMoveTaskStatus?.(sourceTaskId, tab.status);
+                    }
+                    setDraggingTaskId(null);
+                    setDragOverTabSlug(null);
+                    setDragOverTaskId(null);
+                  }
+                }}
                 onClick={() => {
                   if (onSelectStatusRoute) {
                     onSelectStatusRoute(tab.slug);
@@ -292,8 +332,10 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                     setLocalStatusFilter(statusSlugToStatus[tab.slug] || 'All');
                   }
                 }}
-                className={`px-2.5 py-1 rounded-[6px] text-xs font-medium transition-colors flex items-center gap-1.5 cursor-pointer shrink-0 ${
-                  isActive
+                className={`px-2.5 py-1 rounded-[6px] text-xs font-medium transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                  isDragOverThisTab
+                    ? 'bg-orange-600 text-white font-bold ring-2 ring-orange-500 scale-105 shadow-md'
+                    : isActive
                     ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30 font-semibold'
                     : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/40'
                 }`}
@@ -301,7 +343,11 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                 <span>{tab.label}</span>
                 <span
                   className={`text-[10px] font-mono px-1.5 py-0.2 rounded-[6px] ${
-                    isActive ? 'bg-orange-950 text-orange-300' : 'bg-zinc-800 text-zinc-500'
+                    isDragOverThisTab
+                      ? 'bg-white/20 text-white'
+                      : isActive
+                      ? 'bg-orange-950 text-orange-300'
+                      : 'bg-zinc-800 text-zinc-500'
                   }`}
                 >
                   {tab.count}
@@ -351,13 +397,54 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                 {filteredTasks.map((t) => {
                   const isChecked = selectedIds.includes(t.id);
                   const isRowActive = selectedTaskId === t.id;
+                  const isDraggingThis = draggingTaskId === t.id;
+                  const isDragOverThis = dragOverTaskId === t.id && !isDraggingThis;
 
                   return (
                     <tr
                       key={t.id}
+                      draggable={!isReadOnly}
+                      onDragStart={(e) => {
+                        if (isReadOnly) return;
+                        e.dataTransfer.setData('text/plain', t.id);
+                        e.dataTransfer.effectAllowed = 'move';
+                        setDraggingTaskId(t.id);
+                      }}
+                      onDragEnd={() => {
+                        setDraggingTaskId(null);
+                        setDragOverTaskId(null);
+                        setDragOverTabSlug(null);
+                      }}
+                      onDragOver={(e) => {
+                        if (isReadOnly || !draggingTaskId || draggingTaskId === t.id) return;
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        setDragOverTaskId(t.id);
+                      }}
+                      onDragLeave={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                        if (dragOverTaskId === t.id) setDragOverTaskId(null);
+                      }}
+                      onDrop={(e) => {
+                        if (isReadOnly) return;
+                        e.preventDefault();
+                        const sourceTaskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+                        if (sourceTaskId && sourceTaskId !== t.id) {
+                          onMoveTaskStatus?.(sourceTaskId, t.status, undefined, t.id, 'before');
+                        }
+                        setDraggingTaskId(null);
+                        setDragOverTaskId(null);
+                        setDragOverTabSlug(null);
+                      }}
                       onClick={() => onSelectTask(t)}
                       className={`hover:bg-zinc-800/40 transition-colors group cursor-pointer ${
-                        isRowActive ? 'bg-orange-950/30 border-l-2 border-orange-500' : ''
+                        isDraggingThis
+                          ? 'opacity-40 bg-orange-950/20'
+                          : isRowActive
+                          ? 'bg-orange-950/30 border-l-2 border-orange-500'
+                          : ''
+                      } ${
+                        isDragOverThis ? 'border-t-2 border-t-orange-500 bg-orange-950/20' : ''
                       } ${density === 'comfortable' ? 'py-3' : 'py-2'}`}
                     >
                       {/* Checkbox */}
@@ -376,9 +463,19 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                         />
                       </td>
 
-                      {/* ID */}
+                      {/* ID with drag indicator */}
                       <td className="px-3 py-2 font-mono text-[11px] text-zinc-400 font-semibold">
-                        {t.id}
+                        <div className="flex items-center gap-1.5">
+                          {!isReadOnly && (
+                            <span
+                              className="material-symbols-outlined text-[14px] text-zinc-600 group-hover:text-zinc-400 cursor-grab active:cursor-grabbing select-none"
+                              title="Drag deliverable"
+                            >
+                              drag_indicator
+                            </span>
+                          )}
+                          <span>{t.id}</span>
+                        </div>
                       </td>
 
                       {/* Task Name */}

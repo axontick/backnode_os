@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TaskStatus } from '../types';
 
 interface StatusTransitionPopoverProps {
@@ -14,11 +14,52 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
   onSelectStatus,
   onClose,
 }) => {
+  const popoverRef = useRef<HTMLDivElement>(null);
   const [selectedTarget, setSelectedTarget] = useState<TaskStatus>(currentStatus);
   const [gate1, setGate1] = useState(true); // acceptance criteria validated
   const [gate2, setGate2] = useState(false); // peer code review approved
   const [gate3, setGate3] = useState(true); // automated tests passing
   const [showRules, setShowRules] = useState(false);
+
+  // Close when clicking outside or pressing Escape or focus lost
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      if (
+        popoverRef.current &&
+        e.relatedTarget &&
+        !popoverRef.current.contains(e.relatedTarget as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    const element = popoverRef.current;
+    if (element) {
+      element.addEventListener('focusout', handleFocusOut);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+      if (element) {
+        element.removeEventListener('focusout', handleFocusOut);
+      }
+    };
+  }, [onClose]);
 
   const stages: {
     name: TaskStatus;
@@ -72,14 +113,16 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
 
   const readyGatesCount = (gate1 ? 1 : 0) + (gate2 ? 1 : 0) + (gate3 ? 1 : 0);
 
-  const handleApply = () => {
-    onSelectStatus(selectedTarget);
+  const handleApply = (statusToApply?: TaskStatus) => {
+    onSelectStatus(statusToApply || selectedTarget);
     onClose();
   };
 
   return (
     <div
-      className="absolute top-[170px] left-[16px] w-[370px] bg-[#121214] border border-[#27272a] shadow-2xl z-50 overflow-hidden rounded-[6px] text-zinc-100 animate-in fade-in zoom-in-95 duration-150"
+      ref={popoverRef}
+      tabIndex={-1}
+      className="absolute top-[170px] left-[16px] w-[370px] bg-[#121214] border border-[#27272a] shadow-2xl z-50 overflow-hidden rounded-[6px] text-zinc-100 animate-in fade-in zoom-in-95 duration-150 outline-none"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Popover Header: Current Active State & Stage Timer */}
@@ -118,7 +161,10 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
           return (
             <div
               key={stage.name}
-              onClick={() => setSelectedTarget(stage.name)}
+              onClick={() => {
+                setSelectedTarget(stage.name);
+                handleApply(stage.name);
+              }}
               className={`flex items-start gap-2.5 p-2 rounded-[6px] transition-colors cursor-pointer group ${
                 isSelectedTarget
                   ? 'bg-orange-950/40 border border-orange-500/40'
@@ -243,7 +289,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
       <div className="p-2.5 bg-[#121214] border-t border-[#27272a] flex flex-col gap-1.5">
         <button
           type="button"
-          onClick={handleApply}
+          onClick={() => handleApply()}
           className="w-full h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center justify-center gap-2 shadow-sm transition-all active:scale-[0.98] rounded-[6px] cursor-pointer"
         >
           <span>Update Status &amp; Notify Sprint</span>

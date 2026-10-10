@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TaskItem } from '../types';
 import { addDays, formatDateDisplay } from '../utils/dateUtils';
 
@@ -39,12 +39,20 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
 
   // Active drag or resize state
   const [dragSession, setDragSession] = useState<DragSession | null>(null);
+  const isDraggingOrResizingRef = useRef(false);
+  const justFinishedDragRef = useRef(false);
 
   // Column width calculated dynamically per zoom scale
   const dayColWidth = zoomScale === 'days' ? 65 : zoomScale === 'months' ? 28 : 45;
   const weekColWidth = dayColWidth * 7;
   const totalCanvasWidth = dayColWidth * 35;
   const baseDate = new Date(2026, 8, 28); // Sep 28, 2026 Monday
+
+  // Calculate dynamic current date and day index relative to baseDate
+  const now = new Date();
+  const todayDateOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const baseDateOnly = new Date(baseDate.getFullYear(), baseDate.getMonth(), baseDate.getDate());
+  const todayDayIndex = Math.round((todayDateOnly.getTime() - baseDateOnly.getTime()) / (1000 * 60 * 60 * 24));
 
   // Helper to parse day from dueDate or calculate fallback index
   const getTaskSchedule = (task: TaskItem, index: number) => {
@@ -84,6 +92,9 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
 
     const handleMouseMove = (e: MouseEvent) => {
       const deltaX = e.clientX - dragSession.initialMouseX;
+      if (Math.abs(deltaX) > 3) {
+        isDraggingOrResizingRef.current = true;
+      }
 
       if (dragSession.mode === 'move') {
         const snappedDelta = Math.round(deltaX / dayColWidth) * dayColWidth;
@@ -106,6 +117,14 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
     };
 
     const handleMouseUp = () => {
+      if (isDraggingOrResizingRef.current) {
+        justFinishedDragRef.current = true;
+        setTimeout(() => {
+          justFinishedDragRef.current = false;
+          isDraggingOrResizingRef.current = false;
+        }, 150);
+      }
+
       const finalStartDay = Math.round(dragSession.currentLeftPx / dayColWidth);
       const finalDuration = Math.max(1, Math.round(dragSession.currentWidthPx / dayColWidth));
       const finalEndDay = finalStartDay + finalDuration;
@@ -325,36 +344,38 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
             className="h-14 border-b border-[#27272a] bg-[#121214] flex flex-col shrink-0 select-none"
             style={{ width: `${totalCanvasWidth}px` }}
           >
-            {/* Top Tier: Weeks 40 to 44 */}
+            {/* Top Tier: Weeks */}
             <div className="h-7 flex border-b border-[#27272a] font-mono text-[10px] text-zinc-400 font-medium">
-              {[
-                { label: 'Week 40', span: 'Sep 28 - Oct 04', active: false },
-                { label: 'Week 41', span: 'Oct 05 - Oct 11', active: false },
-                { label: 'Week 42', span: 'Oct 12 - Oct 18', active: true },
-                { label: 'Week 43', span: 'Oct 19 - Oct 25', active: false },
-                { label: 'Week 44', span: 'Oct 26 - Nov 01', active: false },
-              ].map((w, idx) => (
-                <div
-                  key={idx}
-                  style={{ width: `${weekColWidth}px` }}
-                  className={`border-r border-[#27272a] px-3 flex items-center justify-between ${
-                    w.active ? 'bg-orange-950/20 text-orange-400' : 'bg-[#18181b] text-zinc-200'
-                  }`}
-                >
-                  <span className="font-bold">{w.label}</span>
-                  <span className={w.active ? 'text-orange-400 font-semibold text-[9px]' : 'text-zinc-500 text-[9px]'}>
-                    {w.span}
-                  </span>
-                </div>
-              ))}
+              {[0, 1, 2, 3, 4].map((wIdx) => {
+                const wStart = addDays(baseDate, wIdx * 7);
+                const wEnd = addDays(baseDate, wIdx * 7 + 6);
+                const isCurrentWeek = todayDayIndex >= wIdx * 7 && todayDayIndex < (wIdx + 1) * 7;
+                const startLabel = wStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const endLabel = wEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                return (
+                  <div
+                    key={wIdx}
+                    style={{ width: `${weekColWidth}px` }}
+                    className={`border-r border-[#27272a] px-3 flex items-center justify-between ${
+                      isCurrentWeek ? 'bg-orange-950/20 text-orange-400 font-semibold' : 'bg-[#18181b] text-zinc-200'
+                    }`}
+                  >
+                    <span className="font-bold">Week {40 + wIdx}</span>
+                    <span className={isCurrentWeek ? 'text-orange-400 font-semibold text-[9px]' : 'text-zinc-500 text-[9px]'}>
+                      {startLabel} - {endLabel}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Bottom Tier: Daily Day Columns */}
             <div className="h-7 flex font-mono text-[10px] text-zinc-500">
               {Array.from({ length: 35 }).map((_, i) => {
-                const dayNum = ((i + 28) % 31) || 31;
-                const isToday = i === 16;
-                const isWeekend = i % 7 === 5 || i % 7 === 6;
+                const colDate = addDays(baseDate, i);
+                const dayNum = colDate.getDate();
+                const isToday = i === todayDayIndex;
+                const isWeekend = colDate.getDay() === 0 || colDate.getDay() === 6;
 
                 return (
                   <div
@@ -449,17 +470,19 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
             )}
 
             {/* TODAY VERTICAL INDICATOR LINE */}
-            <div
-              id="timeline-today-indicator"
-              style={{ left: `${16 * dayColWidth}px` }}
-              className="absolute top-0 bottom-0 w-[2px] bg-orange-500 z-20 pointer-events-none flex flex-col items-center"
-            >
-              <div className="-mt-1.5 px-2 py-0.5 rounded-[6px] bg-orange-600 text-white font-mono text-[9px] font-bold shadow-md shadow-orange-600/30 flex items-center gap-1 scale-90">
-                <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                TODAY
+            {todayDayIndex >= 0 && todayDayIndex < 35 && (
+              <div
+                id="timeline-today-indicator"
+                style={{ left: `${todayDayIndex * dayColWidth + dayColWidth / 2}px` }}
+                className="absolute top-0 bottom-0 w-[2px] bg-orange-500 z-20 pointer-events-none flex flex-col items-center"
+              >
+                <div className="-mt-1.5 px-2 py-0.5 rounded-[6px] bg-orange-600 text-white font-mono text-[9px] font-bold shadow-md shadow-orange-600/30 flex items-center gap-1 scale-90 whitespace-nowrap">
+                  <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                  TODAY ({now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})
+                </div>
+                <div className="w-full h-full bg-orange-500/10"></div>
               </div>
-              <div className="w-full h-full bg-orange-500/10"></div>
-            </div>
+            )}
 
             {/* DYNAMIC GANTT BARS CONTAINER */}
             <div className="relative w-full h-full z-10">
@@ -477,7 +500,11 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
                   return (
                     <div
                       key={task.id}
-                      onClick={() => {
+                      onClick={(e) => {
+                        if (isDraggingOrResizingRef.current || justFinishedDragRef.current) {
+                          e.stopPropagation();
+                          return;
+                        }
                         setSelectedRowId(task.id);
                         onSelectTask(task);
                       }}
@@ -509,6 +536,7 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
                         onMouseDown={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
+                          isDraggingOrResizingRef.current = false;
                           setDragSession({
                             taskId: task.id,
                             mode: 'resize-left',
@@ -530,6 +558,7 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
                         onMouseDown={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
+                          isDraggingOrResizingRef.current = false;
                           setDragSession({
                             taskId: task.id,
                             mode: 'move',
@@ -558,6 +587,7 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
                         onMouseDown={(e) => {
                           e.stopPropagation();
                           e.preventDefault();
+                          isDraggingOrResizingRef.current = false;
                           setDragSession({
                             taskId: task.id,
                             mode: 'resize-right',

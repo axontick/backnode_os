@@ -9,7 +9,7 @@ import { findSpaceBreadcrumbs, findPipelineSubFolderPath, findListItemById } fro
 interface TopNavBarProps {
   currentHub?: string;
   currentView?: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs';
-  crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
+  crmView?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived';
   activePipelineName?: string;
   onSelectView?: (view: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs') => void;
   searchQuery: string;
@@ -122,30 +122,71 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     effectiveHub = 'settings';
   }
 
-  // Close dropdowns on outside click
+  // Close dropdowns on outside click, focus loss, or Escape key
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (filterRef.current && !filterRef.current.contains(e.target as Node)) {
+      const target = e.target as Node;
+      if (filterRef.current && !filterRef.current.contains(target)) {
         setIsFilterDropdownOpen(false);
       }
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+      if (searchRef.current && !searchRef.current.contains(target)) {
         setIsSearchFocused(false);
       }
-      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+      if (notifRef.current && !notifRef.current.contains(target)) {
         setIsNotificationsOpen(false);
       }
-      if (helpRef.current && !helpRef.current.contains(e.target as Node)) {
+      if (helpRef.current && !helpRef.current.contains(target)) {
         setIsHelpOpen(false);
       }
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+      if (profileRef.current && !profileRef.current.contains(target)) {
         setIsProfileOpen(false);
       }
-      if (roleRef.current && !roleRef.current.contains(e.target as Node)) {
+      if (roleRef.current && !roleRef.current.contains(target)) {
         setIsRoleMenuOpen(false);
       }
     };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsFilterDropdownOpen(false);
+        setIsSearchFocused(false);
+        setIsNotificationsOpen(false);
+        setIsHelpOpen(false);
+        setIsProfileOpen(false);
+        setIsRoleMenuOpen(false);
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      const target = e.relatedTarget as Node | null;
+      if (filterRef.current && target && !filterRef.current.contains(target)) {
+        setIsFilterDropdownOpen(false);
+      }
+      if (searchRef.current && target && !searchRef.current.contains(target)) {
+        setIsSearchFocused(false);
+      }
+      if (notifRef.current && target && !notifRef.current.contains(target)) {
+        setIsNotificationsOpen(false);
+      }
+      if (helpRef.current && target && !helpRef.current.contains(target)) {
+        setIsHelpOpen(false);
+      }
+      if (profileRef.current && target && !profileRef.current.contains(target)) {
+        setIsProfileOpen(false);
+      }
+      if (roleRef.current && target && !roleRef.current.contains(target)) {
+        setIsRoleMenuOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('focusout', handleFocusOut);
+    };
   }, []);
 
   const activeFilterCount =
@@ -168,12 +209,15 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
   const matchingDeals =
     searchQuery.trim().length > 0
-      ? deals.filter(
-          (d) =>
-            d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            d.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            d.company.toLowerCase().includes(searchQuery.toLowerCase())
-        ).slice(0, 3)
+      ? deals
+          .filter(
+            (d) =>
+              !d.isArchived &&
+              (d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                d.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                d.company.toLowerCase().includes(searchQuery.toLowerCase()))
+          )
+          .slice(0, 3)
       : [];
 
   const matchingDocs =
@@ -205,7 +249,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
   const availableOwners = Array.from(
     new Set([
-      ...deals.map((d) => d.owner).filter(Boolean),
+      ...deals.filter((d) => !d.isArchived).map((d) => d.owner).filter(Boolean),
       ...(user?.name ? [user.name] : []),
     ])
   );
@@ -522,7 +566,10 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           }
 
           const matchedItem = routeListId ? findListItemById(folders, routeListId) : undefined;
+          const isMatchingListSettings = listSettings && (routeListId === listSettings.listId || !routeListId);
           const displayListName = matchedItem?.name || routeListId || listSettings?.name || 'Sprint 14';
+          const displayListColor = (matchedItem as any)?.color || (isMatchingListSettings && listSettings?.color ? listSettings.color : null) || null;
+          const displayListIcon = (matchedItem as any)?.icon || (isMatchingListSettings && listSettings?.icon ? listSettings.icon : null) || listSettings?.icon || 'format_list_bulleted';
 
           const viewLabels: Record<string, string> = {
             board: 'Board',
@@ -571,9 +618,15 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               <span className="text-zinc-600 font-mono">/</span>
               <span
                 onClick={() => navigate(`${spacePrefix}/spaces/${routeFolderId}/lists/${routeListId}/board`)}
-                className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[140px] text-zinc-300"
+                className="hover:text-zinc-200 cursor-pointer transition-colors truncate max-w-[160px] text-zinc-300 flex items-center gap-1.5"
               >
-                {displayListName}
+                <span
+                  className={`material-symbols-outlined text-[13px] shrink-0 ${displayListColor ? '' : 'text-orange-400'}`}
+                  style={displayListColor ? { color: displayListColor } : undefined}
+                >
+                  {displayListIcon}
+                </span>
+                <span className="truncate">{displayListName}</span>
               </span>
               {routeView && (
                 <>

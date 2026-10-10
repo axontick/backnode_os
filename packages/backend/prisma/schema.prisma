@@ -166,6 +166,7 @@ model CrmDeal {
   nextStep        String?
   linkedTasks     Json         @default("[]")
   history         Json         @default("[]")
+  isArchived      Boolean      @default(false) @map("is_archived")
   pipelineId      String?
   pipeline        CrmPipeline? @relation(fields: [pipelineId], references: [id], onDelete: SetNull)
   createdAt       DateTime     @default(now())

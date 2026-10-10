@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ export const TeamAccessPage: React.FC = () => {
   const { user, effectiveRole, effectiveDepartment } = useAuth();
   const {
     members,
+    departments,
     handleInviteMember,
     handleUpdateMemberAccess,
     handleRemoveMember,
@@ -53,11 +54,20 @@ export const TeamAccessPage: React.FC = () => {
   const [isSavingModalPassword, setIsSavingModalPassword] = useState(false);
 
   // Form state for adding/inviting new member
+  const defaultDeptName = useMemo(() => {
+    return departments.find((d) => d.isDefault)?.name || departments[0]?.name || 'Engineering';
+  }, [departments]);
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Product Engineer');
   const [inviteAccessLevel, setInviteAccessLevel] = useState<'ADMIN' | 'MEMBER' | 'VIEWER'>('MEMBER');
-  const [inviteDept, setInviteDept] = useState<'Engineering' | 'Product' | 'Design' | 'Operations' | 'Sales'>('Engineering');
+  const [inviteDept, setInviteDept] = useState<string>(defaultDeptName);
+
+  useEffect(() => {
+    if (defaultDeptName && (!inviteDept || !departments.some((d) => d.name === inviteDept))) {
+      setInviteDept(defaultDeptName);
+    }
+  }, [defaultDeptName, departments]);
   const [inviteCanLogin, setInviteCanLogin] = useState(true);
   const [invitePassword, setInvitePassword] = useState('Backnode@2026');
   const [showInvitePassword, setShowInvitePassword] = useState(false);
@@ -402,11 +412,11 @@ export const TeamAccessPage: React.FC = () => {
               className="h-8 px-2.5 bg-[#18181b] border border-[#27272a] rounded-[6px] text-xs text-zinc-300 focus:outline-none focus:border-orange-500 transition-colors cursor-pointer"
             >
               <option value="ALL">All Departments</option>
-              <option value="Engineering">Engineering</option>
-              <option value="Product">Product</option>
-              <option value="Design">Design</option>
-              <option value="Operations">Operations</option>
-              <option value="Sales">Sales</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.name}>
+                  {dept.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -490,7 +500,7 @@ export const TeamAccessPage: React.FC = () => {
                                 </span>
                                 {isOwner && (
                                   <span className="px-1.5 py-0.2 rounded-[6px] text-[9.5px] font-mono font-bold bg-orange-950/60 text-orange-400 border border-orange-500/40">
-                                    OWNER
+                                    OWNER {user && (member.email === user.email || member.id === user.id) ? '(YOU)' : ''}
                                   </span>
                                 )}
                               </div>
@@ -503,31 +513,26 @@ export const TeamAccessPage: React.FC = () => {
 
                         {/* Access Level Badge — Clicking opens separate edit page */}
                         <td className="py-3.5 px-4">
-                          {isOwner ? (
-                            <div
-                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-semibold bg-orange-950/40 text-orange-400 border-orange-500/30 shadow-xs"
-                              title="Workspace Owner (Permanent / Immutable)"
-                            >
-                              <span className="material-symbols-outlined text-[13px]">lock</span>
-                              <span>OWNER</span>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() =>
-                                navigate(`/space/${currentSpaceId}/team/members/${member.id}/edit`)
-                              }
-                              className={`px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-semibold inline-flex items-center gap-1.5 transition-all hover:border-orange-500/60 cursor-pointer ${getAccessBadgeStyle(
-                                accessLevel
-                              )}`}
-                              title="Click to open dedicated role edit page"
-                            >
-                              <span>{accessLevel}</span>
-                              <span className="material-symbols-outlined text-[12px] opacity-70">
-                                edit
-                              </span>
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() =>
+                              navigate(`/space/${currentSpaceId}/team/members/${member.id}/edit`)
+                            }
+                            className={`px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-semibold inline-flex items-center gap-1.5 transition-all hover:border-orange-500/60 cursor-pointer ${
+                              isOwner
+                                ? 'bg-orange-950/40 text-orange-400 border-orange-500/30 shadow-xs'
+                                : getAccessBadgeStyle(accessLevel)
+                            }`}
+                            title={isOwner ? 'Workspace Owner — Click to edit profile and role' : 'Click to open dedicated role edit page'}
+                          >
+                            {isOwner && (
+                              <span className="material-symbols-outlined text-[13px]">shield_person</span>
+                            )}
+                            <span>{accessLevel}</span>
+                            <span className="material-symbols-outlined text-[12px] opacity-70">
+                              edit
+                            </span>
+                          </button>
                         </td>
 
                         {/* Department */}
@@ -638,10 +643,10 @@ export const TeamAccessPage: React.FC = () => {
                                 navigate(`/space/${currentSpaceId}/team/members/${member.id}/edit`)
                               }
                               className="px-2 py-1 rounded-[6px] border border-[#27272a] hover:border-orange-500/40 bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-orange-400 text-xs font-semibold flex items-center gap-1 transition-all cursor-pointer"
-                              title={isOwner ? 'View Workspace Owner Details' : 'Edit Role & Clearance'}
+                              title={isOwner ? 'Edit Workspace Owner Profile & Role' : 'Edit Role & Clearance'}
                             >
                               <span className="material-symbols-outlined text-[14px]">tune</span>
-                              <span>{isOwner ? 'View' : 'Edit'}</span>
+                              <span>Edit</span>
                             </button>
 
                             {/* Delete User Button */}
@@ -809,19 +814,31 @@ export const TeamAccessPage: React.FC = () => {
               {/* Department & Role */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1">
-                    Department
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                      Department
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsInviteModalOpen(false);
+                        navigate(`/space/${currentSpaceId}/settings/departments`);
+                      }}
+                      className="text-[10px] text-orange-400 hover:text-orange-300 hover:underline font-mono cursor-pointer"
+                    >
+                      Configure →
+                    </button>
+                  </div>
                   <select
                     value={inviteDept}
-                    onChange={(e) => setInviteDept(e.target.value as any)}
+                    onChange={(e) => setInviteDept(e.target.value)}
                     className="w-full h-[34px] px-3 text-[13px] bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors cursor-pointer"
                   >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Product">Product</option>
-                    <option value="Design">Design</option>
-                    <option value="Operations">Operations</option>
-                    <option value="Sales">Sales</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -1213,6 +1230,11 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
   showToast,
   activeUserSpaceName,
 }) => {
+  const navigate = useNavigate();
+  const { departments, activeUserSpaceId, activeUserSpace } = useWorkspace();
+  const currentSpaceId = activeUserSpaceId || activeUserSpace?.id || 'default';
+  const defaultDeptName = departments.find((d) => d.isDefault)?.name || departments[0]?.name || 'Engineering';
+
   const isOwner =
     (member.accessLevel || '').toUpperCase() === 'OWNER' ||
     member.role === 'Workspace Owner';
@@ -1221,8 +1243,8 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
     ((member.accessLevel || 'MEMBER').toUpperCase() as any)
   );
   const [role, setRole] = useState(member.role || 'Member');
-  const [department, setDepartment] = useState<'Engineering' | 'Product' | 'Design' | 'Operations' | 'Sales' | 'Executive' | string>(
-    member.department || 'Engineering'
+  const [department, setDepartment] = useState<string>(
+    member.department || defaultDeptName
   );
   const [canLogin, setCanLogin] = useState<boolean>(
     member.canLogin !== undefined ? member.canLogin : member.status !== 'Disabled'
@@ -1248,10 +1270,6 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
 
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (isOwner) {
-      showToast('Workspace Owner role cannot be modified or demoted.');
-      return;
-    }
     if (!canManage) {
       showToast('You do not have administrative clearance to update team roles.');
       return;
@@ -1259,14 +1277,17 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
 
     setIsSaving(true);
     try {
+      const effectiveAccessLevel = isOwner ? 'OWNER' : accessLevel;
+      const effectiveCanLogin = isOwner ? true : canLogin;
+
       await onSave(member.id, {
-        accessLevel,
-        role: role.trim() || 'Collaborator',
+        accessLevel: effectiveAccessLevel,
+        role: role.trim() || (isOwner ? 'Workspace Owner' : 'Collaborator'),
         department: department as any,
-        canLogin,
-        allowedPages,
-        allowedActions,
-        status: canLogin ? 'Active' : 'Disabled',
+        canLogin: effectiveCanLogin,
+        allowedPages: isOwner ? ['overview', 'tasks', 'crm', 'contacts', 'docs', 'team', 'settings'] : allowedPages,
+        allowedActions: isOwner ? ['read', 'write', 'delete', 'publish', 'admin'] : allowedActions,
+        status: 'Active',
       });
       showToast(`Access and permissions updated for ${member.name}`);
       onBack();
@@ -1382,17 +1403,15 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
                 <span>Cancel</span>
               </button>
 
-              {!isOwner && (
-                <button
-                  type="button"
-                  onClick={() => handleSave()}
-                  disabled={isSaving || !canManage}
-                  className="h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[16px]">check</span>
-                  <span>{isSaving ? 'Saving...' : 'Save Role & Access'}</span>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => handleSave()}
+                disabled={isSaving || !canManage}
+                className="h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-[16px]">check</span>
+                <span>{isSaving ? 'Saving...' : 'Save Role & Access'}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1409,16 +1428,15 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
             <div className="flex flex-col gap-1 flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-sm text-zinc-100 font-headline">
-                  Workspace Creator &amp; Immutable Owner
+                  Workspace Creator &amp; Primary Owner
                 </h3>
                 <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-orange-950/60 text-orange-400 border border-orange-500/40 uppercase">
-                  ROOT LOCKED
+                  ROOT AUTHORITY
                 </span>
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
                 This operator is the primary creator and owner of <strong className="text-zinc-200">{activeUserSpaceName}</strong>.
-                In accordance with enterprise security policies, the Workspace Owner role and login access are permanent and cannot be modified,
-                disabled, or demoted. Root ownership guarantees universal clearance across all workspace pages and action capabilities.
+                As Workspace Owner, root access tier and login credentials are permanent and cannot be demoted. You can customize your functional title, assigned department, and clearances below.
               </p>
             </div>
           </div>
@@ -1859,21 +1877,32 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider mb-1.5">
-                    Assigned Department
-                  </label>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                      Assigned Department
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/space/${currentSpaceId}/settings/departments`)}
+                      className="text-[10px] text-orange-400 hover:text-orange-300 hover:underline font-mono cursor-pointer"
+                    >
+                      Configure →
+                    </button>
+                  </div>
                   <select
-                    disabled={isOwner || !canManage}
+                    disabled={!canManage}
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
                     className="w-full h-[34px] px-3 bg-[#18181b] border border-[#27272a] rounded-[6px] text-[13px] text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
                   >
-                    <option value="Engineering">Engineering</option>
-                    <option value="Product">Product</option>
-                    <option value="Design">Design</option>
-                    <option value="Operations">Operations</option>
-                    <option value="Sales">Sales</option>
-                    <option value="Executive">Executive</option>
+                    {departments.map((dept) => (
+                      <option key={dept.id} value={dept.name}>
+                        {dept.name}
+                      </option>
+                    ))}
+                    {department && !departments.some((d) => d.name.toLowerCase() === department.toLowerCase()) && (
+                      <option value={department}>{department}</option>
+                    )}
                   </select>
                 </div>
 
@@ -1883,7 +1912,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
                   </label>
                   <input
                     type="text"
-                    disabled={isOwner || !canManage}
+                    disabled={!canManage}
                     value={role}
                     onChange={(e) => setRole(e.target.value)}
                     placeholder="e.g. Core Systems Architect"
@@ -1891,7 +1920,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
                   />
                   {isOwner && (
                     <span className="text-[10px] text-zinc-500 mt-1 block">
-                      Workspace Owner title is permanent.
+                      Customize your functional title displayed across spaces and boards.
                     </span>
                   )}
                 </div>
@@ -2028,31 +2057,20 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
           </button>
 
           <div className="flex items-center gap-2.5">
-            {isOwner ? (
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-mono text-orange-400">
-                  Workspace Owner role is immutable
-                </span>
-                <button
-                  type="button"
-                  disabled
-                  className="h-8 px-4 rounded-[6px] bg-zinc-800 text-zinc-500 text-xs font-semibold flex items-center gap-1.5 cursor-not-allowed"
-                >
-                  <span className="material-symbols-outlined text-[15px]">lock</span>
-                  <span>Locked</span>
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => handleSave()}
-                disabled={isSaving || !canManage}
-                className="h-8 px-5 rounded-[6px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-              >
-                <span className="material-symbols-outlined text-[16px]">save</span>
-                <span>{isSaving ? 'Saving Changes...' : 'Save Role & Access'}</span>
-              </button>
+            {isOwner && (
+              <span className="text-[11px] font-mono text-orange-400 hidden sm:inline">
+                Workspace Owner tier is permanent
+              </span>
             )}
+            <button
+              type="button"
+              onClick={() => handleSave()}
+              disabled={isSaving || !canManage}
+              className="h-8 px-5 rounded-[6px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[16px]">save</span>
+              <span>{isSaving ? 'Saving Changes...' : 'Save Role & Access'}</span>
+            </button>
           </div>
         </div>
       </div>

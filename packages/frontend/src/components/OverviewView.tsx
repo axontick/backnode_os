@@ -34,8 +34,10 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   const completionPct = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
   const urgentCount = tasks.filter((t) => t.priority === 'Urgent').length;
 
-  // Pipeline revenue computations
-  const totalPipelineArr = deals.reduce((acc, d) => acc + (d.value || 0), 0);
+  // Pipeline revenue computations (strictly active, unarchived deals)
+  const activeDeals = deals.filter((d) => !d.isArchived);
+  const archivedDeals = deals.filter((d) => d.isArchived);
+  const totalPipelineArr = activeDeals.reduce((acc, d) => acc + (d.value || 0), 0);
   const formattedPipeline = `$${totalPipelineArr.toLocaleString()}`;
 
   // Stage distribution definition
@@ -48,7 +50,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
   ];
 
   const stageMetrics = stageDefs.map((def) => {
-    const stageDeals = deals.filter((d) => d.stage === def.name);
+    const stageDeals = activeDeals.filter((d) => d.stage === def.name);
     const sumVal = stageDeals.reduce((acc, d) => acc + (d.value || 0), 0);
     const pct = totalPipelineArr > 0 ? (sumVal / totalPipelineArr) * 100 : 0;
     return {
@@ -207,8 +209,12 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
               </span>
             </div>
             <div className="flex items-center justify-between text-xs font-mono text-zinc-400 pt-1.5 border-t border-[#1f1f23]">
-              <span>{deals.length} active deals</span>
-              <span className="text-emerald-400 font-medium">Weighted 72%</span>
+              <span>{activeDeals.length} active deals</span>
+              {archivedDeals.length > 0 ? (
+                <span className="text-zinc-500 font-medium">({archivedDeals.length} archived)</span>
+              ) : (
+                <span className="text-emerald-400 font-medium">Weighted 72%</span>
+              )}
             </div>
           </div>
 
@@ -378,7 +384,11 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
 
             <div className="flex items-center justify-between text-xs font-mono text-zinc-400 pt-3 border-t border-[#1f1f23] mt-2">
               <span>Weighted Win Rate: 42%</span>
-              <span className="text-zinc-500">5 Pipeline Stages Active</span>
+              <span className="text-zinc-500">
+                {archivedDeals.length > 0
+                  ? `5 Stages Active (${archivedDeals.length} archived)`
+                  : '5 Pipeline Stages Active'}
+              </span>
             </div>
           </div>
 

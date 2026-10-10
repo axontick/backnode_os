@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TaskItem, TeamMember, TaskStatus } from '../types';
 import { AssigneePopover } from './AssigneePopover';
 import { StatusTransitionPopover } from './StatusTransitionPopover';
 import { useAuth } from '../context/AuthContext';
+import { formatDateDisplay, formatDateIso, parseTaskDueDate } from '../utils/dateUtils';
 
 interface TaskInspectorProps {
   task: TaskItem;
@@ -38,6 +39,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   const [isAssigneePopoverOpen, setIsAssigneePopoverOpen] = useState(false);
   const [isStatusPopoverOpen, setIsStatusPopoverOpen] = useState(false);
   const [titleText, setTitleText] = useState(task.title);
+  const [descText, setDescText] = useState(task.specMarkdown || task.description || '');
   const [activeTab, setActiveTab] = useState<'spec' | 'preview'>('spec');
   const [commentText, setCommentText] = useState('');
   const [newSubtaskText, setNewSubtaskText] = useState('');
@@ -45,18 +47,51 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Sync title on task prop change
-  React.useEffect(() => {
+  // Sync title and description on task prop change
+  useEffect(() => {
     setTitleText(task.title);
+    setDescText(task.specMarkdown || task.description || '');
     setIsAssigneePopoverOpen(false);
     setIsStatusPopoverOpen(false);
-  }, [task.id]);
+  }, [task.id, task.title, task.description, task.specMarkdown]);
+
 
   const handleTitleBlur = () => {
     if (isReadOnly) return;
     if (titleText.trim() && titleText !== task.title) {
       onUpdateTask({ ...task, title: titleText.trim() });
+    } else if (!titleText.trim()) {
+      setTitleText(task.title);
     }
+  };
+
+  const handleDescBlur = () => {
+    if (isReadOnly) return;
+    const current = task.specMarkdown || task.description || '';
+    if (descText !== current) {
+      onUpdateTask({
+        ...task,
+        description: descText,
+        specMarkdown: descText,
+      });
+    }
+  };
+
+  const handleDueDateChange = (newDateStr: string) => {
+    if (isReadOnly) return;
+    if (!newDateStr) {
+      onUpdateTask({ ...task, dueDate: '' });
+    } else {
+      const [y, m, d] = newDateStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      onUpdateTask({ ...task, dueDate: formatDateDisplay(dateObj) });
+    }
+  };
+
+  const handleDeleteSubtask = (subId: string) => {
+    if (isReadOnly) return;
+    const updatedSubtasks = task.subtasks.filter((st) => st.id !== subId);
+    onUpdateTask({ ...task, subtasks: updatedSubtasks });
   };
 
   const handleAssigneeChange = (member: TeamMember) => {
@@ -156,8 +191,12 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           <span>/</span>
           <span className="hover:text-orange-400 cursor-pointer">Engineering</span>
           <span>/</span>
-          <span className="hover:text-orange-400 cursor-pointer">{task.targetCycle.split(' - ')[0]}</span>
-          <span>/</span>
+          {task.targetCycle ? (
+            <>
+              <span className="hover:text-orange-400 cursor-pointer">{task.targetCycle.split(' - ')[0]}</span>
+              <span>/</span>
+            </>
+          ) : null}
           <span className="bg-orange-950/40 text-orange-400 font-bold px-2 py-0.5 rounded-[6px] border border-orange-500/20">
             {task.id}
           </span>
@@ -241,11 +280,26 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               <span>{task.priority} Priority</span>
             </span>
 
-            {/* Due Date */}
-            <span className="bg-[#18181b] text-zinc-300 border border-[#27272a] font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1">
-              <span className="material-symbols-outlined text-[13px] text-amber-400">calendar_today</span>
-              <span>Due {task.dueDate}</span>
-            </span>
+            {/* Due Date Editable */}
+            <div className="relative flex items-center">
+              <label
+                className={`bg-[#18181b] text-zinc-300 border border-[#27272a] hover:border-orange-500/50 font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1.5 transition-colors ${
+                  isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                }`}
+                title={isReadOnly ? 'Due date' : 'Click to change due date'}
+              >
+                <span className="material-symbols-outlined text-[13px] text-amber-400">calendar_today</span>
+                <span>Due {task.dueDate || 'Unscheduled'}</span>
+                {!isReadOnly && (
+                  <input
+                    type="date"
+                    value={task.dueDate ? formatDateIso(parseTaskDueDate(task.dueDate)) : ''}
+                    onChange={(e) => handleDueDateChange(e.target.value)}
+                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
+                  />
+                )}
+              </label>
+            </div>
 
             {/* Git Branch */}
             <span className="bg-[#18181b] text-zinc-400 border border-[#27272a] font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1">
@@ -262,6 +316,11 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               disabled={isReadOnly}
               onChange={(e) => setTitleText(e.target.value)}
               onBlur={handleTitleBlur}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  (e.target as HTMLInputElement).blur();
+                }
+              }}
               className={`w-full font-bold text-lg text-zinc-100 bg-transparent border-0 border-b border-transparent p-0 pb-1 leading-snug font-headline ${
                 isReadOnly ? 'cursor-default' : 'hover:border-zinc-700 focus:border-orange-500 focus:ring-0 cursor-text transition-colors'
               }`}
@@ -333,25 +392,79 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </div>
           </div>
 
-          {/* Estimation Row */}
+          {/* Estimated Hours Field */}
           <div className="flex flex-col gap-1">
-            <span className="font-mono text-[10px] text-zinc-400 font-medium">ESTIMATION</span>
-            <div className="flex items-center gap-2">
-              <span className="bg-[#121214] border border-[#27272a] px-2 py-0.5 rounded-[6px] font-mono text-[11px] font-semibold text-zinc-200">
-                {task.estimation.hours} hrs
-              </span>
-              <span className="font-mono text-[11px] text-zinc-400 bg-[#121214] border border-[#27272a] px-2 py-0.5 rounded-[6px] font-medium">
-                {task.estimation.points} pts
+            <span className="font-mono text-[10px] text-zinc-400 font-medium">ESTIMATED HOURS</span>
+            <div
+              className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
+                isReadOnly ? 'cursor-default' : 'hover:border-zinc-700 focus-within:border-orange-500'
+              }`}
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0 mr-1.5">
+                <span className="material-symbols-outlined text-orange-400 text-[16px] shrink-0">
+                  schedule
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max="999"
+                  disabled={isReadOnly}
+                  value={task.estimation?.hours ?? 0}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const val = raw === '' ? 0 : Math.max(0, parseInt(raw, 10) || 0);
+                    onUpdateTask({
+                      ...task,
+                      estimation: {
+                        hours: val,
+                        points: task.estimation?.points ?? 0,
+                      },
+                    });
+                  }}
+                  className="w-full bg-transparent font-mono text-xs font-semibold text-zinc-100 focus:outline-none text-left"
+                />
+              </div>
+              <span className="font-mono text-[11px] text-zinc-400 font-medium shrink-0">
+                hrs
               </span>
             </div>
           </div>
 
-          {/* Target Cycle / Sprint */}
+          {/* Story Points Field */}
           <div className="flex flex-col gap-1">
-            <span className="font-mono text-[10px] text-zinc-400 font-medium">TARGET CYCLE</span>
-            <div className="flex items-center gap-1.5 p-1 bg-[#121214] border border-[#27272a] rounded-[6px] text-xs text-zinc-200">
-              <span className="material-symbols-outlined text-orange-400 text-[14px]">sprint</span>
-              <span className="truncate">{task.targetCycle}</span>
+            <span className="font-mono text-[10px] text-zinc-400 font-medium">STORY POINTS</span>
+            <div
+              className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
+                isReadOnly ? 'cursor-default' : 'hover:border-zinc-700 focus-within:border-orange-500'
+              }`}
+            >
+              <div className="flex items-center gap-2 flex-1 min-w-0 mr-1.5">
+                <span className="material-symbols-outlined text-orange-400 text-[16px] shrink-0">
+                  tag
+                </span>
+                <input
+                  type="number"
+                  min="0"
+                  max="99"
+                  disabled={isReadOnly}
+                  value={task.estimation?.points ?? 0}
+                  onChange={(e) => {
+                    const raw = e.target.value;
+                    const val = raw === '' ? 0 : Math.max(0, parseInt(raw, 10) || 0);
+                    onUpdateTask({
+                      ...task,
+                      estimation: {
+                        hours: task.estimation?.hours ?? 0,
+                        points: val,
+                      },
+                    });
+                  }}
+                  className="w-full bg-transparent font-mono text-xs font-semibold text-zinc-100 focus:outline-none text-left"
+                />
+              </div>
+              <span className="font-mono text-[11px] text-zinc-400 font-medium shrink-0">
+                pts
+              </span>
             </div>
           </div>
 
@@ -430,13 +543,43 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 
             {/* Rich text mini toolbar */}
             <div className="flex items-center gap-1 text-zinc-400">
-              <button type="button" className="p-1 hover:bg-[#18181b] rounded-[6px]" title="Bold">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReadOnly) return;
+                  const updated = descText + (descText.endsWith('\n') || !descText ? '**bold text** ' : ' **bold text** ');
+                  setDescText(updated);
+                  onUpdateTask({ ...task, description: updated, specMarkdown: updated });
+                }}
+                className="p-1 hover:bg-[#18181b] rounded-[6px] hover:text-orange-400 cursor-pointer"
+                title="Bold (**text**)"
+              >
                 <span className="material-symbols-outlined text-[15px]">format_bold</span>
               </button>
-              <button type="button" className="p-1 hover:bg-[#18181b] rounded-[6px]" title="Italic">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReadOnly) return;
+                  const updated = descText + (descText.endsWith('\n') || !descText ? '*italic text* ' : ' *italic text* ');
+                  setDescText(updated);
+                  onUpdateTask({ ...task, description: updated, specMarkdown: updated });
+                }}
+                className="p-1 hover:bg-[#18181b] rounded-[6px] hover:text-orange-400 cursor-pointer"
+                title="Italic (*text*)"
+              >
                 <span className="material-symbols-outlined text-[15px]">format_italic</span>
               </button>
-              <button type="button" className="p-1 hover:bg-[#18181b] rounded-[6px]" title="Code">
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReadOnly) return;
+                  const updated = descText + (descText.endsWith('\n') || !descText ? '`code` ' : ' `code` ');
+                  setDescText(updated);
+                  onUpdateTask({ ...task, description: updated, specMarkdown: updated });
+                }}
+                className="p-1 hover:bg-[#18181b] rounded-[6px] hover:text-orange-400 cursor-pointer"
+                title="Inline Code (`code`)"
+              >
                 <span className="material-symbols-outlined text-[15px]">code</span>
               </button>
               <span className="font-mono text-[10px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1 rounded-[6px]">
@@ -445,13 +588,45 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </div>
           </div>
 
-          <div className="bg-[#18181b] border border-[#27272a] rounded-[6px] p-3 text-xs leading-relaxed text-zinc-200 space-y-2">
-            <p className="text-zinc-300">{task.description}</p>
-            <div className="p-2.5 rounded-[6px] bg-[#121214] border-l-2 border-orange-500 text-[11px] text-zinc-400 space-y-1 font-mono">
-              <div className="font-semibold text-orange-400">ARCHITECTURAL REQUIREMENTS</div>
-              <div>Maintain strict 6px radius standard and obsidian black/electric orange tokens.</div>
+          {activeTab === 'spec' ? (
+            <div className="flex flex-col gap-2">
+              <textarea
+                rows={6}
+                disabled={isReadOnly}
+                value={descText}
+                onChange={(e) => setDescText(e.target.value)}
+                onBlur={handleDescBlur}
+                placeholder={isReadOnly ? 'No specification provided.' : 'Enter task specification, technical requirements, acceptance criteria...'}
+                className={`w-full bg-[#18181b] border border-[#27272a] rounded-[6px] p-3 text-xs leading-relaxed text-zinc-200 focus:outline-none transition-colors font-mono resize-y ${
+                  isReadOnly ? 'cursor-default' : 'focus:border-orange-500'
+                }`}
+              />
+              <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500">
+                <span>Auto-saves on blur</span>
+                {descText !== (task.specMarkdown || task.description || '') && (
+                  <button
+                    type="button"
+                    onClick={handleDescBlur}
+                    className="px-2.5 py-1 bg-orange-600 hover:bg-orange-700 text-white rounded-[6px] text-xs font-semibold cursor-pointer"
+                  >
+                    Save Changes
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-[#18181b] border border-[#27272a] rounded-[6px] p-3 text-xs leading-relaxed text-zinc-200 space-y-2 whitespace-pre-wrap font-sans">
+              {descText ? (
+                <p className="text-zinc-300">{descText}</p>
+              ) : (
+                <p className="text-zinc-500 italic">No specification written yet.</p>
+              )}
+              <div className="p-2.5 rounded-[6px] bg-[#121214] border-l-2 border-orange-500 text-[11px] text-zinc-400 space-y-1 font-mono">
+                <div className="font-semibold text-orange-400">ARCHITECTURAL REQUIREMENTS</div>
+                <div>Maintain strict 6px radius standard and obsidian black/electric orange tokens.</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Subtask Checklist with Progress Indicator */}
@@ -479,32 +654,50 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           {/* Checklist Items */}
           <div className="flex flex-col gap-1 pt-1">
             {task.subtasks.map((st) => (
-              <label
+              <div
                 key={st.id}
-                className={`flex items-center gap-2.5 p-1.5 rounded-[6px] transition-colors ${
-                  isReadOnly ? 'cursor-default' : 'hover:bg-[#121214] cursor-pointer group'
+                className={`flex items-center justify-between gap-2 p-1.5 rounded-[6px] transition-colors group ${
+                  isReadOnly ? 'cursor-default' : 'hover:bg-[#121214]'
                 }`}
               >
-                <input
-                  type="checkbox"
-                  disabled={isReadOnly}
-                  checked={st.done}
-                  onChange={() => handleToggleSubtask(st.id)}
-                  className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
-                />
-                <span
-                  className={`text-xs transition-colors ${
-                    st.done
-                      ? 'text-zinc-500 line-through group-hover:text-zinc-300'
-                      : 'text-zinc-200 font-medium group-hover:text-orange-400'
-                  }`}
-                >
-                  {st.text}
-                </span>
-                <span className="ml-auto font-mono text-[10px] text-zinc-500">
-                  {st.author} • {st.time}
-                </span>
-              </label>
+                <label className="flex items-center gap-2.5 flex-1 min-w-0 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    disabled={isReadOnly}
+                    checked={st.done}
+                    onChange={() => handleToggleSubtask(st.id)}
+                    className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer shrink-0"
+                  />
+                  <span
+                    className={`text-xs transition-colors truncate ${
+                      st.done
+                        ? 'text-zinc-500 line-through group-hover:text-zinc-300'
+                        : 'text-zinc-200 font-medium group-hover:text-orange-400'
+                    }`}
+                  >
+                    {st.text}
+                  </span>
+                </label>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="font-mono text-[10px] text-zinc-500">
+                    {st.author} • {st.time}
+                  </span>
+                  {!isReadOnly && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        handleDeleteSubtask(st.id);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-0.5 hover:text-rose-400 hover:bg-rose-950/40 rounded-[6px] text-zinc-500 transition-all cursor-pointer"
+                      title="Delete subtask"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">delete</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             ))}
 
             {!isReadOnly && (

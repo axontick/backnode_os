@@ -465,3 +465,51 @@ export function findFolderById(folders: SpaceFolder[], folderId: string): SpaceF
   if (!folders || !folderId) return undefined;
   return folders.find((f) => f.id === folderId);
 }
+
+/**
+ * Recursively updates a list item by its id across all nested subfolders.
+ */
+export function updateListItemInSubFoldersRecursively(
+  subFolders: SpaceSubFolder[] | undefined,
+  listId: string,
+  updates: Partial<FolderChildItem>
+): { updated: SpaceSubFolder[]; found: boolean } {
+  if (!subFolders || subFolders.length === 0) return { updated: [], found: false };
+  let found = false;
+  const updated = subFolders.map((sf) => {
+    let sfChanged = false;
+    const updatedItems = sf.items?.map((item) => {
+      if (item.id === listId) {
+        found = true;
+        sfChanged = true;
+        return {
+          ...item,
+          name: updates.name || item.name,
+          icon: updates.icon || (item as any).icon,
+          color: updates.color || (item as any).color,
+        };
+      }
+      return item;
+    });
+
+    let childUpdated = sf.subFolders;
+    if (sf.subFolders && sf.subFolders.length > 0) {
+      const childRes = updateListItemInSubFoldersRecursively(sf.subFolders, listId, updates);
+      if (childRes.found) {
+        found = true;
+        sfChanged = true;
+        childUpdated = childRes.updated;
+      }
+    }
+
+    if (sfChanged) {
+      return {
+        ...sf,
+        items: updatedItems,
+        subFolders: childUpdated,
+      };
+    }
+    return sf;
+  });
+  return { updated, found };
+}

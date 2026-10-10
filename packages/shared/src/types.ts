@@ -67,12 +67,26 @@ export interface UserSpace {
   memberCount?: number;
 }
 
+export interface Department {
+  id: string;
+  name: string;
+  code: string;
+  description?: string;
+  color?: string;
+  icon?: string;
+  headMemberId?: string;
+  isDefault?: boolean;
+  accountId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface TeamMember {
   id: string;
   name: string;
   initials: string;
   role: string;
-  department: 'Engineering' | 'Product' | 'Design' | 'Operations' | 'Sales' | string;
+  department: string;
   activeTasks: number;
   capacityStatus: 'Optimal' | 'Available' | 'Near capacity' | 'Overloaded' | string;
   avatarBg?: string;
@@ -171,6 +185,8 @@ export interface FolderChildItem {
   taskCount: number;
   status?: string;
   active?: boolean;
+  icon?: string;
+  color?: string;
 }
 
 export interface SpaceSubFolder {
@@ -270,6 +286,7 @@ export interface CrmDeal {
   createdAt?: string;
   linkedTasks: CrmLinkedTask[];
   history: CrmHistoryEvent[];
+  isArchived?: boolean;
   accountId?: string;
 }
 

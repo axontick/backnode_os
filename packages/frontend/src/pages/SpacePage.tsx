@@ -313,8 +313,11 @@ export const SpacePage: React.FC = () => {
                       >
                         <div className="flex items-start justify-between gap-2 mb-2">
                           <div className="flex items-center gap-2">
-                            <span className="material-symbols-outlined text-[18px] text-orange-400">
-                              format_list_bulleted
+                            <span
+                              className={`material-symbols-outlined text-[18px] shrink-0 ${item.color ? '' : 'text-orange-400'}`}
+                              style={item.color ? { color: item.color } : undefined}
+                            >
+                              {item.icon || 'format_list_bulleted'}
                             </span>
                             <span className="text-xs font-semibold text-zinc-100 font-headline group-hover:text-orange-400 transition-colors">
                               {item.name}
@@ -406,12 +409,15 @@ export const SpacePage: React.FC = () => {
                               onClick={() => navigate(`${spacePrefix}/spaces/${folder.id}/lists/${subItem.id}/board`)}
                               className="flex items-center justify-between py-1.5 px-2 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-xs text-zinc-200 cursor-pointer transition-colors"
                             >
-                              <div className="flex items-center gap-2 truncate">
-                                <span className="material-symbols-outlined text-[14px] text-zinc-500">
-                                  checklist
-                                </span>
-                                <span className="truncate">{subItem.name}</span>
-                              </div>
+                                <div className="flex items-center gap-2 truncate">
+                                  <span
+                                    className={`material-symbols-outlined text-[14px] shrink-0 ${subItem.color ? '' : 'text-zinc-500'}`}
+                                    style={subItem.color ? { color: subItem.color } : undefined}
+                                  >
+                                    {subItem.icon || 'checklist'}
+                                  </span>
+                                  <span className="truncate">{subItem.name}</span>
+                                </div>
                               <span className="text-[10px] font-mono text-orange-400 font-semibold">
                                 {subItem.taskCount} tasks
                               </span>

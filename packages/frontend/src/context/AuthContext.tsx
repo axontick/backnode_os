@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginDto, SignupDto, ForgotPasswordDto, ResetPasswordDto, UserRole } from '../types';
+import { User, LoginDto, SignupDto, ForgotPasswordDto, ResetPasswordDto, UserRole, AuthResponse } from '../types';
 import { authApi } from '../services/api';
 
 interface AuthContextType {
@@ -9,8 +9,8 @@ interface AuthContextType {
   isLoading: boolean;
   isAuthModalOpen: boolean;
   setIsAuthModalOpen: (open: boolean) => void;
-  login: (dto: LoginDto) => Promise<void>;
-  signup: (dto: SignupDto) => Promise<void>;
+  login: (dto: LoginDto) => Promise<AuthResponse>;
+  signup: (dto: SignupDto) => Promise<AuthResponse>;
   forgotPassword: (email: string) => Promise<{ message: string; devToken?: string }>;
   resetPassword: (dto: ResetPasswordDto) => Promise<{ message: string }>;
   logout: () => Promise<void>;
@@ -62,6 +62,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (currentUser.role && !localStorage.getItem('backnode_effective_role')) {
           setEffectiveRoleState(currentUser.role as UserRole);
         }
+        const targetAccountId = currentUser.accountId || currentUser.account?.id;
+        if (targetAccountId) {
+          const currentSaved = localStorage.getItem('backnode_active_user_space_id');
+          if (!currentSaved || currentSaved === 'space-main' || currentSaved === 'space-engineering' || currentSaved === 'space-enterprise') {
+            localStorage.setItem('backnode_active_user_space_id', targetAccountId);
+          }
+        }
       } catch (err) {
         console.warn('Session restoration failed or token expired:', err);
         localStorage.removeItem('backnode_token');
@@ -75,7 +82,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     restoreSession();
   }, []);
 
-  const login = async (dto: LoginDto) => {
+  const login = async (dto: LoginDto): Promise<AuthResponse> => {
     const res = await authApi.login(dto);
     localStorage.setItem('backnode_token', res.accessToken);
     setToken(res.accessToken);
@@ -84,10 +91,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setEffectiveRoleState(res.user.role as UserRole);
       localStorage.setItem('backnode_effective_role', res.user.role);
     }
+    const targetAccountId = res.user.accountId || res.user.account?.id;
+    if (targetAccountId) {
+      localStorage.setItem('backnode_active_user_space_id', targetAccountId);
+    }
     setIsAuthModalOpen(false);
+    return res;
   };
 
-  const signup = async (dto: SignupDto) => {
+  const signup = async (dto: SignupDto): Promise<AuthResponse> => {
     const res = await authApi.signup(dto);
     localStorage.setItem('backnode_token', res.accessToken);
     setToken(res.accessToken);
@@ -96,7 +108,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setEffectiveRoleState(res.user.role as UserRole);
       localStorage.setItem('backnode_effective_role', res.user.role);
     }
+    const targetAccountId = res.user.accountId || res.user.account?.id;
+    if (targetAccountId) {
+      localStorage.setItem('backnode_active_user_space_id', targetAccountId);
+    }
     setIsAuthModalOpen(false);
+    return res;
   };
 
   const forgotPassword = async (email: string) => {

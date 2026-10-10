@@ -55,6 +55,7 @@ export class DealsService {
       nextStep = '',
       linkedTasks = [],
       history = [],
+      isArchived = false,
       pipelineId = 'pipe-enterprise',
       subFolderId = null,
       competitor = null,
@@ -85,6 +86,7 @@ export class DealsService {
       closedAt: closedAt || undefined,
       linkedTasks,
       history,
+      isArchived: Boolean(isArchived),
       pipelineId,
       subFolderId: subFolderId || undefined,
       accountId,
@@ -120,6 +122,7 @@ export class DealsService {
     if (data.closedAt !== undefined) deal.closedAt = data.closedAt;
     if (data.linkedTasks !== undefined) deal.linkedTasks = data.linkedTasks;
     if (data.history !== undefined) deal.history = data.history;
+    if (data.isArchived !== undefined) deal.isArchived = Boolean(data.isArchived);
     if (data.pipelineId !== undefined) deal.pipelineId = data.pipelineId;
     if (data.subFolderId !== undefined) deal.subFolderId = data.subFolderId;
 

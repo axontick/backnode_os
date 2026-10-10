@@ -41,11 +41,12 @@ export const LoginPage: React.FC = () => {
     setSuccessMessage(null);
     setIsSubmitting(true);
     try {
-      await login({
+      const res = await login({
         email: email.trim(),
         password,
       });
-      navigate(`/space/${spaceId}/dashboard`);
+      const targetSpace = res?.user?.accountId || res?.user?.account?.id || spaceId;
+      navigate(`/space/${targetSpace}/dashboard`);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Authentication failed. Please verify your credentials.';
       setError(Array.isArray(msg) ? msg.join(', ') : msg);

@@ -72,6 +72,9 @@ export class CrmDeal {
   @Column('jsonb', { default: [] })
   history: any;
 
+  @Column('boolean', { name: 'is_archived', default: false })
+  isArchived: boolean;
+
   @Index()
   @Column('varchar', { name: 'pipeline_id', nullable: true })
   pipelineId?: string;

@@ -11,6 +11,7 @@ import {
   initialFolders,
   initialCrmPipelines,
   initialDocs,
+  initialDepartments,
 } from '../mockData';
 import {
   TaskItem,
@@ -30,6 +31,7 @@ import {
   FolderChildItem,
   DocItem,
   DocClassification,
+  Department,
 } from '../types';
 import { DeletionTarget } from '../components/DeleteConfirmationModal';
 import {
@@ -53,6 +55,7 @@ import {
   deletePipelineSubFolderRecursively,
   flattenSubFolders,
   flattenPipelineSubFolders,
+  updateListItemInSubFoldersRecursively,
 } from '../utils/treeUtils';
 
 interface WorkspaceContextType {
@@ -95,8 +98,8 @@ interface WorkspaceContextType {
   setCurrentView: (view: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs') => void;
   overviewMode: 'cockpit' | 'summary';
   setOverviewMode: (mode: 'cockpit' | 'summary') => void;
-  crmView: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
-  setCrmView: (v: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings') => void;
+  crmView: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived';
+  setCrmView: (v: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived') => void;
   crmSettingsInitialTab: 'general' | 'stages';
   setCrmSettingsInitialTab: (tab: 'general' | 'stages') => void;
 
@@ -251,6 +254,13 @@ interface WorkspaceContextType {
   handleUpdateWorkspace: (workspaceId: string, updates: { name?: string; color?: string; icon?: string }) => Promise<void>;
   handleDeleteWorkspace: (workspaceId: string) => Promise<void>;
 
+  // Departments
+  departments: Department[];
+  setDepartments: React.Dispatch<React.SetStateAction<Department[]>>;
+  handleCreateDepartment: (dept: Partial<Department>) => Promise<Department>;
+  handleUpdateDepartment: (id: string, updates: Partial<Department>) => Promise<Department>;
+  handleDeleteDepartment: (id: string, reassignToDeptName?: string) => Promise<void>;
+
   // Member & Access Control
   handleInviteMember: (data: {
     name: string;
@@ -284,6 +294,18 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [directoryContacts, setDirectoryContacts] = useState<DirectoryContact[]>([]);
   const [folders, setFolders] = useState<SpaceFolder[]>([]);
   const [syncStatus, setSyncStatus] = useState<'connected' | 'syncing' | 'offline'>('syncing');
+  const [departments, setDepartments] = useState<Department[]>(() => {
+    try {
+      const stored = localStorage.getItem('backnode_departments');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse cached departments:', e);
+    }
+    return initialDepartments;
+  });
 
   // CRM state
   const [pipelines, setPipelines] = useState<CrmPipeline[]>([]);
@@ -297,7 +319,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [crmStages, setCrmStages] = useState<CrmStageDefinition[]>(initialCrmStages);
   const [crmSettings, setCrmSettings] = useState<CrmPipelineSettingsType>(initialCrmPipelineSettings);
   const [selectedDealId, setSelectedDealId] = useState<string | null>(null);
-  const [crmView, setCrmView] = useState<'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings'>('dashboard');
+  const [crmView, setCrmView] = useState<'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived'>('dashboard');
   const [crmSettingsInitialTab, setCrmSettingsInitialTab] = useState<'general' | 'stages'>('general');
 
   // Docs state
@@ -385,14 +407,19 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         s.name &&
         s.name !== 'Cloud Infrastructure & SRE' &&
         s.name !== 'Product Growth & CRM Labs' &&
+        s.name !== 'Engineering Systems' &&
+        s.name !== 'Enterprise Deals & PoCs' &&
         s.id !== 'space-infra' &&
-        s.id !== 'space-growth'
+        s.id !== 'space-growth' &&
+        s.id !== 'space-engineering' &&
+        s.id !== 'space-enterprise' &&
+        s.id !== 'space-main'
     );
   };
 
   // User Spaces state (top-left workspace selector) - Only actual workspaces that exist
   const getInitialSpace = (): UserSpace => ({
-    id: user?.account?.id || 'space-main',
+    id: user?.account?.id || user?.accountId || 'space-main',
     name: user?.account?.name || 'Workspace',
     slug: user?.account?.slug || 'workspace',
     role: (user?.role as string) || 'Owner',
@@ -403,24 +430,6 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const getInitialSpaces = (): UserSpace[] => [
     getInitialSpace(),
-    {
-      id: 'space-engineering',
-      name: 'Engineering Systems',
-      slug: 'engineering-systems',
-      role: 'Admin',
-      color: '#3b82f6',
-      icon: 'terminal',
-      memberCount: 8,
-    },
-    {
-      id: 'space-enterprise',
-      name: 'Enterprise Deals & PoCs',
-      slug: 'enterprise-deals-pocs',
-      role: 'Owner',
-      color: '#10b981',
-      icon: 'domain',
-      memberCount: 5,
-    },
   ];
 
   const [userSpaces, setUserSpaces] = useState<UserSpace[]>(() => {
@@ -428,9 +437,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length >= 2) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           const cleaned = filterRealWorkspaces(parsed);
-          if (cleaned.length >= 2) {
+          if (cleaned.length > 0) {
             localStorage.setItem('backnode_user_spaces', JSON.stringify(cleaned));
             return cleaned;
           }
@@ -443,17 +452,21 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   });
 
   const [activeUserSpaceId, setActiveUserSpaceId] = useState<string>(() => {
-    return localStorage.getItem('backnode_active_user_space_id') || user?.account?.id || 'space-main';
+    const saved = localStorage.getItem('backnode_active_user_space_id');
+    if (saved && saved !== 'space-main') return saved;
+    return user?.account?.id || user?.accountId || 'space-main';
   });
 
   // Sync actual account workspace when user changes
   useEffect(() => {
-    if (user?.account?.name) {
+    const accId = user?.account?.id || user?.accountId;
+    const accName = user?.account?.name || (accId ? 'Workspace' : undefined);
+    if (accId) {
       let nextSpaces: UserSpace[] = [];
       setUserSpaces((prev) => {
         const cleaned = filterRealWorkspaces(prev);
         const matchIndex = cleaned.findIndex(
-          (s) => s.id === user.account!.id || s.name.toLowerCase() === user.account!.name.toLowerCase()
+          (s) => s.id === accId || (accName && s.name.toLowerCase() === accName.toLowerCase())
         );
 
         if (matchIndex >= 0) {
@@ -461,10 +474,10 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
             idx === matchIndex
               ? {
                   ...s,
-                  id: user.account!.id,
-                  name: user.account!.name,
-                  slug: user.account!.slug,
-                  role: (user.role as string) || 'Owner',
+                  id: accId,
+                  name: accName || s.name,
+                  slug: user?.account?.slug || s.slug,
+                  role: (user?.role as string) || 'Owner',
                   memberCount: members.length || s.memberCount || 1,
                 }
               : s
@@ -472,10 +485,10 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         } else {
           nextSpaces = [
             {
-              id: user.account!.id,
-              name: user.account!.name,
-              slug: user.account!.slug,
-              role: (user.role as string) || 'Owner',
+              id: accId,
+              name: accName || 'Workspace',
+              slug: user?.account?.slug || 'workspace',
+              role: (user?.role as string) || 'Owner',
               color: '#ea580c',
               icon: 'deployed_code',
               memberCount: members.length || 1,
@@ -489,18 +502,18 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
       setActiveUserSpaceId((curr) => {
         const savedId = localStorage.getItem('backnode_active_user_space_id');
-        if (savedId && nextSpaces.some((s) => s.id === savedId)) {
+        if (savedId && savedId !== 'space-main' && nextSpaces.some((s) => s.id === savedId)) {
           return savedId;
         }
-        if (curr && nextSpaces.some((s) => s.id === curr)) {
+        if (curr && curr !== 'space-main' && nextSpaces.some((s) => s.id === curr)) {
           return curr;
         }
-        const targetId = user.account!.id;
+        const targetId = accId;
         localStorage.setItem('backnode_active_user_space_id', targetId);
         return targetId;
       });
     }
-  }, [user?.account?.id, user?.account?.name]);
+  }, [user?.account?.id, user?.account?.name, user?.accountId]);
 
   const activeUserSpace =
     userSpaces.find((s) => s.id === activeUserSpaceId) || userSpaces[0] || getInitialSpace();
@@ -615,6 +628,121 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
+  const handleCreateDepartment = async (deptData: Partial<Department>): Promise<Department> => {
+    try {
+      const created = await workspaceApi.createDepartment(deptData);
+      setDepartments((prev) => {
+        const next = deptData.isDefault
+          ? [...prev.map((d) => ({ ...d, isDefault: false })), created]
+          : [...prev, created];
+        localStorage.setItem(`backnode_departments_${activeUserSpaceId}`, JSON.stringify(next));
+        localStorage.setItem('backnode_departments', JSON.stringify(next));
+        return next;
+      });
+      showToast(`Department "${created.name}" created`);
+      return created;
+    } catch (err) {
+      console.warn('Backend create department failed, saving locally:', err);
+      const newDept: Department = {
+        id: deptData.id || `dept-${Date.now().toString(36)}`,
+        name: (deptData.name || 'New Department').trim(),
+        code: (deptData.code || deptData.name?.slice(0, 4) || 'DEPT').trim().toUpperCase(),
+        description: deptData.description || '',
+        color: deptData.color || '#ea580c',
+        icon: deptData.icon || 'domain',
+        headMemberId: deptData.headMemberId || '',
+        isDefault: !!deptData.isDefault,
+        accountId: activeUserSpaceId,
+      };
+      setDepartments((prev) => {
+        const next = deptData.isDefault
+          ? [...prev.map((d) => ({ ...d, isDefault: false })), newDept]
+          : [...prev, newDept];
+        localStorage.setItem(`backnode_departments_${activeUserSpaceId}`, JSON.stringify(next));
+        localStorage.setItem('backnode_departments', JSON.stringify(next));
+        return next;
+      });
+      showToast(`Department "${newDept.name}" created locally`);
+      return newDept;
+    }
+  };
+
+  const handleUpdateDepartment = async (id: string, updates: Partial<Department>): Promise<Department> => {
+    try {
+      const updated = await workspaceApi.updateDepartment(id, updates);
+      setDepartments((prev) => {
+        const next = prev.map((d) => {
+          if (d.id === id) return { ...d, ...updated };
+          if (updates.isDefault) return { ...d, isDefault: false };
+          return d;
+        });
+        localStorage.setItem(`backnode_departments_${activeUserSpaceId}`, JSON.stringify(next));
+        localStorage.setItem('backnode_departments', JSON.stringify(next));
+        return next;
+      });
+      if (updates.name) {
+        const oldDept = departments.find((d) => d.id === id);
+        if (oldDept && oldDept.name !== updates.name) {
+          setMembers((prev) =>
+            prev.map((m) => (m.department === oldDept.name ? { ...m, department: updates.name! } : m))
+          );
+        }
+      }
+      showToast(`Department "${updated.name}" updated`);
+      return updated;
+    } catch (err) {
+      console.warn('Backend update department failed, applying locally:', err);
+      let targetDept: Department | undefined;
+      setDepartments((prev) => {
+        const oldDept = prev.find((d) => d.id === id);
+        const next = prev.map((d) => {
+          if (d.id === id) {
+            targetDept = { ...d, ...updates };
+            return targetDept;
+          }
+          if (updates.isDefault) return { ...d, isDefault: false };
+          return d;
+        });
+        localStorage.setItem(`backnode_departments_${activeUserSpaceId}`, JSON.stringify(next));
+        localStorage.setItem('backnode_departments', JSON.stringify(next));
+        if (oldDept && updates.name && oldDept.name !== updates.name) {
+          setMembers((mPrev) =>
+            mPrev.map((m) => (m.department === oldDept.name ? { ...m, department: updates.name! } : m))
+          );
+        }
+        return next;
+      });
+      showToast('Department settings saved');
+      return targetDept || ({ id, ...updates } as Department);
+    }
+  };
+
+  const handleDeleteDepartment = async (id: string, reassignToDeptName?: string): Promise<void> => {
+    const deptToDelete = departments.find((d) => d.id === id);
+    if (!deptToDelete) return;
+
+    try {
+      await workspaceApi.deleteDepartment(id, reassignToDeptName);
+    } catch (err) {
+      console.warn('Backend delete department failed, removing locally:', err);
+    }
+
+    setDepartments((prev) => {
+      const next = prev.filter((d) => d.id !== id);
+      localStorage.setItem(`backnode_departments_${activeUserSpaceId}`, JSON.stringify(next));
+      localStorage.setItem('backnode_departments', JSON.stringify(next));
+      return next;
+    });
+
+    if (reassignToDeptName) {
+      setMembers((prev) =>
+        prev.map((m) => (m.department === deptToDelete.name ? { ...m, department: reassignToDeptName } : m))
+      );
+    }
+
+    showToast(`Department "${deptToDelete.name}" removed`);
+  };
+
   const handleInviteMember = async (data: {
     name: string;
     email: string;
@@ -676,17 +804,23 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const handleUpdateMemberAccess = async (id: string, updates: Partial<TeamMember>) => {
     const target = members.find((m) => m.id === id);
-    if (target?.accessLevel === 'OWNER') {
-      showToast('Workspace Owner role cannot be modified or demoted.');
-      return;
-    }
+    const isOwner =
+      target?.accessLevel === 'OWNER' ||
+      target?.role === 'Workspace Owner' ||
+      (user && (target?.id === user.id || target?.email === user.email) && user.role === 'OWNER');
+
+    // If target is Owner, ensure accessLevel remains OWNER and canLogin remains true
+    const sanitizedUpdates = isOwner
+      ? { ...updates, accessLevel: 'OWNER' as const, canLogin: true, status: 'Active' as const }
+      : updates;
+
     try {
-      await membersApi.update(id, updates);
+      await membersApi.update(id, sanitizedUpdates);
     } catch (err) {
       console.warn('Backend unavailable for member update, applying locally:', err);
     }
     setMembers((prev) =>
-      prev.map((m) => (m.id === id ? { ...m, ...updates } : m))
+      prev.map((m) => (m.id === id ? { ...m, ...sanitizedUpdates } : m))
     );
     showToast(`Access updated for ${target?.name || 'operator'}`);
   };
@@ -796,6 +930,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         fetchedStatuses,
         fetchedListSettings,
         fetchedWorkspaces,
+        fetchedDepartments,
       ] = await Promise.all([
         tasksApi.getAll(),
         dealsApi.getAll(),
@@ -808,6 +943,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         workspaceApi.getStatuses(),
         workspaceApi.getListSettings(),
         workspaceApi.getWorkspaces().catch(() => null),
+        workspaceApi.getDepartments().catch(() => null),
       ]);
 
       if (fetchedWorkspaces && fetchedWorkspaces.length > 0) {
@@ -850,7 +986,28 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           accentColor: !fetchedCrmSettings.accentColor || fetchedCrmSettings.accentColor === '#9900c2' ? '#ea580c' : fetchedCrmSettings.accentColor,
         });
       }
-      setMembers(fetchedMembers && fetchedMembers.length > 0 ? fetchedMembers : initialTeamMembers);
+      if (fetchedMembers && fetchedMembers.length > 0) {
+        setMembers(fetchedMembers);
+      } else if (user) {
+        setMembers([
+          {
+            id: `tm-${user.accountId || user.account?.id || 'owner'}`,
+            name: user.name || 'Workspace Owner',
+            initials: (user.name || 'OW').slice(0, 2).toUpperCase(),
+            email: user.email,
+            role: user.role === 'OWNER' ? 'Workspace Owner' : user.role || 'Member',
+            department: 'Executive',
+            accessLevel: (user.role as any) === 'OWNER' ? 'OWNER' : 'ADMIN',
+            activeTasks: 0,
+            capacityStatus: 'Available',
+            canLogin: true,
+            status: 'Active',
+            createdDate: new Date().toISOString(),
+          } as unknown as TeamMember,
+        ]);
+      } else {
+        setMembers(initialTeamMembers);
+      }
       setDirectoryContacts(fetchedContacts || []);
       setFolders(fetchedFolders || []);
       if (fetchedFolders && fetchedFolders.length > 0) {
@@ -864,10 +1021,40 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
       if (fetchedStatuses && fetchedStatuses.length > 0) setStatuses(fetchedStatuses);
       if (fetchedListSettings) setListSettings(fetchedListSettings);
+      if (fetchedDepartments && fetchedDepartments.length > 0) {
+        setDepartments(fetchedDepartments);
+        try {
+          localStorage.setItem(`backnode_departments_${activeUserSpaceId}`, JSON.stringify(fetchedDepartments));
+          localStorage.setItem('backnode_departments', JSON.stringify(fetchedDepartments));
+        } catch {}
+      }
       setSyncStatus('connected');
     } catch (err) {
       console.warn('Backend not reachable or error fetching data, using initial cache:', err);
-      setMembers((prev) => (prev && prev.length > 0 ? prev : initialTeamMembers));
+      if (user) {
+        setMembers((prev) =>
+          prev && prev.length > 0
+            ? prev
+            : [
+                {
+                  id: `tm-${user.accountId || user.account?.id || 'owner'}`,
+                  name: user.name || 'Workspace Owner',
+                  initials: (user.name || 'OW').slice(0, 2).toUpperCase(),
+                  email: user.email,
+                  role: user.role === 'OWNER' ? 'Workspace Owner' : user.role || 'Member',
+                  department: 'Executive',
+                  accessLevel: (user.role as any) === 'OWNER' ? 'OWNER' : 'ADMIN',
+                  activeTasks: 0,
+                  capacityStatus: 'Available',
+                  canLogin: true,
+                  status: 'Active',
+                  createdDate: new Date().toISOString(),
+                } as unknown as TeamMember,
+              ]
+        );
+      } else {
+        setMembers((prev) => (prev && prev.length > 0 ? prev : initialTeamMembers));
+      }
       setSyncStatus('offline');
     }
   };
@@ -883,7 +1070,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       return;
     }
     loadData();
-  }, [token]);
+  }, [token, activeUserSpaceId]);
 
   // Filter tasks based on search, priority, status, assignee, and quickFilter
   const filteredTasks = tasks.filter((t) => {
@@ -1002,6 +1189,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       taskCount: 0,
       status: status,
       active: true,
+      icon: 'format_list_bulleted',
+      color: target.color || '#ea580c',
     };
 
     let updatedTarget: SpaceFolder;
@@ -1216,6 +1405,57 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const handleUpdateListSettings = (newSettings: Partial<ListSettings>) => {
     setListSettings((prev) => ({ ...prev, ...newSettings }));
+
+    // Also propagate icon, color, and name to matching list items in space folders
+    if (newSettings.icon || newSettings.name || newSettings.color) {
+      setFolders((prevFolders) => {
+        let changed = false;
+        const targetListId = newSettings.listId || listSettings.listId;
+        const updatedFolders = prevFolders.map((folder) => {
+          let folderChanged = false;
+          const updatedItems = folder.items.map((item) => {
+            if (
+              (targetListId && item.id === targetListId) ||
+              (listSettings.listId && item.id === listSettings.listId) ||
+              (activeSpace && item.id === activeSpace && (!newSettings.listId || newSettings.listId === item.id))
+            ) {
+              folderChanged = true;
+              return {
+                ...item,
+                name: newSettings.name || item.name,
+                icon: newSettings.icon || (item as any).icon,
+                color: newSettings.color || (item as any).color,
+              };
+            }
+            return item;
+          });
+
+          // Check and update subfolders recursively
+          const subRes = updateListItemInSubFoldersRecursively(folder.subFolders, targetListId, {
+            name: newSettings.name,
+            icon: newSettings.icon,
+            color: newSettings.color,
+          });
+          if (subRes.found) {
+            folderChanged = true;
+          }
+
+          if (folderChanged) {
+            changed = true;
+            const updatedFolder = {
+              ...folder,
+              items: updatedItems,
+              subFolders: subRes.found ? subRes.updated : folder.subFolders,
+            };
+            workspaceApi.updateFolder(updatedFolder.id, updatedFolder).catch(console.error);
+            return updatedFolder;
+          }
+          return folder;
+        });
+        return changed ? updatedFolders : prevFolders;
+      });
+    }
+
     workspaceApi.updateListSettings(newSettings).catch((err) => {
       console.error('Failed to update list settings in DB:', err);
     });
@@ -1232,6 +1472,31 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   const handleUpdateCrmSettings = (newSettings: Partial<CrmPipelineSettingsType>) => {
     setCrmSettings((prev) => ({ ...prev, ...newSettings }));
+
+    // Also propagate icon, color, and name to active or target CRM pipeline
+    if (newSettings.icon || newSettings.accentColor || newSettings.name) {
+      setPipelines((prevPipelines) => {
+        const targetId = activePipelineId || prevPipelines[0]?.id;
+        return prevPipelines.map((pipe) => {
+          if (pipe.id === targetId) {
+            const updatedPipe = {
+              ...pipe,
+              name: newSettings.name || pipe.name,
+              icon: newSettings.icon || pipe.icon,
+              color: newSettings.accentColor || pipe.color,
+            };
+            pipelinesApi.update(pipe.id, {
+              name: updatedPipe.name,
+              icon: updatedPipe.icon,
+              color: updatedPipe.color,
+            }).catch((err) => console.error('Failed to update pipeline icon in DB:', err));
+            return updatedPipe;
+          }
+          return pipe;
+        });
+      });
+    }
+
     pipelinesApi.updateSettings(newSettings).catch((err) => {
       console.error('Failed to update CRM settings in DB:', err);
     });
@@ -1773,6 +2038,11 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleCreateUserSpace,
         handleUpdateWorkspace,
         handleDeleteWorkspace,
+        departments,
+        setDepartments,
+        handleCreateDepartment,
+        handleUpdateDepartment,
+        handleDeleteDepartment,
         handleInviteMember,
         handleUpdateMemberAccess,
         handleRemoveMember,

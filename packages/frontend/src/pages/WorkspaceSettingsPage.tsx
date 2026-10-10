@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { DepartmentSettingsView } from '../components/DepartmentSettingsView';
 
 export const WorkspaceSettingsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { tab } = useParams<{ tab?: string }>();
   const {
     activeUserSpace,
+    activeUserSpaceId,
     userSpaces,
     handleUpdateWorkspace,
     handleDeleteWorkspace,
+    departments,
     members,
     tasks,
     pipelines,
@@ -16,6 +20,9 @@ export const WorkspaceSettingsPage: React.FC = () => {
     deals,
     setIsNewWorkspaceModalOpen,
   } = useWorkspace();
+
+  const spacePrefix = `/space/${activeUserSpaceId || activeUserSpace?.id || 'space-main'}`;
+  const currentTab: 'general' | 'departments' = tab === 'departments' ? 'departments' : 'general';
 
   const [workspaceName, setWorkspaceName] = useState(activeUserSpace?.name || '');
   const [slug, setSlug] = useState(activeUserSpace?.slug || '');
@@ -107,10 +114,54 @@ export const WorkspaceSettingsPage: React.FC = () => {
   const isOnlyWorkspace = userSpaces.length <= 1;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar bg-[#09090b] text-zinc-100 select-none">
-      {/* Top Banner / Header */}
-      <div className="border-b border-[#27272a] bg-[#0c0a09] px-8 py-5 shrink-0">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100 select-none">
+      {/* Sub-Header Navigation Tabs Bar */}
+      <div className="h-[44px] bg-[#121214] border-b border-[#27272a] px-8 flex items-center justify-between shrink-0">
+        <div className="max-w-6xl w-full mx-auto flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(`${spacePrefix}/settings/general`)}
+            className={`h-8 px-3 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              currentTab === 'general'
+                ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30 shadow-xs'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] border border-transparent'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">tune</span>
+            <span>General Profile</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate(`${spacePrefix}/settings/departments`)}
+            className={`h-8 px-3 rounded-[6px] text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer ${
+              currentTab === 'departments'
+                ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30 shadow-xs'
+                : 'text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b] border border-transparent'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[16px]">domain</span>
+            <span>Departments</span>
+            <span
+              className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] font-bold ${
+                currentTab === 'departments'
+                  ? 'bg-orange-600/30 text-orange-300'
+                  : 'bg-[#18181b] text-zinc-400'
+              }`}
+            >
+              {departments.length}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {currentTab === 'departments' ? (
+        <DepartmentSettingsView />
+      ) : (
+        <div className="flex-1 flex flex-col h-full overflow-y-auto custom-scrollbar">
+          {/* Top Banner / Header */}
+          <div className="border-b border-[#27272a] bg-[#0c0a09] px-8 py-5 shrink-0">
+            <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3.5">
             <div
               className="w-10 h-10 rounded-[6px] flex items-center justify-center text-white shadow-sm shrink-0"
@@ -282,7 +333,10 @@ export const WorkspaceSettingsPage: React.FC = () => {
             <div className="p-3.5 bg-[#18181b] border border-[#27272a] rounded-[6px] flex flex-col justify-between">
               <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">Pipelines</span>
               <span className="text-2xl font-bold font-mono text-zinc-100 mt-2">{pipelines.length}</span>
-              <span className="text-[10px] text-zinc-500 mt-1">{deals.length} active deals</span>
+              <span className="text-[10px] text-zinc-500 mt-1">
+                {deals.filter((d) => !d.isArchived).length} active deals
+                {deals.some((d) => d.isArchived) ? ` (${deals.filter((d) => d.isArchived).length} archived)` : ''}
+              </span>
             </div>
 
             <div className="p-3.5 bg-[#18181b] border border-[#27272a] rounded-[6px] flex flex-col justify-between">
@@ -351,6 +405,8 @@ export const WorkspaceSettingsPage: React.FC = () => {
           </div>
         </section>
       </div>
+    </div>
+  )}
 
       {/* Delete Workspace Confirmation Modal */}
       {isDeleteModalOpen && (

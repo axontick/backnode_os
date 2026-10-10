@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TaskItem } from '../types';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -22,6 +24,9 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
   onOpenCreateTask,
   onOpenCreateWorkspace,
 }) => {
+  const navigate = useNavigate();
+  const { activeUserSpaceId, activeUserSpace } = useWorkspace();
+  const spacePrefix = `/space/${activeUserSpaceId || activeUserSpace?.id || 'space-main'}`;
   const [query, setQuery] = useState('');
 
   if (!isOpen) return null;
@@ -137,6 +142,18 @@ export const CommandPalette: React.FC<CommandPaletteProps> = ({
             <span className="material-symbols-outlined text-[16px] text-orange-400">settings</span>
             <span className="font-medium">Open Workspace Settings</span>
             <kbd className="ml-auto font-mono text-[10px] text-zinc-500">⌘,</kbd>
+          </button>
+
+          <button
+            onClick={() => {
+              navigate(`${spacePrefix}/settings/departments`);
+              onClose();
+            }}
+            className="flex items-center gap-2.5 px-3 py-2 rounded-[6px] hover:bg-[#18181b] text-left text-zinc-200 hover:text-orange-400 transition-colors cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px] text-orange-400">domain</span>
+            <span className="font-medium">Manage Workspace Departments</span>
+            <kbd className="ml-auto font-mono text-[10px] text-zinc-500">D</kbd>
           </button>
 
           <button

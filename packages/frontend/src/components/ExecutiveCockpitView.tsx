@@ -23,10 +23,12 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  // 1. Dynamic Financial & Pipeline KPI computations
-  const totalPipelineArr = deals.reduce((acc, d) => acc + (d.value || 0), 0);
+  // 1. Dynamic Financial & Pipeline KPI computations (strictly active, unarchived deals)
+  const activeDeals = deals.filter((d) => !d.isArchived);
+  const archivedDeals = deals.filter((d) => d.isArchived);
+  const totalPipelineArr = activeDeals.reduce((acc, d) => acc + (d.value || 0), 0);
   const formattedPipeline = `$${totalPipelineArr.toLocaleString()}`;
-  const activeDealsCount = deals.length;
+  const activeDealsCount = activeDeals.length;
 
   // 2. Sprint execution velocity computation
   const completedTasks = tasks.filter((t) => t.status === 'Done');
@@ -47,7 +49,7 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
   ];
 
   const stageMetrics = stageDefs.map((def) => {
-    const stageDeals = deals.filter((d) => d.stage === def.name);
+    const stageDeals = activeDeals.filter((d) => d.stage === def.name);
     const sumVal = stageDeals.reduce((acc, d) => acc + (d.value || 0), 0);
     const pct = totalPipelineArr > 0 ? (sumVal / totalPipelineArr) * 100 : 0;
     return {
@@ -117,7 +119,9 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
             <span className="font-mono text-xl font-bold text-zinc-100 tracking-tight">
               {activeDealsCount} {activeDealsCount === 1 ? 'deal' : 'deals'}
             </span>
-            <span className="text-xs text-zinc-400">Across {stageDefs.length} stages</span>
+            <span className="text-xs text-zinc-400">
+              Across {stageDefs.length} stages{archivedDeals.length > 0 ? ` (${archivedDeals.length} archived)` : ''}
+            </span>
           </div>
         </div>
 
@@ -249,7 +253,7 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
             <div className="flex items-center justify-between pt-2.5 border-t border-[#27272a] font-mono text-xs">
               <div className="flex items-center gap-4 text-zinc-400">
                 <span>
-                  Active Deals: <strong className="text-zinc-200">{deals.length}</strong>
+                  Active Deals: <strong className="text-zinc-200">{activeDeals.length}</strong>
                 </span>
                 <span>•</span>
                 <span>
@@ -257,8 +261,16 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
                 </span>
                 <span>•</span>
                 <span>
-                  Closed Won: <strong className="text-emerald-400">{deals.filter(d => d.stage === 'Closed Won').length}</strong>
+                  Closed Won: <strong className="text-emerald-400">{activeDeals.filter((d) => d.stage === 'Closed Won').length}</strong>
                 </span>
+                {archivedDeals.length > 0 && (
+                  <>
+                    <span>•</span>
+                    <span>
+                      Archived: <strong className="text-zinc-500">{archivedDeals.length}</strong>
+                    </span>
+                  </>
+                )}
               </div>
               <button
                 type="button"
@@ -279,7 +291,7 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
                   High-Value Enterprise Opportunities
                 </span>
                 <span className="font-mono text-xs px-2.5 py-0.5 rounded-[6px] bg-[#18181b] border border-[#27272a] font-semibold text-zinc-300">
-                  {deals.length} Stored in DB
+                  {activeDeals.length} Active in DB
                 </span>
               </div>
               <button
@@ -287,17 +299,19 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
                 onClick={onNavigateToDeals}
                 className="text-xs text-orange-400 font-semibold hover:text-orange-300 flex items-center gap-1 cursor-pointer"
               >
-                <span>View All Deals ({deals.length})</span>
+                <span>View All Deals ({activeDeals.length})</span>
                 <span className="material-symbols-outlined text-[15px]">arrow_forward</span>
               </button>
             </div>
 
-            {deals.length === 0 ? (
+            {activeDeals.length === 0 ? (
               <div className="p-8 text-center border border-dashed border-[#27272a] rounded-[6px] bg-[#18181b]/40 flex flex-col items-center justify-center">
                 <span className="material-symbols-outlined text-[32px] text-zinc-600">payments</span>
                 <p className="text-sm font-semibold text-zinc-200 mt-2">No active opportunities yet</p>
                 <p className="text-xs text-zinc-400 mt-0.5">
-                  Create a deal in your sales pipeline to track revenue forecasts.
+                  {archivedDeals.length > 0
+                    ? `All ${archivedDeals.length} deals in this workspace are archived.`
+                    : 'Create a deal in your sales pipeline to track revenue forecasts.'}
                 </p>
                 <button
                   type="button"
@@ -309,7 +323,7 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
               </div>
             ) : (
               <div className="flex flex-col divide-y divide-[#1f1f23]">
-                {deals.slice(0, 4).map((deal) => (
+                {activeDeals.slice(0, 4).map((deal) => (
                   <div
                     key={deal.id}
                     onClick={() => onSelectDeal(deal)}

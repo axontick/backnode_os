@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CrmDeal } from '../types';
+import { CrmDeal, CrmLinkedTask } from '../types';
 
 interface DealInspectorProps {
   deal: CrmDeal;
@@ -16,7 +16,18 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
 }) => {
   const [newNote, setNewNote] = useState('');
   const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskPriority, setNewTaskPriority] = useState<'Urgent' | 'High' | 'Medium' | 'Low'>('High');
+  const [newTaskDueDate, setNewTaskDueDate] = useState('');
+  const [newTaskTag, setNewTaskTag] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
+
+  // Edit task state
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
+  const [editTaskTitle, setEditTaskTitle] = useState('');
+  const [editTaskPriority, setEditTaskPriority] = useState<'Urgent' | 'High' | 'Medium' | 'Low'>('Medium');
+  const [editTaskDueDate, setEditTaskDueDate] = useState('');
+  const [editTaskTag, setEditTaskTag] = useState('');
+  const [editTaskAssignee, setEditTaskAssignee] = useState('');
 
   const stages: CrmDeal['stage'][] = [
     'Qualified Lead',
@@ -56,15 +67,50 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
     onUpdateDeal({ ...deal, linkedTasks: updatedTasks });
   };
 
+  const handleStartEditTask = (task: CrmLinkedTask) => {
+    setEditingTaskId(task.id);
+    setEditTaskTitle(task.title);
+    setEditTaskPriority(task.priority || 'Medium');
+    setEditTaskDueDate(task.dueDate || '');
+    setEditTaskTag(task.tag || '');
+    setEditTaskAssignee(task.assignee || 'AW');
+  };
+
+  const handleSaveEditTask = () => {
+    if (!editingTaskId || !editTaskTitle.trim()) return;
+    const updatedTasks = deal.linkedTasks.map((t) =>
+      t.id === editingTaskId
+        ? {
+            ...t,
+            title: editTaskTitle.trim(),
+            priority: editTaskPriority,
+            dueDate: editTaskDueDate.trim() || undefined,
+            tag: editTaskTag.trim() || undefined,
+            assignee: editTaskAssignee.trim() || undefined,
+          }
+        : t
+    );
+    onUpdateDeal({ ...deal, linkedTasks: updatedTasks });
+    setEditingTaskId(null);
+  };
+
+  const handleDeleteTask = (taskId: string) => {
+    const updatedTasks = deal.linkedTasks.filter((t) => t.id !== taskId);
+    onUpdateDeal({ ...deal, linkedTasks: updatedTasks });
+    if (editingTaskId === taskId) {
+      setEditingTaskId(null);
+    }
+  };
+
   const handleAddTask = () => {
     if (!newTaskTitle.trim()) return;
-    const newTask = {
+    const newTask: CrmLinkedTask = {
       id: `task-${Date.now()}`,
       title: newTaskTitle.trim(),
       done: false,
-      priority: 'High' as const,
-      dueDate: 'Oct 26, 2026',
-      tag: 'Deliverable',
+      priority: newTaskPriority,
+      dueDate: newTaskDueDate.trim() || 'Oct 26, 2026',
+      tag: newTaskTag.trim() || 'Deliverable',
       assignee: 'AW',
     };
     onUpdateDeal({
@@ -72,6 +118,8 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
       linkedTasks: [...deal.linkedTasks, newTask],
     });
     setNewTaskTitle('');
+    setNewTaskDueDate('');
+    setNewTaskTag('');
     setIsAddingTask(false);
   };
 
@@ -130,14 +178,34 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
           <span className="font-mono text-2xl font-bold text-orange-400 tracking-tight">
             ${deal.value.toLocaleString()} USD
           </span>
-          <span className="flex items-center gap-1 px-2.5 py-1 rounded-[6px] bg-orange-950/40 text-orange-400 border border-orange-500/20 font-mono text-xs font-semibold">
-            <span className="w-1.5 h-1.5 rounded-full bg-orange-500"></span>
-            {deal.probability}% Probability
-          </span>
-          <span className="text-zinc-400 text-xs flex items-center gap-1">
-            <span className="material-symbols-outlined text-[14px]">event</span>
-            <span>Target Close: <strong className="text-zinc-200">{deal.targetCloseDate}</strong></span>
-          </span>
+          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-[6px] bg-orange-950/40 text-orange-400 border border-orange-500/20 font-mono text-xs font-semibold">
+            <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={deal.probability}
+              onChange={(e) => {
+                const val = Math.min(100, Math.max(0, parseInt(e.target.value, 10) || 0));
+                onUpdateDeal({ ...deal, probability: val });
+              }}
+              title="Click to edit probability"
+              className="w-8 bg-transparent text-orange-400 font-mono text-xs font-bold focus:outline-none text-right border-b border-orange-500/30 focus:border-orange-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+            />
+            <span>% Probability</span>
+          </div>
+          <div className="text-zinc-400 text-xs flex items-center gap-1.5">
+            <span className="material-symbols-outlined text-[15px] text-orange-400">event</span>
+            <span>Target Close:</span>
+            <input
+              type="text"
+              value={deal.targetCloseDate || ''}
+              onChange={(e) => onUpdateDeal({ ...deal, targetCloseDate: e.target.value })}
+              placeholder="e.g. Oct 22, 2026"
+              title="Click to edit target close date"
+              className="bg-[#18181b] border border-[#27272a] hover:border-zinc-700 focus:border-orange-500 rounded-[6px] px-2 py-0.5 text-xs text-zinc-100 font-semibold focus:outline-none w-32 transition-colors"
+            />
+          </div>
         </div>
       </div>
 
@@ -345,89 +413,241 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
           </div>
 
           <div className="flex flex-col gap-2.5">
-            {deal.linkedTasks.map((t) => (
-              <div
-                key={t.id}
-                className="flex items-start gap-3 p-2.5 rounded-[6px] border border-[#27272a] bg-[#121214] hover:border-orange-500/40 transition-colors"
-              >
-                <input
-                  type="checkbox"
-                  checked={t.done}
-                  onChange={() => handleToggleTask(t.id)}
-                  className="mt-0.5 w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
-                />
-                <div className="flex-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <p
-                      className={`leading-snug ${
-                        t.done
-                          ? 'text-zinc-500 line-through'
-                          : 'font-semibold text-zinc-100'
-                      }`}
-                    >
-                      {t.title}
-                    </p>
-                    {t.priority && !t.done && (
-                      <span
-                        className={`font-mono text-[9px] px-1.5 py-0.2 rounded-[6px] font-bold shrink-0 ml-2 ${
-                          t.priority === 'Urgent'
-                            ? 'bg-red-950/40 text-red-400 border border-red-500/20'
-                            : 'bg-orange-950/40 text-orange-400 border border-orange-500/20'
+            {deal.linkedTasks.map((t) => {
+              const isEditing = editingTaskId === t.id;
+
+              if (isEditing) {
+                return (
+                  <div
+                    key={t.id}
+                    className="p-3 rounded-[6px] border border-orange-500/50 bg-[#121214] flex flex-col gap-2.5 shadow-sm"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-mono text-[10px] uppercase font-bold text-orange-400">
+                        Edit Task
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteTask(t.id)}
+                        className="text-zinc-500 hover:text-rose-400 text-xs flex items-center gap-1 cursor-pointer transition-colors"
+                        title="Delete task"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                        <span>Delete</span>
+                      </button>
+                    </div>
+
+                    <input
+                      type="text"
+                      value={editTaskTitle}
+                      onChange={(e) => setEditTaskTitle(e.target.value)}
+                      placeholder="Task title..."
+                      className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2.5 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-orange-500 font-semibold"
+                    />
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-400 mb-0.5">Priority</label>
+                        <select
+                          value={editTaskPriority}
+                          onChange={(e) => setEditTaskPriority(e.target.value as any)}
+                          className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
+                        >
+                          <option value="Urgent">Urgent</option>
+                          <option value="High">High</option>
+                          <option value="Medium">Medium</option>
+                          <option value="Low">Low</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-400 mb-0.5">Due Date</label>
+                        <input
+                          type="text"
+                          value={editTaskDueDate}
+                          onChange={(e) => setEditTaskDueDate(e.target.value)}
+                          placeholder="e.g. Oct 26, 2026"
+                          className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
+                        >
+                        </input>
+                      </div>
+
+                      <div>
+                        <label className="block text-[10px] font-mono text-zinc-400 mb-0.5">Tag</label>
+                        <input
+                          type="text"
+                          value={editTaskTag}
+                          onChange={(e) => setEditTaskTag(e.target.value)}
+                          placeholder="e.g. Legal, Sales"
+                          className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#27272a]">
+                      <button
+                        type="button"
+                        onClick={() => setEditingTaskId(null)}
+                        className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-100 rounded-[6px] hover:bg-zinc-800 transition-colors cursor-pointer"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleSaveEditTask}
+                        className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold rounded-[6px] transition-colors cursor-pointer shadow-xs"
+                      >
+                        Save Changes
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div
+                  key={t.id}
+                  className="flex items-start gap-3 p-2.5 rounded-[6px] border border-[#27272a] bg-[#121214] hover:border-orange-500/40 transition-colors group"
+                >
+                  <input
+                    type="checkbox"
+                    checked={t.done}
+                    onChange={() => handleToggleTask(t.id)}
+                    className="mt-0.5 w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
+                  />
+                  <div className="flex-1 text-xs min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p
+                        className={`leading-snug truncate ${
+                          t.done
+                            ? 'text-zinc-500 line-through'
+                            : 'font-semibold text-zinc-100'
                         }`}
                       >
-                        {t.priority}
-                      </span>
-                    )}
-                  </div>
+                        {t.title}
+                      </p>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {t.priority && !t.done && (
+                          <span
+                            className={`font-mono text-[9px] px-1.5 py-0.2 rounded-[6px] font-bold ${
+                              t.priority === 'Urgent'
+                                ? 'bg-red-950/40 text-red-400 border border-red-500/20'
+                                : 'bg-orange-950/40 text-orange-400 border border-orange-500/20'
+                            }`}
+                          >
+                            {t.priority}
+                          </span>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditTask(t)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-[6px] text-zinc-400 hover:text-orange-400 hover:bg-[#18181b] transition-all cursor-pointer"
+                          title="Edit Task"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteTask(t.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 rounded-[6px] text-zinc-400 hover:text-rose-400 hover:bg-[#18181b] transition-all cursor-pointer"
+                          title="Delete Task"
+                        >
+                          <span className="material-symbols-outlined text-[14px]">delete</span>
+                        </button>
+                      </div>
+                    </div>
 
-                  <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-zinc-400">
-                    {t.dueDate && (
-                      <span className={t.priority === 'Urgent' ? 'text-amber-400 font-semibold' : ''}>
-                        Due {t.dueDate}
-                      </span>
-                    )}
-                    {t.tag && (
-                      <>
-                        <span>•</span>
-                        <span className="px-1.5 py-0.2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-300">
-                          Tag: {t.tag}
+                    <div className="flex items-center gap-3 mt-1.5 font-mono text-[10px] text-zinc-400">
+                      {t.dueDate && (
+                        <span className={t.priority === 'Urgent' ? 'text-amber-400 font-semibold' : ''}>
+                          Due {t.dueDate}
                         </span>
-                      </>
-                    )}
-                    {t.assignee && (
-                      <>
-                        <span>•</span>
-                        <span>Assignee: {t.assignee}</span>
-                      </>
-                    )}
+                      )}
+                      {t.tag && (
+                        <>
+                          <span>•</span>
+                          <span className="px-1.5 py-0.2 rounded-[6px] bg-[#18181b] border border-[#27272a] text-zinc-300">
+                            Tag: {t.tag}
+                          </span>
+                        </>
+                      )}
+                      {t.assignee && (
+                        <>
+                          <span>•</span>
+                          <span>Assignee: {t.assignee}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
 
             {isAddingTask && (
-              <div className="flex items-center gap-2 mt-1">
+              <div className="p-3 bg-[#121214] border border-orange-500/50 rounded-[6px] flex flex-col gap-2.5 shadow-sm mt-1">
+                <span className="font-mono text-[10px] uppercase font-bold text-orange-400">
+                  New Linked Deliverable
+                </span>
                 <input
                   autoFocus
                   type="text"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAddTask()}
-                  placeholder="Task title..."
-                  className="flex-1 bg-[#121214] border border-orange-500 rounded-[6px] px-2.5 py-1 text-xs text-zinc-100 focus:outline-none"
+                  placeholder="Task / deliverable title..."
+                  className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2.5 py-1.5 text-xs text-zinc-100 focus:outline-none focus:border-orange-500 font-semibold"
                 />
-                <button
-                  onClick={handleAddTask}
-                  className="px-2.5 py-1 bg-orange-600 text-white text-xs font-semibold rounded-[6px] cursor-pointer"
-                >
-                  Add
-                </button>
-                <button
-                  onClick={() => setIsAddingTask(false)}
-                  className="px-2 py-1 text-xs text-zinc-400 hover:text-zinc-100 cursor-pointer"
-                >
-                  Cancel
-                </button>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-400 mb-0.5">Priority</label>
+                    <select
+                      value={newTaskPriority}
+                      onChange={(e) => setNewTaskPriority(e.target.value as any)}
+                      className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
+                    >
+                      <option value="Urgent">Urgent</option>
+                      <option value="High">High</option>
+                      <option value="Medium">Medium</option>
+                      <option value="Low">Low</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-400 mb-0.5">Due Date</label>
+                    <input
+                      type="text"
+                      value={newTaskDueDate}
+                      onChange={(e) => setNewTaskDueDate(e.target.value)}
+                      placeholder="e.g. Oct 26, 2026"
+                      className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-mono text-zinc-400 mb-0.5">Tag</label>
+                    <input
+                      type="text"
+                      value={newTaskTag}
+                      onChange={(e) => setNewTaskTag(e.target.value)}
+                      placeholder="e.g. Deliverable"
+                      className="w-full bg-[#18181b] border border-[#27272a] rounded-[6px] px-2 py-1 text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
+                    />
+                  </div>
+                </div>
+                <div className="flex items-center justify-end gap-2 pt-1 border-t border-[#27272a]">
+                  <button
+                    type="button"
+                    onClick={() => setIsAddingTask(false)}
+                    className="px-2.5 py-1 text-xs text-zinc-400 hover:text-zinc-100 rounded-[6px] hover:bg-zinc-800 transition-colors cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleAddTask}
+                    className="px-3 py-1 bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold rounded-[6px] transition-colors cursor-pointer shadow-xs"
+                  >
+                    Add Task
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -492,12 +712,33 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
           <span>Changes saved locally to encrypted storage</span>
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={onClose}
-            className="text-zinc-400 hover:text-rose-400 text-xs font-medium px-3 py-1.5 transition-colors rounded-[6px] cursor-pointer"
-          >
-            Archive Deal
-          </button>
+          {deal.isArchived ? (
+            <button
+              type="button"
+              onClick={() => {
+                onUpdateDeal({ ...deal, isArchived: false });
+                onClose();
+              }}
+              className="text-orange-400 hover:text-orange-300 hover:bg-orange-950/40 text-xs font-semibold px-3 py-1.5 transition-colors rounded-[6px] border border-orange-500/30 flex items-center gap-1.5 cursor-pointer shadow-xs"
+              title="Restore deal back to active pipeline"
+            >
+              <span className="material-symbols-outlined text-[15px]">unarchive</span>
+              <span>Unarchive Deal</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => {
+                onUpdateDeal({ ...deal, isArchived: true });
+                onClose();
+              }}
+              className="text-zinc-400 hover:text-rose-400 hover:bg-rose-950/20 text-xs font-medium px-3 py-1.5 transition-colors rounded-[6px] border border-[#27272a] hover:border-rose-500/30 flex items-center gap-1.5 cursor-pointer"
+              title="Move deal to archived list"
+            >
+              <span className="material-symbols-outlined text-[15px]">archive</span>
+              <span>Archive Deal</span>
+            </button>
+          )}
           <button
             onClick={onClose}
             className="bg-[#18181b] hover:bg-zinc-800 text-zinc-100 border border-[#27272a] text-xs font-semibold rounded-[6px] px-5 py-1.5 transition-all active:scale-[0.98] shadow-sm cursor-pointer"

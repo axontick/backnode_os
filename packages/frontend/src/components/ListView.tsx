@@ -7,6 +7,13 @@ interface ListViewProps {
   selectedTaskId: string | null;
   onSelectTask: (task: TaskItem) => void;
   onQuickStatusChange: (taskId: string, status: TaskStatus) => void;
+  onMoveTaskStatus?: (
+    taskId: string,
+    newStatus: TaskStatus,
+    targetIndex?: number,
+    targetTaskId?: string,
+    position?: 'before' | 'after'
+  ) => void;
   onOpenCreateTask?: () => void;
 }
 
@@ -15,10 +22,16 @@ export const ListView: React.FC<ListViewProps> = ({
   selectedTaskId,
   onSelectTask,
   onQuickStatusChange,
+  onMoveTaskStatus,
   onOpenCreateTask,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
+
+  const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<TaskStatus | null>(null);
+  const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
 
   // Collapsible section states
   const [openSections, setOpenSections] = useState<Record<TaskStatus, boolean>>({
@@ -143,13 +156,69 @@ export const ListView: React.FC<ListViewProps> = ({
       ? t.subtasks.filter((st) => isSubtaskDone(st.id, st.done)).length
       : 0;
 
+    const isDraggingThis = draggingTaskId === t.id;
+    const isDropBefore = dragOverTaskId === t.id && dropPosition === 'before' && !isDraggingThis;
+    const isDropAfter = dragOverTaskId === t.id && dropPosition === 'after' && !isDraggingThis;
+
     return (
       <div
         key={t.id}
-        className={`group border rounded-[6px] p-3 transition-all ${
-          isSelected
+        draggable={!isReadOnly}
+        onDragStart={(e) => {
+          if (isReadOnly) return;
+          e.dataTransfer.setData('text/plain', t.id);
+          e.dataTransfer.effectAllowed = 'move';
+          setDraggingTaskId(t.id);
+        }}
+        onDragEnd={() => {
+          setDraggingTaskId(null);
+          setDragOverSection(null);
+          setDragOverTaskId(null);
+          setDropPosition(null);
+        }}
+        onDragOver={(e) => {
+          if (isReadOnly || !draggingTaskId || draggingTaskId === t.id) return;
+          e.preventDefault();
+          e.stopPropagation();
+          e.dataTransfer.dropEffect = 'move';
+          const rect = e.currentTarget.getBoundingClientRect();
+          const midY = rect.top + rect.height / 2;
+          const pos = e.clientY < midY ? 'before' : 'after';
+          setDropPosition(pos);
+          setDragOverTaskId(t.id);
+        }}
+        onDragLeave={(e) => {
+          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+          if (dragOverTaskId === t.id) {
+            setDragOverTaskId(null);
+            setDropPosition(null);
+          }
+        }}
+        onDrop={(e) => {
+          if (isReadOnly) return;
+          e.preventDefault();
+          e.stopPropagation();
+          const sourceTaskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+          if (sourceTaskId && sourceTaskId !== t.id) {
+            onMoveTaskStatus?.(sourceTaskId, t.status, undefined, t.id, dropPosition || 'before');
+          }
+          setDraggingTaskId(null);
+          setDragOverSection(null);
+          setDragOverTaskId(null);
+          setDropPosition(null);
+        }}
+        className={`group border rounded-[6px] p-3 transition-all relative ${
+          isDraggingThis
+            ? 'opacity-40 border-dashed border-orange-500 bg-orange-950/20'
+            : isSelected
             ? 'bg-orange-950/20 border-orange-500 shadow-sm'
             : 'bg-[#121214] border-[#27272a] hover:border-orange-500/50 hover:bg-[#18181b]'
+        } ${
+          isDropBefore
+            ? 'border-t-2 border-t-orange-500'
+            : isDropAfter
+            ? 'border-b-2 border-b-orange-500'
+            : ''
         }`}
       >
         {/* Parent Row */}
@@ -157,7 +226,17 @@ export const ListView: React.FC<ListViewProps> = ({
           onClick={() => onSelectTask(t)}
           className="flex items-center justify-between cursor-pointer select-none"
         >
-          <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            {/* Drag Handle Indicator */}
+            {!isReadOnly && (
+              <span
+                className="material-symbols-outlined text-[15px] text-zinc-600 group-hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0 select-none"
+                title="Drag to reorder or move status"
+              >
+                drag_indicator
+              </span>
+            )}
+
             {/* Quick Status Check Toggle */}
             <button
               type="button"
@@ -321,9 +400,43 @@ export const ListView: React.FC<ListViewProps> = ({
         {statuses.map(({ status, label, dotClass, badgeClass }) => {
           const groupTasks = tasks.filter((t) => t.status === status);
           const isOpen = openSections[status] ?? true;
+          const isSectionOver = dragOverSection === status;
 
           return (
-            <div key={status} className="flex flex-col gap-3">
+            <div
+              key={status}
+              onDragOver={(e) => {
+                if (isReadOnly || !draggingTaskId) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (dragOverSection !== status) {
+                  setDragOverSection(status);
+                }
+              }}
+              onDragLeave={(e) => {
+                if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                if (dragOverSection === status) {
+                  setDragOverSection(null);
+                }
+              }}
+              onDrop={(e) => {
+                if (isReadOnly) return;
+                e.preventDefault();
+                const sourceTaskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+                if (sourceTaskId) {
+                  onMoveTaskStatus?.(sourceTaskId, status);
+                }
+                setDraggingTaskId(null);
+                setDragOverSection(null);
+                setDragOverTaskId(null);
+                setDropPosition(null);
+              }}
+              className={`flex flex-col gap-3 p-3 rounded-[6px] transition-all border ${
+                isSectionOver
+                  ? 'border-orange-500/80 bg-orange-950/20 ring-1 ring-orange-500/30'
+                  : 'border-transparent'
+              }`}
+            >
               {/* Section Header */}
               <div className="flex items-center justify-between pb-1.5 border-b border-[#27272a]">
                 <button
@@ -353,8 +466,14 @@ export const ListView: React.FC<ListViewProps> = ({
               {isOpen && (
                 <div className="space-y-2.5">
                   {groupTasks.length === 0 ? (
-                    <div className="p-4 text-center text-zinc-500 text-xs font-mono bg-[#18181b] rounded-[6px] border border-dashed border-[#27272a]">
-                      No {status.toLowerCase()} tasks in current space
+                    <div
+                      className={`p-4 text-center text-xs font-mono rounded-[6px] border border-dashed transition-colors ${
+                        isSectionOver
+                          ? 'border-orange-500/50 bg-orange-950/30 text-orange-400'
+                          : 'border-[#27272a] bg-[#18181b] text-zinc-500'
+                      }`}
+                    >
+                      {isSectionOver ? `Drop to move deliverable to ${label}` : `No ${status.toLowerCase()} tasks in current space`}
                     </div>
                   ) : (
                     groupTasks.map(renderTaskRow)

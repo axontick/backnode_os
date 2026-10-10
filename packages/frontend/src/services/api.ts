@@ -17,6 +17,7 @@ import {
   AuthResponse,
   User,
   UserSpace,
+  Department,
 } from '../types';
 
 export const API_BASE_URL =
@@ -247,4 +248,23 @@ export const workspaceApi = {
     const res = await apiClient.put<ListSettings>('/settings/list', settings);
     return res.data;
   },
+  getDepartments: async (): Promise<Department[]> => {
+    const res = await apiClient.get<Department[]>('/departments');
+    return res.data;
+  },
+  createDepartment: async (dept: Partial<Department>): Promise<Department> => {
+    const res = await apiClient.post<Department>('/departments', dept);
+    return res.data;
+  },
+  updateDepartment: async (id: string, dept: Partial<Department>): Promise<Department> => {
+    const res = await apiClient.patch<Department>(`/departments/${id}`, dept);
+    return res.data;
+  },
+  deleteDepartment: async (id: string, reassignToDeptName?: string): Promise<{ id: string; success: boolean }> => {
+    const res = await apiClient.delete<{ id: string; success: boolean }>(`/departments/${id}`, {
+      data: { reassignToDeptName },
+    });
+    return res.data;
+  },
 };
+

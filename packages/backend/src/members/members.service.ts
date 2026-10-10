@@ -43,7 +43,7 @@ export class MembersService {
             member.accessLevel = 'OWNER';
             needsUpdate = true;
           }
-          if (member.role !== 'Workspace Owner') {
+          if (!member.role) {
             member.role = 'Workspace Owner';
             needsUpdate = true;
           }
@@ -171,16 +171,13 @@ export class MembersService {
   async update(accountId: string, id: string, data: any) {
     const member = await this.findOne(accountId, id);
 
-    // Workspace owner role is strictly immutable and cannot be updated or demoted
+    // Workspace owner access level is strictly immutable and cannot be demoted
     if (member.accessLevel === 'OWNER') {
       if (data.accessLevel && data.accessLevel !== 'OWNER') {
-        throw new BadRequestException('Workspace Owner role cannot be modified or demoted.');
+        throw new BadRequestException('Workspace Owner access level cannot be demoted.');
       }
-      if (data.role && data.role !== member.role && data.role !== 'Workspace Owner') {
-        throw new BadRequestException('Workspace Owner role cannot be modified.');
-      }
-      delete data.accessLevel;
-      delete data.role;
+      data.accessLevel = 'OWNER';
+      data.canLogin = true;
     }
 
     if (data.canLogin !== undefined) {

@@ -18,9 +18,11 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
 }) => {
   const [filterQuarter, setFilterQuarter] = useState<'Q4 2026' | 'Q3 2026' | 'All Time'>('Q4 2026');
 
-  // Filter deals belonging to this pipeline
+  // Filter deals belonging to this pipeline (excluding archived deals)
   const pipelineDeals = useMemo(() => {
-    return deals.filter((d) => !pipeline?.id || !d.pipelineId || d.pipelineId === pipeline.id);
+    return deals.filter(
+      (d) => (!pipeline?.id || !d.pipelineId || d.pipelineId === pipeline.id) && !d.isArchived
+    );
   }, [deals, pipeline?.id]);
 
   // Quarter-filtered deals

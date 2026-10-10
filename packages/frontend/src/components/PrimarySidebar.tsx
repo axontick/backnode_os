@@ -38,15 +38,35 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
   const [isSpaceDropdownOpen, setIsSpaceDropdownOpen] = useState(false);
   const spaceDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close workspace dropdown on outside click
+  // Close workspace dropdown on outside click, focus loss, or Escape key
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (spaceDropdownRef.current && !spaceDropdownRef.current.contains(e.target as Node)) {
         setIsSpaceDropdownOpen(false);
       }
     };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsSpaceDropdownOpen(false);
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      const target = e.relatedTarget as Node | null;
+      if (spaceDropdownRef.current && target && !spaceDropdownRef.current.contains(target)) {
+        setIsSpaceDropdownOpen(false);
+      }
+    };
+
     document.addEventListener('mousedown', handleOutsideClick);
-    return () => document.removeEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('focusout', handleFocusOut);
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('focusout', handleFocusOut);
+    };
   }, []);
 
   const initialLetter = activeUserSpace?.name ? activeUserSpace.name.charAt(0).toUpperCase() : 'B';

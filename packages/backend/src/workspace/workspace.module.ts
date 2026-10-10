@@ -1,6 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SpaceFolder, StatusDefinition, ListSettings, Account, TeamMember } from '../entities';
+import { SpaceFolder, StatusDefinition, ListSettings, Account, TeamMember, Department } from '../entities';
 import { WorkspaceService } from './workspace.service';
 import { WorkspaceController } from './workspace.controller';
 
@@ -12,6 +12,7 @@ import { WorkspaceController } from './workspace.controller';
       ListSettings,
       Account,
       TeamMember,
+      Department,
     ]),
   ],
   controllers: [WorkspaceController],

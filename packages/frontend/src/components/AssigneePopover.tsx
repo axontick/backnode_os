@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TeamMember } from '../types';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface AssigneePopoverProps {
   currentAssigneeId: string;
@@ -14,9 +15,51 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
   onSelectMember,
   onClose,
 }) => {
+  const popoverRef = useRef<HTMLDivElement>(null);
+  const { departments } = useWorkspace();
   const [searchTerm, setSearchTerm] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState<'All' | 'Engineering' | 'Product' | 'Design'>('All');
+  const [departmentFilter, setDepartmentFilter] = useState<string>('All');
   const [actionFeedback, setActionFeedback] = useState<string | null>(null);
+
+  // Close on outside click, blur/focusout, or Escape key
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    const handleFocusOut = (e: FocusEvent) => {
+      if (
+        popoverRef.current &&
+        e.relatedTarget &&
+        !popoverRef.current.contains(e.relatedTarget as Node)
+      ) {
+        onClose();
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+    const element = popoverRef.current;
+    if (element) {
+      element.addEventListener('focusout', handleFocusOut);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+      if (element) {
+        element.removeEventListener('focusout', handleFocusOut);
+      }
+    };
+  }, [onClose]);
 
   const filteredMembers = members.filter((member) => {
     const matchesSearch =
@@ -73,7 +116,9 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
 
   return (
     <div
-      className="absolute top-[170px] left-[16px] w-[380px] bg-[#121214] border border-[#27272a] shadow-2xl z-50 flex flex-col overflow-hidden rounded-[6px] text-zinc-100 animate-in fade-in zoom-in-95 duration-150"
+      ref={popoverRef}
+      tabIndex={-1}
+      className="absolute top-[170px] left-[16px] w-[380px] bg-[#121214] border border-[#27272a] shadow-2xl z-50 flex flex-col overflow-hidden rounded-[6px] text-zinc-100 animate-in fade-in zoom-in-95 duration-150 outline-none"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Popover Pointer Accent Bar */}
@@ -101,14 +146,14 @@ export const AssigneePopover: React.FC<AssigneePopoverProps> = ({
         </div>
 
         {/* Filter Chips */}
-        <div className="flex items-center gap-1.5 mt-2.5">
-          {(['All', 'Engineering', 'Product', 'Design'] as const).map((dept) => (
+        <div className="flex items-center gap-1.5 mt-2.5 overflow-x-auto custom-scrollbar pb-1">
+          {['All', ...departments.map((d) => d.name)].map((dept) => (
             <button
               key={dept}
               onClick={() => setDepartmentFilter(dept)}
-              className={`px-2.5 py-1 rounded-[6px] text-[11px] font-mono font-medium transition-colors cursor-pointer ${
+              className={`px-2.5 py-1 rounded-[6px] text-[11px] font-mono font-medium transition-colors cursor-pointer shrink-0 ${
                 departmentFilter === dept
-                  ? 'bg-orange-600 text-white font-semibold'
+                  ? 'bg-orange-600 text-white font-semibold shadow-xs'
                   : 'bg-[#18181b] hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200'
               }`}
             >

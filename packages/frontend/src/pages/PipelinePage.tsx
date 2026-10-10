@@ -9,7 +9,7 @@ export const PipelinePage: React.FC = () => {
   const { spaceId, pipelineId, view = 'board', subFolderId } = useParams<{
     spaceId?: string;
     pipelineId?: string;
-    view?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings';
+    view?: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived';
     subFolderId?: string;
   }>();
 
@@ -71,7 +71,7 @@ export const PipelinePage: React.FC = () => {
   }, [subFolderId, activePipelineSubFolderId, setActivePipelineSubFolderId]);
 
   const handleSelectView = (
-    nextView: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings'
+    nextView: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived'
   ) => {
     if (nextView === 'dashboard') {
       navigate(`${spacePrefix}/crm`);
@@ -122,6 +122,7 @@ export const PipelinePage: React.FC = () => {
           navigate(`${spacePrefix}/crm/pipelines/${pipeId}/${view || 'board'}`);
         }}
         onAdvanceDealStage={handleAdvanceDealStage}
+        onUpdateDeal={handleUpdateDeal}
       />
 
       {/* Deal Inspector Slide-Over */}

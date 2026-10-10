@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ListSettings, StatusDefinition } from '../types';
 
 interface TaskSpaceSettingsProps {
@@ -19,6 +19,14 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
   const [activeTab, setActiveTab] = useState<'general' | 'workflow' | 'permissions' | 'automations' | 'danger'>('workflow');
   const [localSettings, setLocalSettings] = useState<ListSettings>(settings);
   const [localStatuses, setLocalStatuses] = useState<StatusDefinition[]>(statuses);
+
+  useEffect(() => {
+    setLocalSettings(settings);
+  }, [settings]);
+
+  useEffect(() => {
+    setLocalStatuses(statuses);
+  }, [statuses]);
 
   // Status Drawer state
   const [drawerName, setDrawerName] = useState('Quality Assurance Gate');
@@ -97,7 +105,7 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
           <span>/</span>
           <span>{localSettings.name}</span>
           <span>/</span>
-          <span className="text-orange-400 font-semibold">List Settings</span>
+          <span className="font-semibold" style={{ color: localSettings.color || '#ea580c' }}>List Settings</span>
         </div>
 
         <div className="flex items-center gap-3">
@@ -134,8 +142,11 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="font-mono text-[11px] px-2.5 py-1 rounded-[6px] bg-[#18181b] text-orange-400 border border-[#27272a] font-semibold flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                <span
+                  className="font-mono text-[11px] px-2.5 py-1 rounded-[6px] bg-[#18181b] border border-[#27272a] font-semibold flex items-center gap-1.5"
+                  style={{ color: localSettings.color || '#ea580c' }}
+                >
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: localSettings.color || '#ea580c' }}></span>
                   List ID: {localSettings.listId}
                 </span>
               </div>
@@ -721,9 +732,18 @@ export const TaskSpaceSettings: React.FC<TaskSpaceSettingsProps> = ({
                             onClick={() => setLocalSettings({ ...localSettings, icon: ic })}
                             className={`w-8 h-8 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer ${
                               localSettings.icon === ic
-                                ? 'bg-orange-950/40 text-orange-400 border border-orange-500/40 shadow-xs'
+                                ? 'border shadow-xs'
                                 : 'text-zinc-400 hover:text-zinc-100 hover:bg-[#18181b]'
                             }`}
+                            style={
+                              localSettings.icon === ic
+                                ? {
+                                    backgroundColor: `${localSettings.color}25`,
+                                    borderColor: `${localSettings.color}60`,
+                                    color: localSettings.color,
+                                  }
+                                : undefined
+                            }
                             title={ic}
                           >
                             <span className="material-symbols-outlined text-[17px]">{ic}</span>

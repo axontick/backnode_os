@@ -135,6 +135,7 @@ export const DashboardLayout: React.FC = () => {
     toastMessage,
   } = useWorkspace();
 
+  const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const pathname = location.pathname;
@@ -142,15 +143,20 @@ export const DashboardLayout: React.FC = () => {
   const effectiveSpaceId = spaceId || activeUserSpaceId || userSpaces[0]?.id || 'space-main';
   const spacePrefix = `/space/${effectiveSpaceId}`;
 
-  // Keep activeUserSpaceId in sync with route parameter
+  // Keep activeUserSpaceId in sync with route parameter and redirect invalid placeholder space-main
   useEffect(() => {
-    if (spaceId && spaceId !== activeUserSpaceId) {
+    const realSpaceId = user?.account?.id || user?.accountId || userSpaces.find(s => s.id && s.id !== 'space-main')?.id;
+    if (spaceId === 'space-main' && realSpaceId && realSpaceId !== 'space-main') {
+      navigate(location.pathname.replace('/space/space-main', `/space/${realSpaceId}`), { replace: true });
+      return;
+    }
+    if (spaceId && spaceId !== activeUserSpaceId && spaceId !== 'space-main') {
       setActiveUserSpaceId(spaceId);
       try {
         localStorage.setItem('backnode_active_user_space_id', spaceId);
       } catch {}
     }
-  }, [spaceId, activeUserSpaceId, setActiveUserSpaceId]);
+  }, [spaceId, activeUserSpaceId, setActiveUserSpaceId, user?.account?.id, user?.accountId, userSpaces, location.pathname, navigate]);
 
   const normalizedPath = pathname.replace(/^\/space\/[^/]+/, '');
   let effectiveHub = currentHub;
@@ -162,7 +168,7 @@ export const DashboardLayout: React.FC = () => {
     effectiveHub = 'crm';
   } else if (normalizedPath.startsWith('/contacts')) {
     effectiveHub = 'contacts';
-  } else if (normalizedPath.startsWith('/team')) {
+  } else if (normalizedPath.startsWith('/team') || normalizedPath.startsWith('/users')) {
     effectiveHub = 'team';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
@@ -170,7 +176,6 @@ export const DashboardLayout: React.FC = () => {
 
   const showInnerSidebar = effectiveHub === 'task-spaces' || effectiveHub === 'crm';
 
-  const { user } = useAuth();
   const currentMember = members.find(
     (m) =>
       (user?.email && m.email?.toLowerCase() === user.email.toLowerCase()) ||
