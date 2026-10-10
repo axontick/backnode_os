@@ -23,7 +23,7 @@ export const PipelinePage: React.FC = () => {
     setActivePipelineId,
     crmView,
     setCrmView,
-    deals,
+    filteredDeals,
     selectedDealId,
     setSelectedDealId,
     handleOpenAddDealToStage,
@@ -92,7 +92,7 @@ export const PipelinePage: React.FC = () => {
   return (
     <div className="flex-1 flex overflow-hidden relative font-sans">
       <PipelineCrmView
-        deals={deals}
+        deals={filteredDeals}
         pipeline={targetPipeline}
         pipelines={pipelines}
         onSelectPipeline={handleSelectPipeline}

@@ -60,6 +60,12 @@ export class TeamMember {
   })
   allowedActions: string[];
 
+  @Column('varchar', { name: 'role_id', nullable: true })
+  roleId?: string;
+
+  @Column('jsonb', { name: 'permission_overrides', nullable: true })
+  permissionOverrides?: any;
+
   @Column('varchar', { name: 'invited_at', nullable: true })
   invitedAt?: string;
 

@@ -1,8 +1,9 @@
 import React, { useEffect } from 'react';
-import { TaskItem, SpaceFolder, CrmPipeline, SpaceSubFolder, CrmPipelineSubFolder } from '../types';
+import { TaskItem, SpaceFolder, CrmPipeline, SpaceSubFolder, CrmPipelineSubFolder, CrmDeal } from '../types';
 
 export type DeletionTarget =
   | { type: 'task'; item: TaskItem }
+  | { type: 'deal'; item: CrmDeal }
   | { type: 'folder'; item: SpaceFolder }
   | { type: 'pipeline'; item: CrmPipeline }
   | { type: 'subfolder'; item: SpaceSubFolder; folderId: string }
@@ -76,6 +77,7 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                 {activeTarget.type === 'pipeline' && 'Delete Pipeline Permanently?'}
                 {activeTarget.type === 'subfolder' && 'Delete Sub-folder Permanently?'}
                 {activeTarget.type === 'pipeline-subfolder' && 'Delete Pipeline Sub-folder?'}
+                {activeTarget.type === 'deal' && 'Delete Opportunity Permanently?'}
                 {activeTarget.type === 'task' && 'Delete Deliverable Permanently?'}
               </h2>
             </div>
@@ -154,6 +156,40 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                 <span className="material-symbols-outlined text-[16px] text-orange-400 shrink-0">account_tree</span>
                 <div className="text-[12px] leading-tight">
                   Deals tagged to this cohort will remain in the parent pipeline unsegregated.
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTarget.type === 'deal' && (
+            <>
+              <div className="text-zinc-300 text-[13px] leading-relaxed">
+                Are you sure you want to delete CRM deal{' '}
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
+                  {activeTarget.item.title}
+                </span>
+                ?
+              </div>
+
+              <div className="bg-rose-950/20 border border-rose-500/30 text-rose-300 text-xs px-3.5 py-2.5 rounded-[6px] flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[16px] text-rose-400 shrink-0">warning</span>
+                <div className="text-[12px] leading-tight">
+                  This opportunity ({activeTarget.item.formattedValue || `$${activeTarget.item.value.toLocaleString()}`}) will be permanently removed.
+                </div>
+              </div>
+
+              <div className="bg-[#18181b] rounded-[6px] border border-[#27272a] p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-zinc-400">
+                  <span className="text-zinc-500 font-mono text-[11px]">Company:</span>
+                  <span className="font-semibold text-zinc-200">{activeTarget.item.company || 'Enterprise Partner'}</span>
+                </div>
+                <div className="flex items-center justify-between text-zinc-400">
+                  <span className="text-zinc-500 font-mono text-[11px]">Deal Owner:</span>
+                  <span className="text-zinc-200">{activeTarget.item.owner || 'Unassigned'}</span>
+                </div>
+                <div className="flex items-center justify-between text-zinc-400">
+                  <span className="text-zinc-500 font-mono text-[11px]">Stage:</span>
+                  <span className="font-mono text-zinc-300">{activeTarget.item.stage}</span>
                 </div>
               </div>
             </>

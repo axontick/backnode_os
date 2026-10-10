@@ -8,6 +8,7 @@ import { PipelinesModule } from './pipelines/pipelines.module';
 import { MembersModule } from './members/members.module';
 import { ContactsModule } from './contacts/contacts.module';
 import { WorkspaceModule } from './workspace/workspace.module';
+import { RolesModule } from './roles/roles.module';
 
 const dbUrl = (process.env.DATABASE_URL || 'postgresql://postgres:asimwattoo123@localhost:5432/backnode_os').replace(
   /\?schema=.*$/,
@@ -30,6 +31,7 @@ const dbUrl = (process.env.DATABASE_URL || 'postgresql://postgres:asimwattoo123@
     MembersModule,
     ContactsModule,
     WorkspaceModule,
+    RolesModule,
   ],
 })
 export class AppModule {}

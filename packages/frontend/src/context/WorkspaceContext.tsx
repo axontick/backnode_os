@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import {
   initialTasks,
   initialStatuses,
@@ -32,6 +32,10 @@ import {
   DocItem,
   DocClassification,
   Department,
+  WorkspaceRole,
+  RolePermissions,
+  INITIAL_SYSTEM_ROLES,
+  resolveEffectivePermissions,
 } from '../types';
 import { DeletionTarget } from '../components/DeleteConfirmationModal';
 import {
@@ -41,6 +45,7 @@ import {
   membersApi,
   contactsApi,
   workspaceApi,
+  rolesApi,
 } from '../services/api';
 import { useAuth } from './AuthContext';
 import {
@@ -188,6 +193,7 @@ interface WorkspaceContextType {
 
   // Computed & Derived
   filteredTasks: TaskItem[];
+  filteredDeals: CrmDeal[];
   selectedTask: TaskItem | null;
   selectedDeal: CrmDeal | null;
   activePipeline: CrmPipeline;
@@ -211,6 +217,7 @@ interface WorkspaceContextType {
   handleConfirmDeleteTask: () => void;
   handleUpdateDeal: (deal: CrmDeal) => void;
   handleCreateDeal: (deal: Partial<CrmDeal>) => void;
+  handleDeleteDeal: (dealId: string) => void;
   handleAdvanceDealStage: (dealId: string, newStage: CrmDeal['stage']) => void;
   handleMoveTaskStatus: (
     taskId: string,
@@ -261,11 +268,21 @@ interface WorkspaceContextType {
   handleUpdateDepartment: (id: string, updates: Partial<Department>) => Promise<Department>;
   handleDeleteDepartment: (id: string, reassignToDeptName?: string) => Promise<void>;
 
+  // Roles & Permissions
+  roles: WorkspaceRole[];
+  setRoles: React.Dispatch<React.SetStateAction<WorkspaceRole[]>>;
+  effectivePermissions: RolePermissions;
+  handleCreateRole: (role: Partial<WorkspaceRole>) => Promise<WorkspaceRole>;
+  handleUpdateRole: (id: string, updates: Partial<WorkspaceRole>) => Promise<WorkspaceRole>;
+  handleDeleteRole: (id: string) => Promise<void>;
+  handleDuplicateRole: (id: string) => Promise<WorkspaceRole>;
+
   // Member & Access Control
   handleInviteMember: (data: {
     name: string;
     email: string;
     role?: string;
+    roleId?: string;
     accessLevel?: string;
     department?: string;
     capacityStatus?: string;
@@ -273,6 +290,7 @@ interface WorkspaceContextType {
     canLogin?: boolean;
     allowedPages?: string[];
     allowedActions?: string[];
+    permissionOverrides?: any;
   }) => Promise<TeamMember>;
   handleUpdateMemberAccess: (id: string, updates: Partial<TeamMember>) => Promise<void>;
   handleRemoveMember: (id: string) => Promise<void>;
@@ -306,6 +324,46 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
     return initialDepartments;
   });
+
+  const [roles, setRoles] = useState<WorkspaceRole[]>(() => {
+    try {
+      const stored = localStorage.getItem('backnode_roles');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.warn('Failed to parse cached roles:', e);
+    }
+    return INITIAL_SYSTEM_ROLES;
+  });
+
+  const currentMember = members.find(
+    (m) =>
+      (user?.email && m.email?.toLowerCase() === user.email.toLowerCase()) ||
+      m.id === user?.id
+  );
+
+  const effectivePermissions = useMemo<RolePermissions>(() => {
+    const isOwner = user?.role === 'OWNER' || currentMember?.accessLevel === 'OWNER';
+    if (isOwner) {
+      return resolveEffectivePermissions(null, null, true);
+    }
+    const roleId = currentMember?.roleId || user?.roleId;
+    let assignedRole = roles.find((r) => r.id === roleId);
+    if (!assignedRole) {
+      const roleName = currentMember?.role || user?.role;
+      if (roleName) {
+        assignedRole = roles.find(
+          (r) =>
+            r.name.toLowerCase() === roleName.toLowerCase() ||
+            (r.key && r.key.toLowerCase() === roleName.toLowerCase())
+        );
+      }
+    }
+    const overrides = currentMember?.permissionOverrides || user?.permissionOverrides;
+    return resolveEffectivePermissions(assignedRole, overrides, false);
+  }, [user, currentMember, roles]);
 
   // CRM state
   const [pipelines, setPipelines] = useState<CrmPipeline[]>([]);
@@ -743,10 +801,128 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     showToast(`Department "${deptToDelete.name}" removed`);
   };
 
+  const handleCreateRole = async (roleData: Partial<WorkspaceRole>): Promise<WorkspaceRole> => {
+    try {
+      const created = await rolesApi.create(roleData);
+      setRoles((prev) => {
+        const next = [...prev, created];
+        localStorage.setItem('backnode_roles', JSON.stringify(next));
+        return next;
+      });
+      showToast(`Role "${created.name}" created successfully`);
+      return created;
+    } catch (err) {
+      console.warn('Backend create role failed, saving locally:', err);
+      const newRole: WorkspaceRole = {
+        id: roleData.id || `role-${Date.now().toString(36)}`,
+        name: roleData.name || 'Custom Role',
+        key: roleData.key,
+        description: roleData.description || '',
+        color: roleData.color || '#ea580c',
+        icon: roleData.icon || 'shield_person',
+        isSystem: false,
+        isDefault: Boolean(roleData.isDefault),
+        permissions: roleData.permissions || INITIAL_SYSTEM_ROLES[2].permissions,
+        accountId: activeUserSpaceId,
+      };
+      setRoles((prev) => {
+        const next = [...prev, newRole];
+        localStorage.setItem('backnode_roles', JSON.stringify(next));
+        return next;
+      });
+      showToast(`Role "${newRole.name}" created locally`);
+      return newRole;
+    }
+  };
+
+  const handleUpdateRole = async (id: string, updates: Partial<WorkspaceRole>): Promise<WorkspaceRole> => {
+    try {
+      const updated = await rolesApi.update(id, updates);
+      setRoles((prev) => {
+        const next = prev.map((r) => (r.id === id ? { ...r, ...updated } : r));
+        localStorage.setItem('backnode_roles', JSON.stringify(next));
+        return next;
+      });
+      showToast(`Role "${updated.name}" updated successfully`);
+      return updated;
+    } catch (err) {
+      console.warn('Backend update role failed, applying locally:', err);
+      let targetRole: WorkspaceRole | undefined;
+      setRoles((prev) => {
+        const next = prev.map((r) => {
+          if (r.id === id) {
+            targetRole = { ...r, ...updates };
+            return targetRole;
+          }
+          return r;
+        });
+        localStorage.setItem('backnode_roles', JSON.stringify(next));
+        return next;
+      });
+      showToast('Role changes saved');
+      return targetRole || ({ id, ...updates } as WorkspaceRole);
+    }
+  };
+
+  const handleDeleteRole = async (id: string): Promise<void> => {
+    const roleToDelete = roles.find((r) => r.id === id);
+    if (!roleToDelete) return;
+    if (roleToDelete.isSystem) {
+      showToast('System roles cannot be deleted');
+      return;
+    }
+    try {
+      await rolesApi.delete(id);
+    } catch (err) {
+      console.warn('Backend delete role failed, removing locally:', err);
+    }
+    setRoles((prev) => {
+      const next = prev.filter((r) => r.id !== id);
+      localStorage.setItem('backnode_roles', JSON.stringify(next));
+      return next;
+    });
+    showToast(`Role "${roleToDelete.name}" deleted`);
+  };
+
+  const handleDuplicateRole = async (id: string): Promise<WorkspaceRole> => {
+    try {
+      const duplicated = await rolesApi.duplicate(id);
+      setRoles((prev) => {
+        const next = [...prev, duplicated];
+        localStorage.setItem('backnode_roles', JSON.stringify(next));
+        return next;
+      });
+      showToast(`Duplicated role "${duplicated.name}"`);
+      return duplicated;
+    } catch (err) {
+      console.warn('Backend duplicate role failed, duplicating locally:', err);
+      const source = roles.find((r) => r.id === id) || roles[0];
+      const copy: WorkspaceRole = {
+        id: `role-${Date.now().toString(36)}`,
+        name: `${source.name} (Copy)`,
+        description: source.description ? `Copy of ${source.name}. ${source.description}` : '',
+        color: source.color,
+        icon: source.icon,
+        isSystem: false,
+        isDefault: false,
+        permissions: JSON.parse(JSON.stringify(source.permissions)),
+        accountId: activeUserSpaceId,
+      };
+      setRoles((prev) => {
+        const next = [...prev, copy];
+        localStorage.setItem('backnode_roles', JSON.stringify(next));
+        return next;
+      });
+      showToast(`Duplicated role "${copy.name}"`);
+      return copy;
+    }
+  };
+
   const handleInviteMember = async (data: {
     name: string;
     email: string;
     role?: string;
+    roleId?: string;
     accessLevel?: string;
     department?: string;
     capacityStatus?: string;
@@ -754,6 +930,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     canLogin?: boolean;
     allowedPages?: string[];
     allowedActions?: string[];
+    permissionOverrides?: any;
   }) => {
     const defaultPages = ['overview', 'tasks', 'crm', 'contacts', 'docs', 'team', 'settings'];
     const defaultActions =
@@ -771,6 +948,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       email: data.email.trim(),
       initials: data.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2),
       role: data.role || (data.accessLevel === 'ADMIN' ? 'Workspace Admin' : 'Product Operator'),
+      roleId: data.roleId || undefined,
+      permissionOverrides: data.permissionOverrides || undefined,
       accessLevel: data.accessLevel || 'MEMBER',
       status: canLogin ? 'Active' : 'Disabled',
       canLogin,
@@ -931,6 +1110,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         fetchedListSettings,
         fetchedWorkspaces,
         fetchedDepartments,
+        fetchedRoles,
       ] = await Promise.all([
         tasksApi.getAll(),
         dealsApi.getAll(),
@@ -944,7 +1124,13 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         workspaceApi.getListSettings(),
         workspaceApi.getWorkspaces().catch(() => null),
         workspaceApi.getDepartments().catch(() => null),
+        rolesApi.getAll().catch(() => null),
       ]);
+
+      if (fetchedRoles && fetchedRoles.length > 0) {
+        setRoles(fetchedRoles);
+        localStorage.setItem('backnode_roles', JSON.stringify(fetchedRoles));
+      }
 
       if (fetchedWorkspaces && fetchedWorkspaces.length > 0) {
         const cleaned = filterRealWorkspaces(fetchedWorkspaces);
@@ -1098,8 +1284,42 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       matchesQuick = t.status === 'In Review';
     }
 
+    // ABAC / RBAC tasks.view scope enforcement
+    if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
+      const viewScope = effectivePermissions.tasks.view;
+      if (viewScope === 'none') return false;
+      if (viewScope === 'assigned') {
+        const isAssigned =
+          (t.assigneeId && t.assigneeId === user?.id) ||
+          (t.assignee?.name && user?.name && t.assignee.name.toLowerCase() === user.name.toLowerCase()) ||
+          t.creatorId === user?.id;
+        if (!isAssigned) return false;
+      }
+    }
+
     return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesQuick;
   });
+
+  const filteredDeals = useMemo(() => {
+    return deals.filter((deal) => {
+      // ABAC / RBAC deals.view scope enforcement
+      if (user?.role !== 'OWNER' && effectivePermissions?.deals) {
+        const viewScope = effectivePermissions.deals.view;
+        if (viewScope === 'none') return false;
+        if (viewScope === 'assigned') {
+          const userName = (user?.name || '').toLowerCase();
+          const userEmail = (user?.email || '').toLowerCase();
+          const userId = user?.id;
+          const isAssigned =
+            (deal.ownerId && deal.ownerId === userId) ||
+            (deal.owner && deal.owner.toLowerCase() === userName) ||
+            (deal.contact?.email && deal.contact.email.toLowerCase() === userEmail);
+          if (!isAssigned) return false;
+        }
+      }
+      return true;
+    });
+  }, [deals, user, effectivePermissions]);
 
   const selectedTask = tasks.find((t) => t.id === selectedTaskId) || null;
   const selectedDeal = deals.find((d) => d.id === selectedDealId) || null;
@@ -1231,6 +1451,24 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleUpdateTask = (updatedTask: TaskItem) => {
+    if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
+      const updateScope = effectivePermissions.tasks.update;
+      if (updateScope === 'none') {
+        showToast('Permission denied: You do not have permission to update tasks.');
+        return;
+      }
+      if (updateScope === 'assigned') {
+        const userName = (user?.name || '').toLowerCase();
+        const isAssigned =
+          updatedTask.assigneeId === user?.id ||
+          (updatedTask.assignee?.name && updatedTask.assignee.name.toLowerCase() === userName) ||
+          updatedTask.creatorId === user?.id;
+        if (!isAssigned) {
+          showToast('Permission denied: You can only update tasks assigned to you.');
+          return;
+        }
+      }
+    }
     setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
     tasksApi.update(updatedTask.id, updatedTask).catch((err) => {
       console.error('Failed to update task in DB:', err);
@@ -1239,6 +1477,12 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleCreateTask = (newTask: Partial<TaskItem>) => {
+    if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
+      if (effectivePermissions.tasks.create === false) {
+        showToast('Permission denied: You do not have permission to create tasks.');
+        return;
+      }
+    }
     const defaultAssignee: TeamMember = members[0] || {
       id: `tm-${user?.id || 'owner'}`,
       name: user?.name || 'Operator',
@@ -1276,6 +1520,25 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleDeleteTask = (taskId: string) => {
+    const taskToDeleteItem = tasks.find((t) => t.id === taskId);
+    if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
+      const deleteScope = effectivePermissions.tasks.delete;
+      if (deleteScope === 'none') {
+        showToast('Permission denied: You do not have permission to delete tasks.');
+        return;
+      }
+      if (deleteScope === 'assigned' && taskToDeleteItem) {
+        const userName = (user?.name || '').toLowerCase();
+        const isAssigned =
+          taskToDeleteItem.assigneeId === user?.id ||
+          (taskToDeleteItem.assignee?.name && taskToDeleteItem.assignee.name.toLowerCase() === userName) ||
+          taskToDeleteItem.creatorId === user?.id;
+        if (!isAssigned) {
+          showToast('Permission denied: You can only delete tasks assigned to you.');
+          return;
+        }
+      }
+    }
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
     if (selectedTaskId === taskId) {
       setSelectedTaskId(null);
@@ -1294,6 +1557,25 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleUpdateDeal = (updatedDeal: CrmDeal) => {
+    if (user?.role !== 'OWNER' && effectivePermissions?.deals) {
+      const updateScope = effectivePermissions.deals.update;
+      if (updateScope === 'none') {
+        showToast('Permission denied: You do not have permission to update deals.');
+        return;
+      }
+      if (updateScope === 'assigned') {
+        const userName = (user?.name || '').toLowerCase();
+        const userEmail = (user?.email || '').toLowerCase();
+        const isOwner =
+          updatedDeal.ownerId === user?.id ||
+          (updatedDeal.owner && updatedDeal.owner.toLowerCase() === userName) ||
+          (updatedDeal.contact?.email && updatedDeal.contact.email.toLowerCase() === userEmail);
+        if (!isOwner) {
+          showToast('Permission denied: You can only update deals assigned to you.');
+          return;
+        }
+      }
+    }
     setDeals((prev) => prev.map((d) => (d.id === updatedDeal.id ? updatedDeal : d)));
     dealsApi.update(updatedDeal.id, updatedDeal).catch((err) => {
       console.error('Failed to update deal in DB:', err);
@@ -1302,6 +1584,12 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleCreateDeal = (newDeal: Partial<CrmDeal>) => {
+    if (user?.role !== 'OWNER' && effectivePermissions?.deals) {
+      if (effectivePermissions.deals.create === false) {
+        showToast('Permission denied: You do not have permission to create CRM deals.');
+        return;
+      }
+    }
     const ownerName = user?.name || members[0]?.name || 'Operator';
     const ownerInitials = ownerName.slice(0, 2).toUpperCase();
     const created: CrmDeal = {
@@ -1344,9 +1632,60 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     showToast(`Deal "${created.title}" launched`);
   };
 
+  const handleDeleteDeal = (dealId: string) => {
+    const targetDeal = deals.find((d) => d.id === dealId);
+    if (!targetDeal) return;
+    if (user?.role !== 'OWNER' && effectivePermissions?.deals) {
+      const deleteScope = effectivePermissions.deals.delete;
+      if (deleteScope === 'none') {
+        showToast('Permission denied: You do not have permission to delete deals.');
+        return;
+      }
+      if (deleteScope === 'assigned') {
+        const userName = (user?.name || '').toLowerCase();
+        const userEmail = (user?.email || '').toLowerCase();
+        const isOwner =
+          targetDeal.ownerId === user?.id ||
+          (targetDeal.owner && targetDeal.owner.toLowerCase() === userName) ||
+          (targetDeal.contact?.email && targetDeal.contact.email.toLowerCase() === userEmail);
+        if (!isOwner) {
+          showToast('Permission denied: You can only delete deals assigned to you.');
+          return;
+        }
+      }
+    }
+    setDeals((prev) => prev.filter((d) => d.id !== dealId));
+    if (selectedDealId === dealId) {
+      setSelectedDealId(null);
+    }
+    dealsApi.delete(dealId).catch((err) => {
+      console.error('Failed to delete deal in DB:', err);
+    });
+    showToast(`Deal "${targetDeal.title}" deleted`);
+  };
+
   const handleAdvanceDealStage = (dealId: string, newStage: CrmDeal['stage']) => {
     const deal = deals.find((d) => d.id === dealId);
     if (!deal) return;
+    if (user?.role !== 'OWNER' && effectivePermissions?.deals) {
+      const changeStageScope = effectivePermissions.deals.change_stage;
+      if (changeStageScope === 'none') {
+        showToast('Permission denied: You do not have permission to advance deal stages.');
+        return;
+      }
+      if (changeStageScope === 'assigned') {
+        const userName = (user?.name || '').toLowerCase();
+        const userEmail = (user?.email || '').toLowerCase();
+        const isOwner =
+          deal.ownerId === user?.id ||
+          (deal.owner && deal.owner.toLowerCase() === userName) ||
+          (deal.contact?.email && deal.contact.email.toLowerCase() === userEmail);
+        if (!isOwner) {
+          showToast('Permission denied: You can only advance stages for deals assigned to you.');
+          return;
+        }
+      }
+    }
     const updatedDeal: CrmDeal = {
       ...deal,
       stage: newStage,
@@ -1370,6 +1709,25 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     targetTaskId?: string,
     position?: 'before' | 'after'
   ) => {
+    const task = tasks.find((t) => t.id === taskId);
+    if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
+      const changeStatusScope = effectivePermissions.tasks.change_status;
+      if (changeStatusScope === 'none') {
+        showToast('Permission denied: You do not have permission to move or change task statuses.');
+        return;
+      }
+      if (changeStatusScope === 'assigned' && task) {
+        const userName = (user?.name || '').toLowerCase();
+        const isAssigned =
+          task.assigneeId === user?.id ||
+          (task.assignee?.name && task.assignee.name.toLowerCase() === userName) ||
+          task.creatorId === user?.id;
+        if (!isAssigned) {
+          showToast('Permission denied: You can only move tasks assigned to you.');
+          return;
+        }
+      }
+    }
     setTasks((prev) => {
       const task = prev.find((t) => t.id === taskId);
       if (!task) return prev;
@@ -1748,6 +2106,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (!itemToDelete?.item?.id) return;
     if (itemToDelete.type === 'task') {
       handleDeleteTask(itemToDelete.item.id);
+    } else if (itemToDelete.type === 'deal') {
+      handleDeleteDeal(itemToDelete.item.id);
     } else if (itemToDelete.type === 'folder') {
       handleDeleteFolder(itemToDelete.item.id);
     } else if (itemToDelete.type === 'pipeline') {
@@ -1979,6 +2339,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         toastMessage,
         showToast,
         filteredTasks,
+        filteredDeals,
         selectedTask,
         selectedDeal,
         activePipeline,
@@ -2000,6 +2361,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleConfirmDeleteTask,
         handleUpdateDeal,
         handleCreateDeal,
+        handleDeleteDeal,
         handleAdvanceDealStage,
         handleMoveTaskStatus,
         handleUpdateListSettings,
@@ -2043,6 +2405,13 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleCreateDepartment,
         handleUpdateDepartment,
         handleDeleteDepartment,
+        roles,
+        setRoles,
+        effectivePermissions,
+        handleCreateRole,
+        handleUpdateRole,
+        handleDeleteRole,
+        handleDuplicateRole,
         handleInviteMember,
         handleUpdateMemberAccess,
         handleRemoveMember,

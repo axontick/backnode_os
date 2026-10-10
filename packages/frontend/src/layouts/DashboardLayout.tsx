@@ -56,6 +56,7 @@ export const DashboardLayout: React.FC = () => {
     tasks,
     deals,
     filteredTasks,
+    filteredDeals,
     setSelectedTaskId,
     setSelectedDealId,
     handleOpenAddDealToStage,
@@ -91,6 +92,7 @@ export const DashboardLayout: React.FC = () => {
     handleUpdateSubFolder,
     isNewListModalOpen,
     setIsNewListModalOpen,
+    effectivePermissions,
     targetFolderForNewList,
     setTargetFolderForNewList,
     targetSubFolderIdForNewList,
@@ -170,6 +172,8 @@ export const DashboardLayout: React.FC = () => {
     effectiveHub = 'contacts';
   } else if (normalizedPath.startsWith('/team') || normalizedPath.startsWith('/users')) {
     effectiveHub = 'team';
+  } else if (normalizedPath.startsWith('/roles')) {
+    effectiveHub = 'roles';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
   }
@@ -181,7 +185,7 @@ export const DashboardLayout: React.FC = () => {
       (user?.email && m.email?.toLowerCase() === user.email.toLowerCase()) ||
       m.id === user?.id
   );
-  const hasPageClearance = SecurityPolicy.canAccessPage(user, currentMember, effectiveHub);
+  const hasPageClearance = SecurityPolicy.canAccessPage(user, currentMember, effectiveHub, effectivePermissions);
 
   const [isPrimarySidebarCollapsed, setIsPrimarySidebarCollapsed] = useState<boolean>(() => {
     try {
@@ -382,8 +386,8 @@ export const DashboardLayout: React.FC = () => {
           filterCrmOwner={crmFilterOwner}
           onSelectFilterCrmOwner={setCrmFilterOwner}
           onClearFilters={handleClearAllFilters}
-          tasks={tasks}
-          deals={deals}
+          tasks={filteredTasks}
+          deals={filteredDeals}
           onSelectTask={(task) => {
             setSelectedTaskId(task.id);
             const parentFolder = findFolderByListId(folders, task.targetCycle);

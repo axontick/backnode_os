@@ -1,28 +1,63 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CrmDeal } from '../entities';
+import { RolesService } from '../roles/roles.service';
+import { CurrentUserPayload } from '../auth/current-user.decorator';
 
 @Injectable()
 export class DealsService {
   constructor(
     @InjectRepository(CrmDeal)
     private readonly dealRepo: Repository<CrmDeal>,
+    @Inject(RolesService)
+    private readonly rolesService: RolesService,
   ) {}
 
-  async findAll(accountId: string, pipelineId?: string) {
+  private isDealOwner(deal: CrmDeal, user?: CurrentUserPayload): boolean {
+    if (!user) return true;
+    if (user.role === 'OWNER') return true;
+    if (user.name && deal.owner && deal.owner.toLowerCase().trim() === user.name.toLowerCase().trim()) return true;
+    if (user.email && deal.contact?.email && deal.contact.email.toLowerCase().trim() === user.email.toLowerCase().trim()) return true;
+    const userInitials = (user.name || '')
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+    if (userInitials && deal.ownerInitials && deal.ownerInitials.toUpperCase() === userInitials) return true;
+    return false;
+  }
+
+  async findAll(accountId: string, pipelineId?: string, currentUser?: CurrentUserPayload) {
+    if (currentUser) {
+      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+      if (perms.deals.view === 'none') {
+        return [];
+      }
+    }
+
     const where: any = { accountId };
     if (pipelineId) where.pipelineId = pipelineId;
 
-    return this.dealRepo.find({
+    const deals = await this.dealRepo.find({
       where,
       order: {
         createdAt: 'ASC',
       },
     });
+
+    if (currentUser) {
+      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+      if (perms.deals.view === 'assigned') {
+        return deals.filter((d) => this.isDealOwner(d, currentUser));
+      }
+    }
+
+    return deals;
   }
 
-  async findOne(accountId: string, id: string) {
+  async findOne(accountId: string, id: string, currentUser?: CurrentUserPayload) {
     const deal = await this.dealRepo.findOne({
       where: { id, accountId },
       relations: { pipeline: true },
@@ -30,15 +65,44 @@ export class DealsService {
     if (!deal) {
       throw new NotFoundException(`Deal with ID ${id} not found in this account`);
     }
+
+    if (currentUser) {
+      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+      if (perms.deals.view === 'none') {
+        throw new ForbiddenException('You do not have permission to view CRM deals.');
+      }
+      if (perms.deals.view === 'assigned' && !this.isDealOwner(deal, currentUser)) {
+        throw new ForbiddenException('Access restricted: You can only view deals where you are the designated owner.');
+      }
+    }
+
     return deal;
   }
 
-  async create(accountId: string, data: any) {
+  async create(accountId: string, data: any, currentUser?: CurrentUserPayload) {
+    if (currentUser) {
+      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+      if (!perms.deals.create) {
+        throw new ForbiddenException('You do not have permission to create CRM deals.');
+      }
+      if (!perms.deals.assign && data.owner && data.owner !== currentUser.name) {
+        throw new ForbiddenException('You do not have permission to assign deals to other operators.');
+      }
+    }
+
     let id = data.id;
     if (!id) {
       const count = await this.dealRepo.count({ where: { accountId } });
       id = `crm-${count + 1}`;
     }
+
+    const defaultOwner = currentUser?.name || 'Alex Wong';
+    const defaultInitials = (defaultOwner || 'AW')
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
 
     const {
       title,
@@ -49,8 +113,8 @@ export class DealsService {
       probability = 20,
       targetCloseDate = '',
       contact = {},
-      owner = 'Alex Wong',
-      ownerInitials = 'AW',
+      owner = defaultOwner,
+      ownerInitials = defaultInitials,
       tags = [],
       nextStep = '',
       linkedTasks = [],
@@ -95,8 +159,34 @@ export class DealsService {
     return this.dealRepo.save(deal);
   }
 
-  async update(accountId: string, id: string, data: any) {
-    const deal = await this.findOne(accountId, id);
+  async update(accountId: string, id: string, data: any, currentUser?: CurrentUserPayload) {
+    const deal = await this.findOne(accountId, id, currentUser);
+
+    if (currentUser) {
+      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+
+      if (perms.deals.update === 'none') {
+        throw new ForbiddenException('You do not have permission to update CRM deals.');
+      }
+      if (perms.deals.update === 'assigned' && !this.isDealOwner(deal, currentUser)) {
+        throw new ForbiddenException('Access restricted: You can only edit deals where you are the designated owner.');
+      }
+
+      if (data.stage !== undefined && data.stage !== deal.stage) {
+        if (perms.deals.change_stage === 'none') {
+          throw new ForbiddenException('You do not have permission to change pipeline deal stages.');
+        }
+        if (perms.deals.change_stage === 'assigned' && !this.isDealOwner(deal, currentUser)) {
+          throw new ForbiddenException('Access restricted: You can only advance stages for deals assigned to you.');
+        }
+      }
+
+      if (data.owner !== undefined && data.owner !== deal.owner) {
+        if (!perms.deals.assign) {
+          throw new ForbiddenException('You do not have permission to reassign deal ownership.');
+        }
+      }
+    }
 
     if (data.title !== undefined) deal.title = data.title;
     if (data.company !== undefined) deal.company = data.company;
@@ -129,8 +219,19 @@ export class DealsService {
     return this.dealRepo.save(deal);
   }
 
-  async remove(accountId: string, id: string) {
-    const deal = await this.findOne(accountId, id);
+  async remove(accountId: string, id: string, currentUser?: CurrentUserPayload) {
+    const deal = await this.findOne(accountId, id, currentUser);
+
+    if (currentUser) {
+      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+      if (perms.deals.delete === 'none') {
+        throw new ForbiddenException('You do not have permission to delete CRM deals.');
+      }
+      if (perms.deals.delete === 'assigned' && !this.isDealOwner(deal, currentUser)) {
+        throw new ForbiddenException('Access restricted: You can only delete deals where you are the designated owner.');
+      }
+    }
+
     await this.dealRepo.remove(deal);
     return { id };
   }

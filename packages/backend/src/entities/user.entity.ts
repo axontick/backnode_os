@@ -43,6 +43,12 @@ export class User {
   @Column('simple-json', { name: 'allowed_actions', nullable: true })
   allowedActions?: string[];
 
+  @Column('varchar', { name: 'role_id', nullable: true })
+  roleId?: string;
+
+  @Column('simple-json', { name: 'permission_overrides', nullable: true })
+  permissionOverrides?: any;
+
   @Column('varchar', { name: 'account_id' })
   accountId: string;
 

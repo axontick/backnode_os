@@ -32,6 +32,8 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     activeUserSpaceId,
     handleSelectUserSpace,
     members,
+    roles,
+    effectivePermissions,
     setIsNewWorkspaceModalOpen,
   } = useWorkspace();
 
@@ -78,7 +80,11 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
       (user?.email && m.email?.toLowerCase() === user.email.toLowerCase()) ||
       m.id === user?.id
   );
-  const canWrite = SecurityPolicy.canPerformAction(user, currentMember, 'write');
+  const canWrite =
+    user?.role === 'OWNER' ||
+    (effectivePermissions
+      ? Boolean(effectivePermissions.tasks?.create || effectivePermissions.deals?.create)
+      : SecurityPolicy.canPerformAction(user, currentMember, 'write'));
 
   // Derive active space prefix
   const effectiveSpaceId = spaceId || activeUserSpaceId || activeUserSpace?.id || userSpaces[0]?.id || 'space-main';
@@ -98,6 +104,8 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     effectiveHub = 'contacts';
   } else if (normalizedPath.startsWith('/team')) {
     effectiveHub = 'team';
+  } else if (normalizedPath.startsWith('/roles')) {
+    effectiveHub = 'roles';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
   }
@@ -107,7 +115,8 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     { id: 'task-spaces', path: `${spacePrefix}/spaces`, label: 'Task Spaces', icon: 'folder_open', description: 'Execution Workspaces' },
     { id: 'crm', path: `${spacePrefix}/crm`, label: 'CRM Pipelines', icon: 'leaderboard', description: 'Deals & Revenue Pipeline' },
     { id: 'contacts', path: `${spacePrefix}/contacts`, label: 'Contacts', icon: 'group', description: 'Client & Partner Directory' },
-    { id: 'team', path: `${spacePrefix}/team`, label: 'Team & Access', icon: 'shield_person', description: 'Access Controls & Roles', count: members.length },
+    { id: 'team', path: `${spacePrefix}/team`, label: 'Team & Access', icon: 'shield_person', description: 'Operator Roster & Access', count: members.length },
+    { id: 'roles', path: `${spacePrefix}/roles`, label: 'Roles & Matrix', icon: 'verified_user', description: 'RBAC Roles & Matrix', count: roles?.length },
   ];
 
   return (
@@ -298,7 +307,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
         {hubs.map((hub) => {
           const isActive = effectiveHub === hub.id;
-          const isAuthorized = SecurityPolicy.canAccessPage(user, currentMember, hub.id);
+          const isAuthorized = SecurityPolicy.canAccessPage(user, currentMember, hub.id, effectivePermissions);
 
           if (isCollapsed) {
             return (
@@ -382,7 +391,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
       <div className={`shrink-0 flex flex-col gap-1 pt-2 border-t border-[#27272a] w-full ${isCollapsed ? 'items-center' : ''}`}>
         {/* Settings */}
         {(() => {
-          const isSettingsAuthorized = SecurityPolicy.canAccessPage(user, currentMember, 'settings');
+          const isSettingsAuthorized = SecurityPolicy.canAccessPage(user, currentMember, 'settings', effectivePermissions);
 
           if (isCollapsed) {
             return (

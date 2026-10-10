@@ -1,4 +1,4 @@
-import { UserRole, DocClassification, TaskItem, CrmDeal, DirectoryContact, DocItem } from '../types';
+import { UserRole, DocClassification, TaskItem, CrmDeal, DirectoryContact, DocItem, RolePermissions } from '../types';
 
 export type ResourceClassification = DocClassification;
 
@@ -17,6 +17,9 @@ export interface SecurityResourceContext {
   department?: string;
   authorId?: string;
   authorName?: string;
+  assigneeId?: string;
+  assigneeName?: string;
+  ownerId?: string;
 }
 
 /**
@@ -179,7 +182,8 @@ export const SecurityPolicy = {
   canAccessPage: (
     user: { role?: string; allowedPages?: string[] } | null | undefined,
     member: { accessLevel?: string; allowedPages?: string[] } | null | undefined,
-    pageKey: string
+    pageKey: string,
+    effectivePermissions?: RolePermissions | null
   ): boolean => {
     const role = ((member?.accessLevel || user?.role || 'MEMBER') as string).toUpperCase();
     if (role === 'OWNER' || role === 'ADMIN') {
@@ -194,7 +198,26 @@ export const SecurityPolicy = {
     else if (normalized === 'contacts') normalized = 'contacts';
     else if (normalized === 'docs') normalized = 'docs';
     else if (normalized === 'team') normalized = 'team';
+    else if (normalized === 'roles') normalized = 'roles';
     else if (normalized === 'settings') normalized = 'settings';
+
+    // If effectivePermissions is passed, check its page clearance
+    if (effectivePermissions?.pages) {
+      const pageKeyMap: Record<string, keyof typeof effectivePermissions.pages> = {
+        overview: 'overview',
+        tasks: 'tasks',
+        crm: 'crm',
+        contacts: 'contacts',
+        docs: 'docs',
+        team: 'team',
+        roles: 'roles',
+        settings: 'settings',
+      };
+      const mapped = pageKeyMap[normalized];
+      if (mapped !== undefined && effectivePermissions.pages[mapped] !== undefined) {
+        return Boolean(effectivePermissions.pages[mapped]);
+      }
+    }
 
     // If member has allowedPages specified
     const allowed = member?.allowedPages || user?.allowedPages;
@@ -202,10 +225,145 @@ export const SecurityPolicy = {
       return allowed.includes(normalized) || allowed.includes(pageKey);
     }
 
-    // Default policy for regular members & viewers: allow operational pages, restrict team & settings
-    if (normalized === 'team' || normalized === 'settings') {
+    // Default policy for regular members & viewers: allow operational pages, restrict team, roles & settings
+    if (normalized === 'team' || normalized === 'roles' || normalized === 'settings') {
       return false;
     }
+    return true;
+  },
+
+  /**
+   * Granular Task permission check combining RBAC action and ABAC assignment scope
+   */
+  canAccessTask: (
+    user: SecurityUserContext | null | undefined,
+    task: Partial<TaskItem> | null | undefined,
+    action: 'view' | 'create' | 'update' | 'change_status' | 'assign' | 'delete',
+    effectivePermissions?: RolePermissions | null
+  ): boolean => {
+    if (!user) return false;
+    if (user.role === 'OWNER') return true;
+
+    const isAssigned = (t: Partial<TaskItem>) => {
+      if (t.assigneeId && t.assigneeId === user.id) return true;
+      if (t.assignee && typeof t.assignee === 'object') {
+        if (t.assignee.id === user.id) return true;
+        if (user.name && t.assignee.name && t.assignee.name.toLowerCase() === user.name.toLowerCase()) return true;
+      }
+      if (t.creatorId && t.creatorId === user.id) return true;
+      return false;
+    };
+
+    if (effectivePermissions?.tasks) {
+      const tp = effectivePermissions.tasks;
+      if (action === 'view') {
+        if (tp.view === 'none') return false;
+        if (tp.view === 'assigned') {
+          if (!task) return true;
+          return isAssigned(task);
+        }
+        return true;
+      }
+      if (action === 'create') {
+        return Boolean(tp.create);
+      }
+      if (action === 'update') {
+        if (tp.update === 'none') return false;
+        if (tp.update === 'assigned') {
+          if (!task) return true;
+          return isAssigned(task);
+        }
+        return true;
+      }
+      if (action === 'change_status') {
+        if (tp.change_status === 'none') return false;
+        if (tp.change_status === 'assigned') {
+          if (!task) return true;
+          return isAssigned(task);
+        }
+        return true;
+      }
+      if (action === 'assign') {
+        return Boolean(tp.assign);
+      }
+      if (action === 'delete') {
+        if (tp.delete === 'none') return false;
+        if (tp.delete === 'assigned') {
+          if (!task) return true;
+          return isAssigned(task);
+        }
+        return true;
+      }
+    }
+
+    if (user.role === 'ADMIN') return true;
+    if (user.role === 'VIEWER') return action === 'view';
+    return true;
+  },
+
+  /**
+   * Granular Deal permission check combining RBAC action and ABAC assignment scope
+   */
+  canAccessDeal: (
+    user: SecurityUserContext | null | undefined,
+    deal: Partial<CrmDeal> | null | undefined,
+    action: 'view' | 'create' | 'update' | 'change_stage' | 'assign' | 'delete',
+    effectivePermissions?: RolePermissions | null
+  ): boolean => {
+    if (!user) return false;
+    if (user.role === 'OWNER') return true;
+
+    const isAssigned = (d: Partial<CrmDeal>) => {
+      if (d.ownerId && d.ownerId === user.id) return true;
+      if (user.name && d.owner && d.owner.toLowerCase() === user.name.toLowerCase()) return true;
+      if (user.email && d.contact?.email && d.contact.email.toLowerCase() === user.email.toLowerCase()) return true;
+      return false;
+    };
+
+    if (effectivePermissions?.deals) {
+      const dp = effectivePermissions.deals;
+      if (action === 'view') {
+        if (dp.view === 'none') return false;
+        if (dp.view === 'assigned') {
+          if (!deal) return true;
+          return isAssigned(deal);
+        }
+        return true;
+      }
+      if (action === 'create') {
+        return Boolean(dp.create);
+      }
+      if (action === 'update') {
+        if (dp.update === 'none') return false;
+        if (dp.update === 'assigned') {
+          if (!deal) return true;
+          return isAssigned(deal);
+        }
+        return true;
+      }
+      if (action === 'change_stage') {
+        if (dp.change_stage === 'none') return false;
+        if (dp.change_stage === 'assigned') {
+          if (!deal) return true;
+          return isAssigned(deal);
+        }
+        return true;
+      }
+      if (action === 'assign') {
+        return Boolean(dp.assign);
+      }
+      if (action === 'delete') {
+        if (dp.delete === 'none') return false;
+        if (dp.delete === 'assigned') {
+          if (!deal) return true;
+          return isAssigned(deal);
+        }
+        return true;
+      }
+    }
+
+    if (user.role === 'ADMIN') return true;
+    if (user.role === 'VIEWER') return action === 'view';
     return true;
   },
 
@@ -250,6 +408,7 @@ export const WORKSPACE_PAGES = [
   { id: 'contacts', label: 'Contacts Directory', icon: 'group', description: 'Operator network, partners, and enterprise clients' },
   { id: 'docs', label: 'Architecture & RFCs', icon: 'description', description: 'Technical specifications, documentation, and RFCs' },
   { id: 'team', label: 'Team & Access Control', icon: 'shield_person', description: 'Operator roster, clearance levels, and security policies' },
+  { id: 'roles', label: 'Roles & Matrix', icon: 'verified_user', description: 'RBAC role templates and granular permission matrix' },
   { id: 'settings', label: 'Workspace Settings', icon: 'settings', description: 'Global parameters, branding, and workspace configuration' },
 ] as const;
 

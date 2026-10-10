@@ -4,6 +4,17 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { TeamMember } from '../types';
 import {
+  WorkspaceRole,
+  UserPermissionOverrides,
+  PermissionScope,
+  OverrideScope,
+  OverrideBoolean,
+  RolePermissions,
+  resolveEffectivePermissions,
+  TaskPermissions,
+  DealPermissions,
+} from '@backnode/shared';
+import {
   SecurityPolicy,
   WORKSPACE_PAGES,
   WORKSPACE_ACTIONS,
@@ -19,6 +30,7 @@ export const TeamAccessPage: React.FC = () => {
   const {
     members,
     departments,
+    roles,
     handleInviteMember,
     handleUpdateMemberAccess,
     handleRemoveMember,
@@ -61,7 +73,21 @@ export const TeamAccessPage: React.FC = () => {
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRole, setInviteRole] = useState('Product Engineer');
   const [inviteAccessLevel, setInviteAccessLevel] = useState<'ADMIN' | 'MEMBER' | 'VIEWER'>('MEMBER');
+  const [inviteRoleId, setInviteRoleId] = useState<string>('');
   const [inviteDept, setInviteDept] = useState<string>(defaultDeptName);
+
+  useEffect(() => {
+    if (roles && roles.length > 0 && !inviteRoleId) {
+      const defaultRole = roles.find((r) => r.isDefault || r.key === 'member') || roles[0];
+      if (defaultRole) {
+        setInviteRoleId(defaultRole.id);
+        const lvl = (defaultRole.key || 'MEMBER').toUpperCase();
+        if (lvl === 'ADMIN' || lvl === 'MEMBER' || lvl === 'VIEWER') {
+          setInviteAccessLevel(lvl as any);
+        }
+      }
+    }
+  }, [roles, inviteRoleId]);
 
   useEffect(() => {
     if (defaultDeptName && (!inviteDept || !departments.some((d) => d.name === inviteDept))) {
@@ -151,6 +177,7 @@ export const TeamAccessPage: React.FC = () => {
         email: inviteEmail.trim(),
         role: inviteRole.trim() || 'Collaborator',
         accessLevel: inviteAccessLevel,
+        roleId: inviteRoleId || undefined,
         department: inviteDept,
         capacityStatus: 'Available',
         canLogin: inviteCanLogin,
@@ -326,6 +353,31 @@ export const TeamAccessPage: React.FC = () => {
           </div>
         </div>
 
+        {/* Navigation Tabs */}
+        <div className="flex items-center gap-2 mt-6 border-b border-[#27272a]">
+          <button
+            type="button"
+            className="pb-3 px-3 text-xs font-semibold font-headline border-b-2 border-orange-500 text-orange-400 flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[16px]">group</span>
+            <span>Operator Roster</span>
+            <span className="px-1.5 py-0.2 rounded-[6px] bg-orange-950/40 border border-orange-500/30 text-[10px] font-mono">
+              {members.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/space/${currentSpaceId}/roles`)}
+            className="pb-3 px-3 text-xs font-medium font-headline border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 flex items-center gap-2 transition-all cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">verified_user</span>
+            <span>Roles &amp; Permissions Matrix</span>
+            <span className="px-1.5 py-0.2 rounded-[6px] bg-zinc-800 text-zinc-400 text-[10px] font-mono">
+              {roles.length}
+            </span>
+          </button>
+        </div>
+
         {/* Quick KPI Stat Strip */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
           <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
@@ -428,7 +480,7 @@ export const TeamAccessPage: React.FC = () => {
               <thead>
                 <tr className="border-b border-[#27272a] bg-[#18181b] text-zinc-400 font-mono uppercase text-[10.5px] tracking-wider">
                   <th className="py-3 px-6 font-semibold">Operator</th>
-                  <th className="py-3 px-4 font-semibold">Access Level</th>
+                  <th className="py-3 px-4 font-semibold">Assigned Role &amp; Matrix</th>
                   <th className="py-3 px-4 font-semibold">Department</th>
                   <th className="py-3 px-4 font-semibold">Login Access</th>
                   <th className="py-3 px-4 font-semibold">Clearance</th>
@@ -511,28 +563,104 @@ export const TeamAccessPage: React.FC = () => {
                           </div>
                         </td>
 
-                        {/* Access Level Badge — Clicking opens separate edit page */}
+                        {/* Assigned Role & Overrides Badge — Clicking opens separate edit page */}
                         <td className="py-3.5 px-4">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              navigate(`/space/${currentSpaceId}/team/members/${member.id}/edit`)
+                          {(() => {
+                            const assignedRole =
+                              roles.find((r) => r.id === member.roleId) ||
+                              roles.find((r) => r.key === (member.accessLevel || '').toLowerCase()) ||
+                              roles.find((r) => r.name.toLowerCase() === (member.role || '').toLowerCase());
+                            const roleName = isOwner ? 'Workspace Owner' : assignedRole?.name || accessLevel;
+
+                            let overridesCount = 0;
+                            if (member.permissionOverrides) {
+                              if (member.permissionOverrides.tasks) {
+                                Object.values(member.permissionOverrides.tasks).forEach((v) => {
+                                  if (v && v !== 'inherit') overridesCount++;
+                                });
+                              }
+                              if (member.permissionOverrides.deals) {
+                                Object.values(member.permissionOverrides.deals).forEach((v) => {
+                                  if (v && v !== 'inherit') overridesCount++;
+                                });
+                              }
+                              (['contacts', 'spaces', 'pipelines', 'docs'] as const).forEach((d) => {
+                                const obj = member.permissionOverrides?.[d] as any;
+                                if (obj) {
+                                  Object.values(obj).forEach((v) => {
+                                    if (v && v !== 'inherit') overridesCount++;
+                                  });
+                                }
+                              });
+                              if (member.permissionOverrides.team) {
+                                Object.values(member.permissionOverrides.team).forEach((v) => {
+                                  if (v && v !== 'inherit') overridesCount++;
+                                });
+                              }
+                              if (member.permissionOverrides.pages) {
+                                Object.values(member.permissionOverrides.pages).forEach((v) => {
+                                  if (v && v !== 'inherit') overridesCount++;
+                                });
+                              }
                             }
-                            className={`px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-semibold inline-flex items-center gap-1.5 transition-all hover:border-orange-500/60 cursor-pointer ${
-                              isOwner
-                                ? 'bg-orange-950/40 text-orange-400 border-orange-500/30 shadow-xs'
-                                : getAccessBadgeStyle(accessLevel)
-                            }`}
-                            title={isOwner ? 'Workspace Owner — Click to edit profile and role' : 'Click to open dedicated role edit page'}
-                          >
-                            {isOwner && (
-                              <span className="material-symbols-outlined text-[13px]">shield_person</span>
-                            )}
-                            <span>{accessLevel}</span>
-                            <span className="material-symbols-outlined text-[12px] opacity-70">
-                              edit
-                            </span>
-                          </button>
+
+                            const isTaskScoped =
+                              member.permissionOverrides?.tasks?.view === 'assigned' ||
+                              (!member.permissionOverrides?.tasks?.view &&
+                                assignedRole?.permissions?.tasks?.view === 'assigned');
+
+                            return (
+                              <div className="flex flex-col gap-1 items-start">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(`/space/${currentSpaceId}/team/members/${member.id}/edit`)
+                                  }
+                                  className={`px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-semibold inline-flex items-center gap-1.5 transition-all hover:border-orange-500/60 cursor-pointer ${
+                                    isOwner
+                                      ? 'bg-orange-950/40 text-orange-400 border-orange-500/30 shadow-xs'
+                                      : getAccessBadgeStyle(accessLevel)
+                                  }`}
+                                  title={
+                                    isOwner
+                                      ? 'Workspace Owner — Click to edit profile and role'
+                                      : 'Click to open dedicated role and overrides editor'
+                                  }
+                                >
+                                  {isOwner ? (
+                                    <span className="material-symbols-outlined text-[13px]">shield_person</span>
+                                  ) : (
+                                    <span className="material-symbols-outlined text-[13px] text-zinc-400">
+                                      verified_user
+                                    </span>
+                                  )}
+                                  <span className="truncate max-w-[140px]">{roleName}</span>
+                                  <span className="material-symbols-outlined text-[12px] opacity-70">
+                                    edit
+                                  </span>
+                                </button>
+
+                                <div className="flex items-center gap-1 flex-wrap">
+                                  {overridesCount > 0 && !isOwner && (
+                                    <span
+                                      className="px-1.5 py-0.2 rounded-[4px] text-[9.5px] font-mono font-bold bg-orange-950/40 text-orange-400 border border-orange-500/30 flex items-center gap-1"
+                                      title={`${overridesCount} custom explicit permission overrides active`}
+                                    >
+                                      <span>⚡ {overridesCount} overrides</span>
+                                    </span>
+                                  )}
+                                  {isTaskScoped && !isOwner && (
+                                    <span
+                                      className="px-1.5 py-0.2 rounded-[4px] text-[9.5px] font-mono font-semibold bg-amber-950/40 text-amber-400 border border-amber-500/30"
+                                      title="ABAC constrained: Can only access items assigned to them"
+                                    >
+                                      Assigned Only
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </td>
 
                         {/* Department */}
@@ -854,6 +982,49 @@ export const TeamAccessPage: React.FC = () => {
                     className="w-full h-[34px] px-3 text-[13px] bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors"
                   />
                 </div>
+              </div>
+
+              {/* Assigned Workspace Role */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-mono text-zinc-400 uppercase tracking-wider">
+                    Assigned Workspace Role (Template)
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsInviteModalOpen(false);
+                      navigate(`/space/${currentSpaceId}/roles`);
+                    }}
+                    className="text-[10px] text-orange-400 hover:text-orange-300 hover:underline font-mono cursor-pointer"
+                  >
+                    View Roles Matrix →
+                  </button>
+                </div>
+                <select
+                  value={inviteRoleId}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    setInviteRoleId(id);
+                    const found = roles.find((r) => r.id === id);
+                    if (found) {
+                      const lvl = (found.key || 'MEMBER').toUpperCase();
+                      if (lvl === 'ADMIN' || lvl === 'MEMBER' || lvl === 'VIEWER') {
+                        setInviteAccessLevel(lvl as any);
+                      }
+                      if (found.permissions?.allowedPages) {
+                        setInviteAllowedPages(found.permissions.allowedPages);
+                      }
+                    }
+                  }}
+                  className="w-full h-[34px] px-3 text-[13px] bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 focus:outline-none focus:border-orange-500 transition-colors cursor-pointer"
+                >
+                  {roles.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name} {r.isSystem ? '(System)' : '(Custom)'} {r.permissions?.tasks?.view === 'assigned' ? '• Tasks: Assigned Only' : ''}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               {/* Access Tier */}
@@ -1207,6 +1378,10 @@ export const TeamAccessPage: React.FC = () => {
  * Dedicated Separate Edit Page View for Editing Team Roles & Access Controls
  * Conforms strictly to design.md (Obsidian #09090b / #121214, Electric Orange #ea580c, 6px radii)
  */
+/**
+ * Dedicated Separate Edit Page View for Editing Team Roles & Access Controls
+ * Conforms strictly to design.md (Obsidian #09090b / #121214, Electric Orange #ea580c, 6px radii)
+ */
 interface EditMemberViewProps {
   member: TeamMember;
   onBack: () => void;
@@ -1231,7 +1406,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
   activeUserSpaceName,
 }) => {
   const navigate = useNavigate();
-  const { departments, activeUserSpaceId, activeUserSpace } = useWorkspace();
+  const { departments, roles, activeUserSpaceId, activeUserSpace } = useWorkspace();
   const currentSpaceId = activeUserSpaceId || activeUserSpace?.id || 'default';
   const defaultDeptName = departments.find((d) => d.isDefault)?.name || departments[0]?.name || 'Engineering';
 
@@ -1239,23 +1414,158 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
     (member.accessLevel || '').toUpperCase() === 'OWNER' ||
     member.role === 'Workspace Owner';
 
-  const [accessLevel, setAccessLevel] = useState<'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER'>(
-    ((member.accessLevel || 'MEMBER').toUpperCase() as any)
-  );
-  const [role, setRole] = useState(member.role || 'Member');
-  const [department, setDepartment] = useState<string>(
-    member.department || defaultDeptName
-  );
+  // Find currently assigned role or matching fallback
+  const initialRole = useMemo(() => {
+    if (member.roleId) {
+      const byId = roles.find((r) => r.id === member.roleId);
+      if (byId) return byId;
+    }
+    const accessKey = (member.accessLevel || 'MEMBER').toLowerCase();
+    const byKey = roles.find((r) => r.key === accessKey);
+    if (byKey) return byKey;
+    const byName = roles.find((r) => r.name.toLowerCase() === (member.role || '').toLowerCase());
+    if (byName) return byName;
+    return roles.find((r) => r.isDefault || r.key === 'member') || roles[0];
+  }, [member, roles]);
+
+  const [selectedRoleId, setSelectedRoleId] = useState<string>(initialRole?.id || '');
+  const [role, setRole] = useState(member.role || initialRole?.name || 'Member');
+  const [department, setDepartment] = useState<string>(member.department || defaultDeptName);
   const [canLogin, setCanLogin] = useState<boolean>(
     member.canLogin !== undefined ? member.canLogin : member.status !== 'Disabled'
   );
 
-  const [allowedPages, setAllowedPages] = useState<string[]>(
-    member.allowedPages || ['overview', 'tasks', 'crm', 'contacts', 'docs']
-  );
-  const [allowedActions, setAllowedActions] = useState<string[]>(
-    member.allowedActions || (member.accessLevel === 'VIEWER' ? ['read'] : ['read', 'write', 'delete', 'publish'])
-  );
+  // Granular Explicit Overrides State
+  const [overrides, setOverrides] = useState<UserPermissionOverrides>(() => {
+    return member.permissionOverrides ? JSON.parse(JSON.stringify(member.permissionOverrides)) : {};
+  });
+
+  const selectedRole = useMemo(() => {
+    return roles.find((r) => r.id === selectedRoleId) || initialRole || null;
+  }, [roles, selectedRoleId, initialRole]);
+
+  // Live Effective clearance calculation
+  const liveEffective = useMemo(() => {
+    return resolveEffectivePermissions(selectedRole, overrides, isOwner);
+  }, [selectedRole, overrides, isOwner]);
+
+  // Count active overrides
+  const activeOverridesCount = useMemo(() => {
+    if (!overrides) return 0;
+    let count = 0;
+    if (overrides.tasks) {
+      Object.values(overrides.tasks).forEach((v) => {
+        if (v && v !== 'inherit') count++;
+      });
+    }
+    if (overrides.deals) {
+      Object.values(overrides.deals).forEach((v) => {
+        if (v && v !== 'inherit') count++;
+      });
+    }
+    (['contacts', 'spaces', 'pipelines', 'docs'] as const).forEach((d) => {
+      const obj = overrides[d] as any;
+      if (obj) {
+        Object.values(obj).forEach((v) => {
+          if (v && v !== 'inherit') count++;
+        });
+      }
+    });
+    if (overrides.team) {
+      Object.values(overrides.team).forEach((v) => {
+        if (v && v !== 'inherit') count++;
+      });
+    }
+    if (overrides.pages) {
+      Object.values(overrides.pages).forEach((v) => {
+        if (v && v !== 'inherit') count++;
+      });
+    }
+    return count;
+  }, [overrides]);
+
+  // Override mutation helpers
+  const setTaskScopeOverride = (key: keyof TaskPermissions, val: OverrideScope) => {
+    setOverrides((prev) => ({
+      ...prev,
+      tasks: {
+        ...prev.tasks,
+        [key]: val,
+      },
+    }));
+  };
+
+  const setTaskBoolOverride = (key: 'create' | 'assign', val: OverrideBoolean) => {
+    setOverrides((prev) => ({
+      ...prev,
+      tasks: {
+        ...prev.tasks,
+        [key]: val,
+      },
+    }));
+  };
+
+  const setDealScopeOverride = (key: keyof DealPermissions, val: OverrideScope) => {
+    setOverrides((prev) => ({
+      ...prev,
+      deals: {
+        ...prev.deals,
+        [key]: val,
+      },
+    }));
+  };
+
+  const setDealBoolOverride = (key: 'create' | 'assign', val: OverrideBoolean) => {
+    setOverrides((prev) => ({
+      ...prev,
+      deals: {
+        ...prev.deals,
+        [key]: val,
+      },
+    }));
+  };
+
+  const setCrudOverride = (
+    domain: 'contacts' | 'spaces' | 'pipelines' | 'docs',
+    action: 'view' | 'create' | 'update' | 'delete',
+    val: OverrideBoolean
+  ) => {
+    setOverrides((prev) => ({
+      ...prev,
+      [domain]: {
+        ...(prev[domain] as any),
+        [action]: val,
+      },
+    }));
+  };
+
+  const setTeamOverride = (action: 'manage_members' | 'manage_roles' | 'manage_settings', val: OverrideBoolean) => {
+    setOverrides((prev) => ({
+      ...prev,
+      team: {
+        ...prev.team,
+        [action]: val,
+      },
+    }));
+  };
+
+  const setPageOverride = (pageId: string, val: OverrideBoolean) => {
+    setOverrides((prev) => {
+      const prevPages = prev.pages || {};
+      return {
+        ...prev,
+        pages: {
+          ...prevPages,
+          [pageId]: val,
+        },
+      };
+    });
+  };
+
+  const resetAllOverrides = () => {
+    setOverrides({});
+    showToast('All explicit overrides cleared. Inheriting directly from assigned role.');
+  };
 
   // Password reset inside Edit view
   const [newPassword, setNewPassword] = useState('');
@@ -1277,16 +1587,26 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
 
     setIsSaving(true);
     try {
-      const effectiveAccessLevel = isOwner ? 'OWNER' : accessLevel;
+      const effectiveAccessLevel = isOwner
+        ? 'OWNER'
+        : ((selectedRole?.key || 'MEMBER').toUpperCase() as any);
       const effectiveCanLogin = isOwner ? true : canLogin;
 
       await onSave(member.id, {
+        roleId: selectedRoleId,
+        permissionOverrides: overrides,
         accessLevel: effectiveAccessLevel,
-        role: role.trim() || (isOwner ? 'Workspace Owner' : 'Collaborator'),
+        role: role.trim() || (isOwner ? 'Workspace Owner' : selectedRole?.name || 'Collaborator'),
         department: department as any,
         canLogin: effectiveCanLogin,
-        allowedPages: isOwner ? ['overview', 'tasks', 'crm', 'contacts', 'docs', 'team', 'settings'] : allowedPages,
-        allowedActions: isOwner ? ['read', 'write', 'delete', 'publish', 'admin'] : allowedActions,
+        allowedPages: isOwner
+          ? ['overview', 'tasks', 'crm', 'contacts', 'docs', 'team', 'roles', 'settings']
+          : liveEffective.allowedPages,
+        allowedActions: isOwner
+          ? ['read', 'write', 'delete', 'publish', 'admin']
+          : liveEffective.tasks.create || liveEffective.deals.create
+          ? ['read', 'write', 'delete', 'publish']
+          : ['read'],
         status: 'Active',
       });
       showToast(`Access and permissions updated for ${member.name}`);
@@ -1351,11 +1671,14 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
     }
   };
 
+  const isTaskScopeConstrained = liveEffective.tasks.view === 'assigned';
+  const isDealScopeConstrained = liveEffective.deals.view === 'assigned';
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto custom-scrollbar select-none text-zinc-100">
       {/* 1. Header Toolbar & Breadcrumbs */}
       <div className="px-8 pt-6 pb-6 border-b border-[#27272a] bg-[#0c0a09] shrink-0">
-        <div className="max-w-6xl mx-auto flex flex-col gap-3">
+        <div className="max-w-7xl mx-auto flex flex-col gap-3">
           {/* Breadcrumbs */}
           <div className="flex items-center gap-2 text-xs text-zinc-400">
             <button
@@ -1369,7 +1692,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
             <span>Operators</span>
             <span className="text-zinc-600">/</span>
             <span className="text-orange-400 font-mono font-medium">
-              Edit Role: {member.name}
+              Edit Permissions: {member.name}
             </span>
           </div>
 
@@ -1381,14 +1704,14 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
               <div className="flex flex-col">
                 <div className="flex items-center gap-2.5">
                   <h1 className="text-lg md:text-xl font-bold text-zinc-100 tracking-tight font-headline">
-                    Edit Operator Access &amp; Permissions
+                    Operator Permissions &amp; Matrix Editor
                   </h1>
                   <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-orange-950/40 text-orange-400 border border-orange-500/30">
                     {member.id}
                   </span>
                 </div>
                 <p className="text-xs text-zinc-400">
-                  Configure operational security tier, login credentials, ABAC page clearance, and RBAC actions.
+                  Assign a base workspace role and configure granular explicit overrides (ABAC scopes &amp; RBAC actions).
                 </p>
               </div>
             </div>
@@ -1418,7 +1741,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
       </div>
 
       {/* 2. Main Page Body (Bento Grid) */}
-      <div className="p-8 max-w-6xl w-full mx-auto flex flex-col gap-6">
+      <div className="p-8 max-w-7xl w-full mx-auto flex flex-col gap-6">
         {/* Workspace Owner Permanent Role Callout Banner */}
         {isOwner && (
           <div className="bg-[#121214] border border-orange-500/40 rounded-[6px] p-5 flex items-start gap-4 shadow-sm">
@@ -1428,7 +1751,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
             <div className="flex flex-col gap-1 flex-1">
               <div className="flex items-center gap-2">
                 <h3 className="font-semibold text-sm text-zinc-100 font-headline">
-                  Workspace Creator &amp; Primary Owner
+                  Workspace Creator &amp; Root Owner
                 </h3>
                 <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-orange-950/60 text-orange-400 border border-orange-500/40 uppercase">
                   ROOT AUTHORITY
@@ -1436,15 +1759,15 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
               </div>
               <p className="text-xs text-zinc-400 leading-relaxed">
                 This operator is the primary creator and owner of <strong className="text-zinc-200">{activeUserSpaceName}</strong>.
-                As Workspace Owner, root access tier and login credentials are permanent and cannot be demoted. You can customize your functional title, assigned department, and clearances below.
+                As Workspace Owner, root access tier and all actions across all scopes are unconditionally granted.
               </p>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-          {/* Left Column: Operator Identity, Credentials & Roles (8 cols) */}
-          <div className="lg:col-span-8 flex flex-col gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Role Selector & Granular Overrides Matrix (8 cols) */}
+          <div className="lg:col-span-8 flex flex-col gap-6">
             {/* Operator Identity & Sign-In Control Card */}
             <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
               <div className="flex items-center gap-3.5">
@@ -1504,7 +1827,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
             </div>
 
             {/* Change Password Card */}
-            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-6 flex flex-col gap-4 shadow-sm">
+            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 flex flex-col gap-3.5 shadow-sm">
               <div className="flex items-center gap-2">
                 <span className="material-symbols-outlined text-[20px] text-orange-400">vpn_key</span>
                 <div>
@@ -1557,7 +1880,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
 
                 <div className="sm:col-span-2 flex items-center justify-between pt-1">
                   <span className="text-[11px] text-zinc-500">
-                    Passwords are encrypted with bcrypt cost-factor 10 on the backend.
+                    Passwords are encrypted with bcrypt on the backend.
                   </span>
                   <button
                     type="submit"
@@ -1570,221 +1893,90 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
               </form>
             </div>
 
-            {/* Role & Access Tier Selection Bento */}
+            {/* 1. Assigned Base Role Template Card */}
             <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-6 flex flex-col gap-4 shadow-sm">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-sm text-zinc-100 font-headline">
-                    Access Level &amp; Security Clearance Tier
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Select the operational security tier governing access boundaries.
-                  </p>
-                </div>
-                {isOwner && (
-                  <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-semibold bg-orange-950/40 text-orange-400 border border-orange-500/30 flex items-center gap-1">
-                    <span className="material-symbols-outlined text-[12px]">lock</span>
-                    <span>Role Locked</span>
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {/* 1. ADMIN CARD */}
-                <div
-                  onClick={() => {
-                    if (!isOwner && canManage) {
-                      setAccessLevel('ADMIN');
-                      setAllowedActions(['read', 'write', 'delete', 'publish', 'admin']);
-                      setAllowedPages(['overview', 'tasks', 'crm', 'contacts', 'docs', 'team', 'settings']);
-                    }
-                  }}
-                  className={`p-4 rounded-[6px] border flex flex-col gap-2 transition-all ${
-                    isOwner
-                      ? 'opacity-40 cursor-not-allowed border-[#27272a] bg-[#18181b]'
-                      : accessLevel === 'ADMIN'
-                      ? 'border-orange-500 bg-orange-950/20 ring-1 ring-orange-500/40 cursor-pointer'
-                      : 'border-[#27272a] bg-[#18181b] hover:border-zinc-700 cursor-pointer'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-indigo-400">
-                        admin_panel_settings
-                      </span>
-                      <span className="font-semibold text-xs text-zinc-100">Administrator</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-[6px] font-mono text-[10px] bg-indigo-950/40 text-indigo-400 border border-indigo-500/30">
-                      ADMIN
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    Full workspace administration. Can add/delete operators, manage login passwords, configure spaces &amp; lists, and edit CRM pipelines.
-                  </p>
-                </div>
-
-                {/* 2. MEMBER CARD */}
-                <div
-                  onClick={() => {
-                    if (!isOwner && canManage) {
-                      setAccessLevel('MEMBER');
-                      setAllowedActions(['read', 'write', 'delete', 'publish']);
-                    }
-                  }}
-                  className={`p-4 rounded-[6px] border flex flex-col gap-2 transition-all ${
-                    isOwner
-                      ? 'opacity-40 cursor-not-allowed border-[#27272a] bg-[#18181b]'
-                      : accessLevel === 'MEMBER'
-                      ? 'border-orange-500 bg-orange-950/20 ring-1 ring-orange-500/40 cursor-pointer'
-                      : 'border-[#27272a] bg-[#18181b] hover:border-zinc-700 cursor-pointer'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-emerald-400">
-                        engineering
-                      </span>
-                      <span className="font-semibold text-xs text-zinc-100">Standard Member</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-[6px] font-mono text-[10px] bg-emerald-950/40 text-emerald-400 border border-emerald-500/30">
-                      MEMBER
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    Standard team contributor. Full access to create deliverables, update CRM deals, add contacts, and author docs.
-                  </p>
-                </div>
-
-                {/* 3. VIEWER CARD */}
-                <div
-                  onClick={() => {
-                    if (!isOwner && canManage) {
-                      setAccessLevel('VIEWER');
-                      setAllowedActions(['read']);
-                    }
-                  }}
-                  className={`p-4 rounded-[6px] border flex flex-col gap-2 transition-all ${
-                    isOwner
-                      ? 'opacity-40 cursor-not-allowed border-[#27272a] bg-[#18181b]'
-                      : accessLevel === 'VIEWER'
-                      ? 'border-orange-500 bg-orange-950/20 ring-1 ring-orange-500/40 cursor-pointer'
-                      : 'border-[#27272a] bg-[#18181b] hover:border-zinc-700 cursor-pointer'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-zinc-400">
-                        visibility
-                      </span>
-                      <span className="font-semibold text-xs text-zinc-100">Read-Only Viewer</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-[6px] font-mono text-[10px] bg-zinc-900 text-zinc-400 border border-zinc-700">
-                      VIEWER
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    Observational access across boards, calendar views, and CRM pipelines without authoring, publishing, or deletion privileges.
-                  </p>
-                </div>
-
-                {/* 4. OWNER CARD (Reserved / Locked) */}
-                <div
-                  className={`p-4 rounded-[6px] border flex flex-col gap-2 transition-all ${
-                    isOwner
-                      ? 'border-orange-500 bg-orange-950/30 ring-1 ring-orange-500/50'
-                      : 'opacity-40 cursor-not-allowed border-[#27272a] bg-[#18181b]'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="material-symbols-outlined text-[18px] text-orange-400">
-                        shield
-                      </span>
-                      <span className="font-semibold text-xs text-zinc-100">Workspace Owner</span>
-                    </div>
-                    <span className="px-2 py-0.5 rounded-[6px] font-mono text-[10px] bg-orange-950/50 text-orange-400 border border-orange-500/40 flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[11px]">lock</span>
-                      <span>OWNER</span>
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-400 leading-relaxed">
-                    {isOwner
-                      ? 'Permanent root authority for this workspace creator. Role is non-demotable.'
-                      : 'Reserved exclusively for workspace creator. Ownership cannot be assigned manually.'}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Authorized Workspace Pages (ABAC Clearance Matrix) Card */}
-            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-6 flex flex-col gap-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-sm text-zinc-100 font-headline">
-                    Authorized Workspace Pages (ABAC Clearance)
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Explicitly configure which hub views and screens this operator has access to.
-                  </p>
-                </div>
-                {!isOwner && (
                   <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setAllowedPages(WORKSPACE_PAGES.map((p) => p.id))}
-                      className="text-[11px] font-mono text-orange-400 hover:text-orange-300 cursor-pointer"
-                    >
-                      Grant All
-                    </button>
-                    <span className="text-zinc-600">|</span>
-                    <button
-                      type="button"
-                      onClick={() => setAllowedPages(['overview', 'tasks', 'crm', 'contacts', 'docs'])}
-                      className="text-[11px] font-mono text-zinc-400 hover:text-zinc-200 cursor-pointer"
-                    >
-                      Member Preset
-                    </button>
+                    <span className="material-symbols-outlined text-[20px] text-orange-400">verified_user</span>
+                    <h3 className="font-semibold text-sm text-zinc-100 font-headline">
+                      Assigned Base Role (Template)
+                    </h3>
                   </div>
-                )}
+                  <p className="text-xs text-zinc-400 mt-1">
+                    Select a base role grouping common permissions. All settings below default to this role unless explicitly overridden.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => navigate(`/space/${currentSpaceId}/roles`)}
+                  className="text-xs font-mono text-orange-400 hover:text-orange-300 hover:underline flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Manage Roles</span>
+                  <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                </button>
               </div>
 
+              {/* Roles Selection Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {WORKSPACE_PAGES.map((page) => {
-                  const isChecked = isOwner || allowedPages.includes(page.id);
+                {roles.map((r) => {
+                  const isSelected = selectedRoleId === r.id;
+                  const isRoleOwner = r.key === 'owner';
+                  const isLocked = isOwner && !isRoleOwner;
+
                   return (
                     <div
-                      key={page.id}
+                      key={r.id}
                       onClick={() => {
                         if (isOwner || !canManage) return;
-                        if (allowedPages.includes(page.id)) {
-                          setAllowedPages(allowedPages.filter((p) => p !== page.id));
-                        } else {
-                          setAllowedPages([...allowedPages, page.id]);
-                        }
+                        setSelectedRoleId(r.id);
                       }}
-                      className={`p-3 rounded-[6px] border flex items-start gap-3 transition-colors ${
-                        isOwner
-                          ? 'border-orange-500/30 bg-orange-950/10 cursor-not-allowed'
-                          : isChecked
-                          ? 'border-orange-500/50 bg-orange-950/20 cursor-pointer'
+                      className={`p-3.5 rounded-[6px] border flex flex-col gap-2 transition-all ${
+                        isLocked
+                          ? 'opacity-40 cursor-not-allowed border-[#27272a] bg-[#18181b]'
+                          : isSelected
+                          ? 'border-orange-500 bg-orange-950/20 ring-1 ring-orange-500/40 cursor-pointer shadow-xs'
                           : 'border-[#27272a] bg-[#18181b] hover:border-zinc-700 cursor-pointer'
                       }`}
                     >
-                      <input
-                        type="checkbox"
-                        disabled={isOwner || !canManage}
-                        checked={isChecked}
-                        onChange={() => {}}
-                        className="accent-orange-600 rounded-[3px] w-4 h-4 mt-0.5 cursor-pointer"
-                      />
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-[15px] text-zinc-400">
-                            {page.icon}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="material-symbols-outlined text-[18px]"
+                            style={{ color: r.color || '#ea580c' }}
+                          >
+                            {r.icon || 'shield'}
                           </span>
-                          <span className="text-xs font-semibold text-zinc-200">{page.label}</span>
+                          <span className="font-semibold text-xs text-zinc-100 truncate">
+                            {r.name}
+                          </span>
                         </div>
-                        <span className="text-[10.5px] text-zinc-400 mt-0.5">{page.description}</span>
+                        <span className="px-1.5 py-0.2 rounded-[4px] font-mono text-[9.5px] uppercase font-bold bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0">
+                          {r.key || (r.isSystem ? 'SYSTEM' : 'CUSTOM')}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] text-zinc-400 line-clamp-2 leading-relaxed">
+                        {r.description}
+                      </p>
+
+                      <div className="flex items-center gap-1.5 flex-wrap pt-1 border-t border-[#27272a]/60">
+                        {r.permissions?.tasks?.view === 'assigned' && (
+                          <span className="px-1.5 py-0.2 rounded-[4px] text-[9px] font-mono bg-amber-950/40 text-amber-400 border border-amber-500/30">
+                            Tasks: Assigned Only
+                          </span>
+                        )}
+                        {r.permissions?.deals?.view === 'assigned' && (
+                          <span className="px-1.5 py-0.2 rounded-[4px] text-[9px] font-mono bg-amber-950/40 text-amber-400 border border-amber-500/30">
+                            Deals: Assigned Only
+                          </span>
+                        )}
+                        {r.isDefault && (
+                          <span className="px-1.5 py-0.2 rounded-[4px] text-[9px] font-mono bg-zinc-800 text-zinc-400">
+                            Default
+                          </span>
+                        )}
                       </div>
                     </div>
                   );
@@ -1792,80 +1984,491 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
               </div>
             </div>
 
-            {/* Action Capabilities (RBAC Matrix) Card */}
-            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-6 flex flex-col gap-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="font-semibold text-sm text-zinc-100 font-headline">
-                    Action Capabilities (RBAC Matrix)
-                  </h3>
-                  <p className="text-xs text-zinc-400 mt-0.5">
-                    Configure granular permissions for creating, editing, publishing, and deleting items.
-                  </p>
+            {/* 2. Granular Permissions Matrix with Explicit Overrides */}
+            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-6 flex flex-col gap-6 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#27272a]">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-[6px] bg-orange-950/40 text-orange-400 border border-orange-500/30 flex items-center justify-center">
+                    <span className="material-symbols-outlined text-[18px]">tune</span>
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-sm text-zinc-100 font-headline">
+                        Explicit Permissions Matrix &amp; Overrides
+                      </h3>
+                      {activeOverridesCount > 0 ? (
+                        <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-orange-950/50 text-orange-400 border border-orange-500/30">
+                          {activeOverridesCount} EXPLICIT OVERRIDES ACTIVE
+                        </span>
+                      ) : (
+                        <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono text-zinc-400 bg-zinc-800 border border-zinc-700">
+                          PURE ROLE CLEARANCE
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Assign explicit permissions to this operator even with a role assigned. Use 'Inherit' to follow role updates.
+                    </p>
+                  </div>
                 </div>
-                {!isOwner && (
+
+                {!isOwner && activeOverridesCount > 0 && (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (allowedActions.length === WORKSPACE_ACTIONS.length) {
-                        setAllowedActions(['read']);
-                      } else {
-                        setAllowedActions(WORKSPACE_ACTIONS.map((a) => a.id));
-                      }
-                    }}
-                    className="text-[11px] font-mono text-orange-400 hover:text-orange-300 cursor-pointer"
+                    onClick={resetAllOverrides}
+                    className="h-7 px-3 rounded-[6px] bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-[11px] font-mono flex items-center gap-1 transition-all cursor-pointer self-start sm:self-auto"
+                    title="Clear all overrides back to pure role inheritance"
                   >
-                    {allowedActions.length === WORKSPACE_ACTIONS.length ? 'Read-Only' : 'All Actions'}
+                    <span className="material-symbols-outlined text-[14px]">restart_alt</span>
+                    <span>Reset to Role Defaults</span>
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {WORKSPACE_ACTIONS.map((action) => {
-                  const isChecked = isOwner || allowedActions.includes(action.id);
-                  const isViewerLocked = accessLevel === 'VIEWER' && action.id !== 'read';
+              {/* SECTION A: Tasks Management Matrix (ABAC & RBAC) */}
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-orange-400">task_alt</span>
+                    <h4 className="font-semibold text-xs text-zinc-200 font-headline uppercase tracking-wider">
+                      Tasks Execution &amp; Scope Matrix
+                    </h4>
+                  </div>
+                  {liveEffective.tasks.view === 'assigned' && (
+                    <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-amber-950/40 text-amber-400 border border-amber-500/30">
+                      ABAC: ASSIGNED TASKS ONLY
+                    </span>
+                  )}
+                </div>
 
-                  return (
-                    <div
-                      key={action.id}
-                      onClick={() => {
-                        if (isOwner || isViewerLocked || !canManage) return;
-                        if (allowedActions.includes(action.id)) {
-                          if (action.id === 'read') return; // Cannot uncheck read
-                          setAllowedActions(allowedActions.filter((a) => a !== action.id));
-                        } else {
-                          setAllowedActions([...allowedActions, action.id]);
-                        }
-                      }}
-                      className={`p-3 rounded-[6px] border flex items-start gap-3 transition-colors ${
-                        isOwner
-                          ? 'border-orange-500/30 bg-orange-950/10 cursor-not-allowed'
-                          : isViewerLocked
-                          ? 'opacity-40 cursor-not-allowed border-[#27272a] bg-[#18181b]'
-                          : isChecked
-                          ? 'border-orange-500/50 bg-orange-950/20 cursor-pointer'
-                          : 'border-[#27272a] bg-[#18181b] hover:border-zinc-700 cursor-pointer'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        disabled={isOwner || isViewerLocked || !canManage || action.id === 'read'}
-                        checked={isChecked}
-                        onChange={() => {}}
-                        className="accent-orange-600 rounded-[3px] w-4 h-4 mt-0.5 cursor-pointer"
-                      />
-                      <div className="flex flex-col min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="material-symbols-outlined text-[15px] text-zinc-400">
-                            {action.icon}
-                          </span>
-                          <span className="text-xs font-semibold text-zinc-200">{action.label}</span>
-                        </div>
-                        <span className="text-[10.5px] text-zinc-400 mt-0.5">{action.description}</span>
-                      </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-[#27272a] text-zinc-500 font-mono uppercase text-[10px] tracking-wider">
+                        <th className="py-2 px-3">Capability</th>
+                        <th className="py-2 px-3">Operational Scope</th>
+                        <th className="py-2 px-3 text-right">Clearance Override</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#27272a]">
+                      {/* View Tasks */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">View Tasks</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Visibility across sprint boards, lists, and calendar.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.tasks?.view}
+                            roleDefault={selectedRole?.permissions?.tasks?.view || 'all'}
+                            onChange={(val) => setTaskScopeOverride('view', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Create Tasks */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Create Tasks</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Draft new tasks, deliverables, and specs.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideBooleanSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.tasks?.create}
+                            roleDefault={selectedRole?.permissions?.tasks?.create ?? true}
+                            onChange={(val) => setTaskBoolOverride('create', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Edit Tasks */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Edit / Update Tasks</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Modify task description, markdown, and estimations.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.tasks?.update}
+                            roleDefault={selectedRole?.permissions?.tasks?.update || 'all'}
+                            onChange={(val) => setTaskScopeOverride('update', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Change Status */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Change Status</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Transition lifecycle status (Backlog → In Progress → Review → Done).
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.tasks?.change_status}
+                            roleDefault={selectedRole?.permissions?.tasks?.change_status || 'all'}
+                            onChange={(val) => setTaskScopeOverride('change_status', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Assign Tasks */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Assign / Reassign</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Reassign deliverables to other operators or claim tasks.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideBooleanSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.tasks?.assign}
+                            roleDefault={selectedRole?.permissions?.tasks?.assign ?? true}
+                            onChange={(val) => setTaskBoolOverride('assign', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Delete Tasks */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Delete Tasks</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Permanently delete or archive deliverables.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.tasks?.delete}
+                            roleDefault={selectedRole?.permissions?.tasks?.delete || 'all'}
+                            onChange={(val) => setTaskScopeOverride('delete', val)}
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* SECTION B: CRM Deals & Revenue Pipelines Matrix (ABAC & RBAC) */}
+              <div className="flex flex-col gap-3 pt-3 border-t border-[#27272a]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-orange-400">leaderboard</span>
+                    <h4 className="font-semibold text-xs text-zinc-200 font-headline uppercase tracking-wider">
+                      CRM Deals &amp; Revenue Pipeline Matrix
+                    </h4>
+                  </div>
+                  {liveEffective.deals.view === 'assigned' && (
+                    <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono font-bold bg-amber-950/40 text-amber-400 border border-amber-500/30">
+                      ABAC: ASSIGNED DEALS ONLY
+                    </span>
+                  )}
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <thead>
+                      <tr className="border-b border-[#27272a] text-zinc-500 font-mono uppercase text-[10px] tracking-wider">
+                        <th className="py-2 px-3">Capability</th>
+                        <th className="py-2 px-3">Operational Scope</th>
+                        <th className="py-2 px-3 text-right">Clearance Override</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#27272a]">
+                      {/* View Deals */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">View Deals</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Visibility across sales funnels and stage boards.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.deals?.view}
+                            roleDefault={selectedRole?.permissions?.deals?.view || 'all'}
+                            onChange={(val) => setDealScopeOverride('view', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Create Deals */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Create Deals</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Draft new opportunities and log accounts.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideBooleanSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.deals?.create}
+                            roleDefault={selectedRole?.permissions?.deals?.create ?? true}
+                            onChange={(val) => setDealBoolOverride('create', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Edit Deals */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Edit / Update Deals</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Modify deal value, probability, notes, and contacts.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.deals?.update}
+                            roleDefault={selectedRole?.permissions?.deals?.update || 'all'}
+                            onChange={(val) => setDealScopeOverride('update', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Change Stage */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Change Stage</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Advance deal stages (Lead → Qualified → Proposal → Won/Lost).
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.deals?.change_stage}
+                            roleDefault={selectedRole?.permissions?.deals?.change_stage || 'all'}
+                            onChange={(val) => setDealScopeOverride('change_stage', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Assign Deals */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Assign / Reassign Owner</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Change lead/deal ownership among sales operators.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideBooleanSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.deals?.assign}
+                            roleDefault={selectedRole?.permissions?.deals?.assign ?? true}
+                            onChange={(val) => setDealBoolOverride('assign', val)}
+                          />
+                        </td>
+                      </tr>
+
+                      {/* Delete Deals */}
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Delete Deals</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Permanently remove opportunities from pipeline.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideScopeSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.deals?.delete}
+                            roleDefault={selectedRole?.permissions?.deals?.delete || 'all'}
+                            onChange={(val) => setDealScopeOverride('delete', val)}
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* SECTION C: Contacts, Spaces, Pipelines, & Docs (CRUD) */}
+              <div className="flex flex-col gap-4 pt-3 border-t border-[#27272a]">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-orange-400">category</span>
+                  <h4 className="font-semibold text-xs text-zinc-200 font-headline uppercase tracking-wider">
+                    Contacts, Spaces, Pipelines &amp; Architecture Matrix
+                  </h4>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {/* Contacts */}
+                  <div className="p-3.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-zinc-100">Contacts Directory</span>
+                      <span className="text-[10px] font-mono text-zinc-400">directory</span>
                     </div>
-                  );
-                })}
+                    {(['view', 'create', 'update', 'delete'] as const).map((act) => (
+                      <div key={act} className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400 uppercase text-[10px] font-mono">{act}</span>
+                        <OverrideBooleanSelector
+                          disabled={!canManage || isOwner}
+                          overrideValue={overrides.contacts?.[act]}
+                          roleDefault={selectedRole?.permissions?.contacts?.[act] ?? (act !== 'delete')}
+                          onChange={(val) => setCrudOverride('contacts', act, val)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Spaces */}
+                  <div className="p-3.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-zinc-100">Task Spaces &amp; Lists</span>
+                      <span className="text-[10px] font-mono text-zinc-400">spaces</span>
+                    </div>
+                    {(['view', 'create', 'update', 'delete'] as const).map((act) => (
+                      <div key={act} className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400 uppercase text-[10px] font-mono">{act}</span>
+                        <OverrideBooleanSelector
+                          disabled={!canManage || isOwner}
+                          overrideValue={overrides.spaces?.[act]}
+                          roleDefault={selectedRole?.permissions?.spaces?.[act] ?? (act !== 'delete')}
+                          onChange={(val) => setCrudOverride('spaces', act, val)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Pipelines */}
+                  <div className="p-3.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-zinc-100">CRM Pipelines Config</span>
+                      <span className="text-[10px] font-mono text-zinc-400">pipelines</span>
+                    </div>
+                    {(['view', 'create', 'update', 'delete'] as const).map((act) => (
+                      <div key={act} className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400 uppercase text-[10px] font-mono">{act}</span>
+                        <OverrideBooleanSelector
+                          disabled={!canManage || isOwner}
+                          overrideValue={overrides.pipelines?.[act]}
+                          roleDefault={selectedRole?.permissions?.pipelines?.[act] ?? (act !== 'delete')}
+                          onChange={(val) => setCrudOverride('pipelines', act, val)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Docs */}
+                  <div className="p-3.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex flex-col gap-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-xs text-zinc-100">Architecture Specs &amp; RFCs</span>
+                      <span className="text-[10px] font-mono text-zinc-400">documentation</span>
+                    </div>
+                    {(['view', 'create', 'update', 'delete'] as const).map((act) => (
+                      <div key={act} className="flex items-center justify-between text-xs">
+                        <span className="text-zinc-400 uppercase text-[10px] font-mono">{act}</span>
+                        <OverrideBooleanSelector
+                          disabled={!canManage || isOwner}
+                          overrideValue={overrides.docs?.[act]}
+                          roleDefault={selectedRole?.permissions?.docs?.[act] ?? (act !== 'delete')}
+                          onChange={(val) => setCrudOverride('docs', act, val)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* SECTION D: Team & Workspace Administration */}
+              <div className="flex flex-col gap-3 pt-3 border-t border-[#27272a]">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-orange-400">admin_panel_settings</span>
+                  <h4 className="font-semibold text-xs text-zinc-200 font-headline uppercase tracking-wider">
+                    Team &amp; Workspace Administration
+                  </h4>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse text-xs">
+                    <tbody className="divide-y divide-[#27272a]">
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Manage Members &amp; Passwords</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Invite, edit credentials, and remove team operators.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideBooleanSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.team?.manage_members}
+                            roleDefault={selectedRole?.permissions?.team?.manage_members ?? false}
+                            onChange={(val) => setTeamOverride('manage_members', val)}
+                          />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Manage Roles &amp; Matrix</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Create, duplicate, and modify workspace role definitions.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideBooleanSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.team?.manage_roles}
+                            roleDefault={selectedRole?.permissions?.team?.manage_roles ?? false}
+                            onChange={(val) => setTeamOverride('manage_roles', val)}
+                          />
+                        </td>
+                      </tr>
+                      <tr>
+                        <td className="py-2.5 px-3 font-semibold text-zinc-200">Manage Global Workspace Settings</td>
+                        <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
+                          Configure branding, custom departments, integrations, and telemetry.
+                        </td>
+                        <td className="py-2.5 px-3 text-right">
+                          <OverrideBooleanSelector
+                            disabled={!canManage || isOwner}
+                            overrideValue={overrides.team?.manage_settings}
+                            roleDefault={selectedRole?.permissions?.team?.manage_settings ?? false}
+                            onChange={(val) => setTeamOverride('manage_settings', val)}
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* SECTION E: Authorized Workspace Pages (ABAC Clearance) */}
+              <div className="flex flex-col gap-3 pt-3 border-t border-[#27272a]">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[18px] text-orange-400">shield</span>
+                    <h4 className="font-semibold text-xs text-zinc-200 font-headline uppercase tracking-wider">
+                      Authorized Workspace Pages (ABAC Clearance)
+                    </h4>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-400">
+                    {liveEffective.allowedPages.length}/8 Pages Authorized
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  {WORKSPACE_PAGES.map((page) => {
+                    const roleDefaultHasPage = Boolean(
+                      selectedRole?.permissions?.allowedPages?.includes(page.id)
+                    );
+                    const pageOverride = overrides.pages?.[page.id];
+
+                    return (
+                      <div
+                        key={page.id}
+                        className="p-3 rounded-[6px] border border-[#27272a] bg-[#18181b] flex items-center justify-between gap-3"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="material-symbols-outlined text-[16px] text-zinc-400">
+                            {page.icon}
+                          </span>
+                          <span className="text-xs font-semibold text-zinc-200 truncate">
+                            {page.label}
+                          </span>
+                        </div>
+
+                        <OverrideBooleanSelector
+                          disabled={!canManage || isOwner}
+                          overrideValue={pageOverride}
+                          roleDefault={roleDefaultHasPage}
+                          onChange={(val) => setPageOverride(page.id, val)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
@@ -1956,77 +2559,174 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
           </div>
 
           {/* Right Column: Live Effective Permissions Matrix (4 cols) */}
-          <div className="lg:col-span-4 flex flex-col gap-5">
-            {/* Effective Permissions Matrix */}
-            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 flex flex-col gap-3.5 shadow-sm sticky top-6">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-[18px] text-orange-400">
-                  fact_check
+          <div className="lg:col-span-4 flex flex-col gap-5 sticky top-6">
+            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 flex flex-col gap-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-orange-400">
+                    fact_check
+                  </span>
+                  <h4 className="font-semibold text-xs text-zinc-100 font-headline uppercase tracking-wider">
+                    Live Effective Clearance
+                  </h4>
+                </div>
+                <span className="px-2 py-0.5 rounded-[4px] font-mono text-[10px] bg-orange-950/40 text-orange-400 border border-orange-500/30 font-semibold">
+                  LIVE
                 </span>
-                <h4 className="font-semibold text-xs text-zinc-100 font-headline uppercase tracking-wider">
-                  Live Effective Clearance
-                </h4>
               </div>
-              <p className="text-[11px] text-zinc-400">
-                Summary profile for <span className="text-zinc-200 font-medium">{member.name}</span>:
-              </p>
 
-              <div className="flex flex-col divide-y divide-[#27272a] text-xs pt-1">
-                {[
-                  {
-                    title: 'Login & Authentication',
-                    granted: canLogin,
-                    note: canLogin ? 'Sign-in enabled' : 'Account locked',
-                  },
-                  {
-                    title: 'Workspace Ownership',
-                    granted: isOwner,
-                    note: 'Owner exclusive',
-                  },
-                  {
-                    title: 'Manage Team & Passwords',
-                    granted: isOwner || accessLevel === 'ADMIN' || allowedActions.includes('admin'),
-                    note: 'Admin clearance',
-                  },
-                  {
-                    title: 'Task Spaces & Sprint Boards',
-                    granted: isOwner || allowedPages.includes('tasks'),
-                    note: 'Tasks hub clearance',
-                  },
-                  {
-                    title: 'CRM Deals & Pipelines',
-                    granted: isOwner || allowedPages.includes('crm'),
-                    note: 'CRM hub clearance',
-                  },
-                  {
-                    title: 'Author RFCs & Docs',
-                    granted: isOwner || (allowedPages.includes('docs') && allowedActions.includes('write')),
-                    note: 'Docs + Write capability',
-                  },
-                  {
-                    title: 'Delete Resources',
-                    granted: isOwner || allowedActions.includes('delete'),
-                    note: 'Delete action permission',
-                  },
-                ].map((perm, idx) => (
-                  <div key={idx} className="py-2.5 flex items-center justify-between gap-2">
-                    <div className="flex flex-col">
-                      <span className="text-zinc-300 text-[11px]">{perm.title}</span>
-                      <span className="text-[9.5px] text-zinc-500 font-mono">{perm.note}</span>
-                    </div>
-                    {perm.granted ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 font-semibold shrink-0">
-                        <span className="material-symbols-outlined text-[14px]">check_circle</span>
-                        <span>Granted</span>
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 shrink-0">
-                        <span className="material-symbols-outlined text-[14px]">block</span>
-                        <span>Denied</span>
-                      </span>
-                    )}
+              {/* Active Base Role Badge */}
+              <div className="p-3 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-[18px] text-orange-400">
+                    {selectedRole?.icon || 'verified_user'}
+                  </span>
+                  <div className="flex flex-col">
+                    <span className="font-semibold text-xs text-zinc-200">
+                      {isOwner ? 'Workspace Owner' : selectedRole?.name || 'Standard Member'}
+                    </span>
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      Base Template • {activeOverridesCount} override{activeOverridesCount !== 1 ? 's' : ''}
+                    </span>
                   </div>
-                ))}
+                </div>
+              </div>
+
+              {/* ABAC Scope Limitation Callout if Active */}
+              {(isTaskScopeConstrained || isDealScopeConstrained) && !isOwner && (
+                <div className="p-3 rounded-[6px] bg-amber-950/40 border border-amber-500/40 flex items-start gap-2.5">
+                  <span className="material-symbols-outlined text-amber-400 text-[18px] shrink-0 mt-0.5">
+                    lock_clock
+                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-mono text-[10.5px] font-bold text-amber-300 uppercase tracking-wide">
+                      ABAC Scope Enforced
+                    </span>
+                    <span className="text-[11px] text-zinc-300 leading-snug">
+                      Operator is constrained to{' '}
+                      <strong>Assigned Items Only</strong> for{' '}
+                      {[
+                        isTaskScopeConstrained && 'Tasks',
+                        isDealScopeConstrained && 'CRM Deals',
+                      ].filter(Boolean).join(' and ')}.
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Live Effective Metrics Breakdown */}
+              <div className="flex flex-col divide-y divide-[#27272a] text-xs pt-1">
+                {/* 1. Auth */}
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-300 text-[11px]">Login &amp; Auth</span>
+                    <span className="text-[9.5px] text-zinc-500 font-mono">
+                      {canLogin ? 'Sign-in enabled' : 'Account locked'}
+                    </span>
+                  </div>
+                  {canLogin ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 font-semibold shrink-0">
+                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                      <span>Active</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-rose-400 font-semibold shrink-0">
+                      <span className="material-symbols-outlined text-[14px]">block</span>
+                      <span>Disabled</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* 2. Tasks View Scope */}
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-300 text-[11px]">Tasks View Scope</span>
+                    <span className="text-[9.5px] text-zinc-500 font-mono">Board &amp; list visibility</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-[4px] font-mono text-[10px] font-bold uppercase ${
+                    liveEffective.tasks.view === 'all'
+                      ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
+                      : liveEffective.tasks.view === 'assigned'
+                      ? 'bg-amber-950/40 text-amber-400 border border-amber-500/30'
+                      : 'bg-zinc-800 text-zinc-500'
+                  }`}>
+                    {liveEffective.tasks.view === 'all' ? 'All Tasks' : liveEffective.tasks.view === 'assigned' ? 'Assigned' : 'None'}
+                  </span>
+                </div>
+
+                {/* 3. Tasks Lifecycle & Mutation */}
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-300 text-[11px]">Tasks Status &amp; Update</span>
+                    <span className="text-[9.5px] text-zinc-500 font-mono">Status: {liveEffective.tasks.change_status} • Edit: {liveEffective.tasks.update}</span>
+                  </div>
+                  <span className="text-[11px] font-mono text-zinc-300 font-medium">
+                    {liveEffective.tasks.create ? 'Can Create' : 'Read-only'}
+                  </span>
+                </div>
+
+                {/* 4. CRM Deals View Scope */}
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-300 text-[11px]">Deals View Scope</span>
+                    <span className="text-[9.5px] text-zinc-500 font-mono">Pipeline visibility</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-[4px] font-mono text-[10px] font-bold uppercase ${
+                    liveEffective.deals.view === 'all'
+                      ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
+                      : liveEffective.deals.view === 'assigned'
+                      ? 'bg-amber-950/40 text-amber-400 border border-amber-500/30'
+                      : 'bg-zinc-800 text-zinc-500'
+                  }`}>
+                    {liveEffective.deals.view === 'all' ? 'All Deals' : liveEffective.deals.view === 'assigned' ? 'Assigned' : 'None'}
+                  </span>
+                </div>
+
+                {/* 5. Team Admin */}
+                <div className="py-2.5 flex items-center justify-between gap-2">
+                  <div className="flex flex-col">
+                    <span className="text-zinc-300 text-[11px]">Team Admin</span>
+                    <span className="text-[9.5px] text-zinc-500 font-mono">Manage members &amp; roles</span>
+                  </div>
+                  {liveEffective.team.manage_members || isOwner ? (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-emerald-400 font-semibold shrink-0">
+                      <span className="material-symbols-outlined text-[14px]">check_circle</span>
+                      <span>Granted</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-mono text-zinc-500 shrink-0">
+                      <span className="material-symbols-outlined text-[14px]">block</span>
+                      <span>Denied</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* 6. Authorized Pages */}
+                <div className="py-2.5 flex flex-col gap-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-zinc-300 text-[11px]">Authorized Pages</span>
+                    <span className="text-[10px] font-mono text-zinc-400">
+                      {liveEffective.allowedPages.length}/8
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1 flex-wrap">
+                    {WORKSPACE_PAGES.map((p) => {
+                      const hasPage = liveEffective.allowedPages.includes(p.id);
+                      return (
+                        <span
+                          key={p.id}
+                          className={`px-1.5 py-0.2 rounded-[3px] text-[9.5px] font-mono ${
+                            hasPage
+                              ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
+                              : 'bg-zinc-900 text-zinc-600 border border-zinc-800'
+                          }`}
+                        >
+                          {p.id}
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Security Policy Information */}
@@ -2034,11 +2734,11 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <span className="material-symbols-outlined text-[16px]">security</span>
                   <span className="font-mono text-[10px] uppercase font-bold tracking-wider">
-                    ABAC / RBAC Policy
+                    Backend Enforcement
                   </span>
                 </div>
                 <p className="text-[10.5px] text-zinc-400 leading-relaxed">
-                  Modifications made here take effect immediately on backend services and propagate across all active sessions.
+                  Permissions are enforced across NestJS REST endpoints, JWT authentication payloads, and real-time database queries.
                 </p>
               </div>
             </div>
@@ -2059,7 +2759,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
           <div className="flex items-center gap-2.5">
             {isOwner && (
               <span className="text-[11px] font-mono text-orange-400 hidden sm:inline">
-                Workspace Owner tier is permanent
+                Workspace Owner root authority is permanent
               </span>
             )}
             <button
@@ -2116,6 +2816,141 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+/**
+ * Segmented scope selector for 'inherit' | 'all' | 'assigned' | 'none'
+ */
+interface OverrideScopeSelectorProps {
+  overrideValue: OverrideScope | undefined;
+  roleDefault: PermissionScope;
+  onChange: (val: OverrideScope) => void;
+  disabled?: boolean;
+}
+
+const OverrideScopeSelector: React.FC<OverrideScopeSelectorProps> = ({
+  overrideValue = 'inherit',
+  roleDefault,
+  onChange,
+  disabled,
+}) => {
+  const defaultLabel = roleDefault === 'all' ? 'All' : roleDefault === 'assigned' ? 'Assigned' : 'Denied';
+
+  return (
+    <div className="inline-flex items-center bg-[#18181b] border border-[#27272a] rounded-[6px] p-0.5">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange('inherit')}
+        className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[4px] transition-colors ${
+          overrideValue === 'inherit'
+            ? 'bg-zinc-800 text-zinc-300 shadow-xs'
+            : 'text-zinc-500 hover:text-zinc-300'
+        } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        title={`Inherit from assigned role (Current role default: ${defaultLabel})`}
+      >
+        Inherit ({defaultLabel})
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange('all')}
+        className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[4px] transition-colors ${
+          overrideValue === 'all'
+            ? 'bg-orange-600 text-white shadow-xs'
+            : 'text-zinc-400 hover:text-zinc-200'
+        } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+      >
+        All Items
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange('assigned')}
+        className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[4px] transition-colors ${
+          overrideValue === 'assigned'
+            ? 'bg-amber-600 text-white shadow-xs'
+            : 'text-zinc-400 hover:text-zinc-200'
+        } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        title="Restrict control strictly to items assigned to this operator"
+      >
+        Assigned Only
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange('none')}
+        className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[4px] transition-colors ${
+          overrideValue === 'none'
+            ? 'bg-rose-950 text-rose-300 border border-rose-500/40 shadow-xs'
+            : 'text-zinc-500 hover:text-zinc-300'
+        } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+      >
+        Denied
+      </button>
+    </div>
+  );
+};
+
+/**
+ * Segmented boolean selector for 'inherit' | 'granted' | 'denied'
+ */
+interface OverrideBooleanSelectorProps {
+  overrideValue: OverrideBoolean | undefined;
+  roleDefault: boolean;
+  onChange: (val: OverrideBoolean) => void;
+  disabled?: boolean;
+}
+
+const OverrideBooleanSelector: React.FC<OverrideBooleanSelectorProps> = ({
+  overrideValue = 'inherit',
+  roleDefault,
+  onChange,
+  disabled,
+}) => {
+  const defaultLabel = roleDefault ? 'Granted' : 'Denied';
+
+  return (
+    <div className="inline-flex items-center bg-[#18181b] border border-[#27272a] rounded-[6px] p-0.5">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange('inherit')}
+        className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[4px] transition-colors ${
+          overrideValue === 'inherit'
+            ? 'bg-zinc-800 text-zinc-300 shadow-xs'
+            : 'text-zinc-500 hover:text-zinc-300'
+        } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+        title={`Inherit from assigned role (Current role default: ${defaultLabel})`}
+      >
+        Inherit ({defaultLabel})
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange('granted')}
+        className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[4px] transition-colors ${
+          overrideValue === 'granted'
+            ? 'bg-emerald-600 text-white shadow-xs'
+            : 'text-zinc-400 hover:text-zinc-200'
+        } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+      >
+        Granted
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => onChange('denied')}
+        className={`px-2 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[4px] transition-colors ${
+          overrideValue === 'denied'
+            ? 'bg-rose-950 text-rose-300 border border-rose-500/40 shadow-xs'
+            : 'text-zinc-500 hover:text-zinc-300'
+        } ${disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+      >
+        Denied
+      </button>
     </div>
   );
 };

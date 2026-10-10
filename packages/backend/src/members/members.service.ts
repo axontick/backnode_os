@@ -118,6 +118,8 @@ export class MembersService {
           .join('')
           .toUpperCase(),
       role: data.role || 'Member',
+      roleId: data.roleId || undefined,
+      permissionOverrides: data.permissionOverrides || undefined,
       accessLevel: data.accessLevel || 'MEMBER',
       status,
       canLogin,
@@ -146,6 +148,8 @@ export class MembersService {
         existingUser.canLogin = canLogin;
         existingUser.status = canLogin ? 'ACTIVE' : 'DISABLED';
         existingUser.role = data.accessLevel || existingUser.role;
+        existingUser.roleId = data.roleId || existingUser.roleId;
+        existingUser.permissionOverrides = data.permissionOverrides || existingUser.permissionOverrides;
         existingUser.allowedPages = data.allowedPages || defaultPages;
         existingUser.allowedActions = data.allowedActions || defaultActions;
         await this.userRepo.save(existingUser);
@@ -155,6 +159,8 @@ export class MembersService {
           passwordHash,
           name: data.name,
           role: data.accessLevel || 'MEMBER',
+          roleId: data.roleId || undefined,
+          permissionOverrides: data.permissionOverrides || undefined,
           accountId,
           canLogin,
           status: canLogin ? 'ACTIVE' : 'DISABLED',
@@ -189,6 +195,8 @@ export class MembersService {
 
     if (data.allowedPages !== undefined) member.allowedPages = data.allowedPages;
     if (data.allowedActions !== undefined) member.allowedActions = data.allowedActions;
+    if (data.roleId !== undefined) member.roleId = data.roleId;
+    if (data.permissionOverrides !== undefined) member.permissionOverrides = data.permissionOverrides;
     if (data.status !== undefined) {
       member.status = data.status;
       if (data.status === 'Disabled' || data.status === 'Suspended') {
@@ -212,6 +220,8 @@ export class MembersService {
           if (member.status === 'Disabled') user.status = 'DISABLED';
           else if (member.status === 'Active') user.status = 'ACTIVE';
           if (member.accessLevel && member.accessLevel !== 'OWNER') user.role = member.accessLevel;
+          if (member.roleId !== undefined) user.roleId = member.roleId;
+          if (member.permissionOverrides !== undefined) user.permissionOverrides = member.permissionOverrides;
           if (member.allowedPages) user.allowedPages = member.allowedPages;
           if (member.allowedActions) user.allowedActions = member.allowedActions;
           await this.userRepo.save(user);

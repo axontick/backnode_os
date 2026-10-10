@@ -18,6 +18,8 @@ import {
   User,
   UserSpace,
   Department,
+  WorkspaceRole,
+  RolePermissions,
 } from '../types';
 
 export const API_BASE_URL =
@@ -264,6 +266,37 @@ export const workspaceApi = {
     const res = await apiClient.delete<{ id: string; success: boolean }>(`/departments/${id}`, {
       data: { reassignToDeptName },
     });
+    return res.data;
+  },
+};
+
+export const rolesApi = {
+  getAll: async (): Promise<WorkspaceRole[]> => {
+    const res = await apiClient.get<WorkspaceRole[]>('/roles');
+    return res.data;
+  },
+  getEffectivePermissions: async (): Promise<RolePermissions> => {
+    const res = await apiClient.get<RolePermissions>('/roles/effective-permissions');
+    return res.data;
+  },
+  getById: async (id: string): Promise<WorkspaceRole> => {
+    const res = await apiClient.get<WorkspaceRole>(`/roles/${id}`);
+    return res.data;
+  },
+  create: async (role: Partial<WorkspaceRole>): Promise<WorkspaceRole> => {
+    const res = await apiClient.post<WorkspaceRole>('/roles', role);
+    return res.data;
+  },
+  update: async (id: string, role: Partial<WorkspaceRole>): Promise<WorkspaceRole> => {
+    const res = await apiClient.patch<WorkspaceRole>(`/roles/${id}`, role);
+    return res.data;
+  },
+  delete: async (id: string): Promise<{ id: string; success: boolean }> => {
+    const res = await apiClient.delete<{ id: string; success: boolean }>(`/roles/${id}`);
+    return res.data;
+  },
+  duplicate: async (id: string): Promise<WorkspaceRole> => {
+    const res = await apiClient.post<WorkspaceRole>(`/roles/${id}/duplicate`);
     return res.data;
   },
 };

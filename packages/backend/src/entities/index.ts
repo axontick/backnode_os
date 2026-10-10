@@ -13,3 +13,4 @@ export * from './crm-stage-definition.entity';
 export * from './crm-pipeline-settings.entity';
 export * from './directory-contact.entity';
 export * from './department.entity';
+export * from './role.entity';

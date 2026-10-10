@@ -15,6 +15,7 @@ import {
   DirectoryContact,
   User,
   Department,
+  Role,
 } from '../entities';
 import { CurrentUserPayload } from '../auth/current-user.decorator';
 
@@ -180,6 +181,7 @@ export class WorkspaceService {
       await manager.delete(StatusDefinition, { accountId: id });
       await manager.delete(ListSettings, { accountId: id });
       await manager.delete(TeamMember, { accountId: id });
+      await manager.delete(Role, { accountId: id });
 
       // 2. Reassign users if their primary account is being deleted
       const usersWithAccount = await manager.find(User, { where: { accountId: id } });

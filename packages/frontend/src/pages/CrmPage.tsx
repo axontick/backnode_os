@@ -9,7 +9,7 @@ export const CrmPage: React.FC = () => {
   const {
     activeUserSpaceId,
     userSpaces,
-    deals,
+    filteredDeals,
     setSelectedDealId,
     handleOpenAddDealToStage,
     setCrmSettingsInitialTab,
@@ -24,7 +24,7 @@ export const CrmPage: React.FC = () => {
   return (
     <div className="flex-1 flex overflow-hidden relative font-sans">
       <CrmDashboardView
-        deals={deals}
+        deals={filteredDeals}
         onSelectDeal={(deal) => {
           setSelectedDealId(deal.id);
           const pipeId = deal.pipelineId || activePipelineId;

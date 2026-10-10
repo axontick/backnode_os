@@ -5,6 +5,8 @@ export interface CurrentUserPayload {
   email: string;
   name: string;
   role: string;
+  roleId?: string;
+  permissionOverrides?: any;
   accountId: string;
 }
 

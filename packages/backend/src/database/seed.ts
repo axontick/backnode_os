@@ -14,6 +14,7 @@ import {
   CrmDeal,
   TaskItem,
   DirectoryContact,
+  Role,
 } from '../entities';
 import {
   initialTeamMembers,
@@ -26,6 +27,7 @@ import {
   initialCrmDeals,
   initialTasks,
   initialDirectoryContacts,
+  INITIAL_SYSTEM_ROLES,
 } from '@backnode/shared';
 
 const DEFAULT_ACCOUNT_ID = 'acc-default';
@@ -42,6 +44,7 @@ async function seed() {
   const accountRepo = AppDataSource.getRepository(Account);
   const userRepo = AppDataSource.getRepository(User);
   const memberRepo = AppDataSource.getRepository(TeamMember);
+  const roleRepo = AppDataSource.getRepository(Role);
   const statusRepo = AppDataSource.getRepository(StatusDefinition);
   const listSettingsRepo = AppDataSource.getRepository(ListSettings);
   const folderRepo = AppDataSource.getRepository(SpaceFolder);
@@ -62,6 +65,23 @@ async function seed() {
       slug: 'backnode-core',
     });
     await accountRepo.save(defaultAccount);
+  }
+
+  // 1b. Seed Default Roles
+  console.log('🛡️ Seeding default workspace roles...');
+  for (const r of INITIAL_SYSTEM_ROLES) {
+    await roleRepo.save({
+      id: `${r.id}-default`,
+      name: r.name,
+      key: r.key,
+      description: r.description,
+      color: r.color,
+      icon: r.icon,
+      isSystem: r.isSystem,
+      isDefault: r.isDefault,
+      permissions: r.permissions,
+      accountId: DEFAULT_ACCOUNT_ID,
+    });
   }
 
   // 2. Seed Default Demo User (Alex Wong)

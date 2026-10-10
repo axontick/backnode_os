@@ -24,7 +24,7 @@ export class DealsController {
     @CurrentUser() user: CurrentUserPayload,
     @Query('pipelineId') pipelineId?: string,
   ) {
-    return this.dealsService.findAll(user.accountId, pipelineId);
+    return this.dealsService.findAll(user.accountId, pipelineId, user);
   }
 
   @Get(':id')
@@ -32,7 +32,7 @@ export class DealsController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') id: string,
   ) {
-    return this.dealsService.findOne(user.accountId, id);
+    return this.dealsService.findOne(user.accountId, id, user);
   }
 
   @Post()
@@ -40,7 +40,7 @@ export class DealsController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() createDealDto: any,
   ) {
-    return this.dealsService.create(user.accountId, createDealDto);
+    return this.dealsService.create(user.accountId, createDealDto, user);
   }
 
   @Patch(':id')
@@ -49,7 +49,7 @@ export class DealsController {
     @Param('id') id: string,
     @Body() updateDealDto: any,
   ) {
-    return this.dealsService.update(user.accountId, id, updateDealDto);
+    return this.dealsService.update(user.accountId, id, updateDealDto, user);
   }
 
   @Delete(':id')
@@ -57,6 +57,6 @@ export class DealsController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') id: string,
   ) {
-    return this.dealsService.remove(user.accountId, id);
+    return this.dealsService.remove(user.accountId, id, user);
   }
 }

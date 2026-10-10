@@ -26,7 +26,7 @@ export class TasksController {
     @Query('priority') priority?: string,
     @Query('assigneeId') assigneeId?: string,
   ) {
-    return this.tasksService.findAll(user.accountId, { status, priority, assigneeId });
+    return this.tasksService.findAll(user.accountId, { status, priority, assigneeId }, user);
   }
 
   @Get(':id')
@@ -34,7 +34,7 @@ export class TasksController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') id: string,
   ) {
-    return this.tasksService.findOne(user.accountId, id);
+    return this.tasksService.findOne(user.accountId, id, user);
   }
 
   @Post()
@@ -42,7 +42,7 @@ export class TasksController {
     @CurrentUser() user: CurrentUserPayload,
     @Body() createTaskDto: any,
   ) {
-    return this.tasksService.create(user.accountId, createTaskDto);
+    return this.tasksService.create(user.accountId, createTaskDto, user);
   }
 
   @Patch(':id')
@@ -51,7 +51,7 @@ export class TasksController {
     @Param('id') id: string,
     @Body() updateTaskDto: any,
   ) {
-    return this.tasksService.update(user.accountId, id, updateTaskDto);
+    return this.tasksService.update(user.accountId, id, updateTaskDto, user);
   }
 
   @Delete(':id')
@@ -59,6 +59,6 @@ export class TasksController {
     @CurrentUser() user: CurrentUserPayload,
     @Param('id') id: string,
   ) {
-    return this.tasksService.remove(user.accountId, id);
+    return this.tasksService.remove(user.accountId, id, user);
   }
 }

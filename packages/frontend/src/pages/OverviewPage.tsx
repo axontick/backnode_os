@@ -11,8 +11,8 @@ export const OverviewPage: React.FC = () => {
   const {
     activeUserSpaceId,
     userSpaces,
-    tasks,
-    deals,
+    filteredTasks,
+    filteredDeals,
     overviewMode,
     setSelectedTaskId,
     setSelectedDealId,
@@ -43,8 +43,8 @@ export const OverviewPage: React.FC = () => {
     return (
       <div className="flex-1 flex overflow-hidden relative font-sans">
         <ExecutiveCockpitView
-          tasks={tasks}
-          deals={deals}
+          tasks={filteredTasks}
+          deals={filteredDeals}
           onSelectTask={handleSelectTask}
           onSelectDeal={handleSelectDeal}
           onNavigateToDeals={() => {
@@ -61,8 +61,8 @@ export const OverviewPage: React.FC = () => {
   return (
     <div className="flex-1 flex overflow-hidden relative font-sans">
       <OverviewView
-        tasks={tasks}
-        deals={deals}
+        tasks={filteredTasks}
+        deals={filteredDeals}
         onSelectTask={handleSelectTask}
         onSelectDeal={handleSelectDeal}
         onNavigateToBoard={() => {

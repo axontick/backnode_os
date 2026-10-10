@@ -13,6 +13,7 @@ import { CrmPage } from './pages/CrmPage';
 import { PipelinePage } from './pages/PipelinePage';
 import { ContactsPage } from './pages/ContactsPage';
 import { TeamAccessPage } from './pages/TeamAccessPage';
+import { RolesPage } from './pages/RolesPage';
 import { WorkspaceSettingsPage } from './pages/WorkspaceSettingsPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 import { AuthModal } from './components/AuthModal';
@@ -117,6 +118,8 @@ export default function App() {
             {/* Team & Access Controls */}
             <Route path="team" element={<TeamAccessPage />} />
             <Route path="team/members/:memberId/edit" element={<TeamAccessPage />} />
+            <Route path="roles" element={<RolesPage />} />
+            <Route path="roles/:roleId" element={<RolesPage />} />
             <Route path="users" element={<Navigate to="../team" replace />} />
             <Route path="users/*" element={<Navigate to="../team" replace />} />
 
