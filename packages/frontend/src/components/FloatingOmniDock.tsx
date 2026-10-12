@@ -14,7 +14,7 @@ export const FloatingOmniDock: React.FC<FloatingOmniDockProps> = ({
   onOpenCommandPalette,
 }) => {
   return (
-    <div className="fixed bottom-4 left-[300px] z-30 select-none">
+    <div className="fixed bottom-4 left-[300px] z-30">
       <div className="bg-[#121214]/95 backdrop-blur-md border border-[#27272a] rounded-[6px] px-4 py-2 flex items-center gap-3.5 shadow-2xl text-xs text-zinc-300">
         <button
           onClick={onToggleEngine}

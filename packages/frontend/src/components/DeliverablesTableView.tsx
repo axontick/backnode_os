@@ -455,7 +455,11 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                         setDragOverTaskId(null);
                         setDragOverTabSlug(null);
                       }}
-                      onClick={() => onSelectTask(t)}
+                      onClick={() => {
+                        const sel = window.getSelection();
+                        if (sel && sel.toString().trim().length > 0) return;
+                        onSelectTask(t);
+                      }}
                       className={`hover:bg-zinc-800/40 transition-colors group cursor-pointer ${
                         isDraggingThis
                           ? 'opacity-40 bg-orange-950/20'
@@ -493,7 +497,12 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                               drag_indicator
                             </span>
                           )}
-                          <span>{t.id}</span>
+                          <span
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="cursor-text select-text"
+                          >
+                            {t.id}
+                          </span>
                         </div>
                       </td>
 
@@ -501,7 +510,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                       <td className="px-3 py-2 font-medium text-zinc-200">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
+                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
                               t.status === 'In Progress'
                                 ? 'bg-orange-500'
                                 : t.status === 'Done'
@@ -511,7 +520,10 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                                 : 'bg-zinc-500'
                             }`}
                           />
-                          <span className={`truncate group-hover:text-orange-400 transition-colors ${t.status === 'Done' ? 'line-through text-zinc-500' : ''}`}>
+                          <span
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className={`truncate group-hover:text-orange-400 transition-colors cursor-text select-text ${t.status === 'Done' ? 'line-through text-zinc-500' : ''}`}
+                          >
                             {t.title}
                           </span>
                           {t.isRecurring && (

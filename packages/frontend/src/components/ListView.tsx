@@ -256,7 +256,11 @@ export const ListView: React.FC<ListViewProps> = ({
       >
         {/* Parent Row */}
         <div
-          onClick={() => onSelectTask(t)}
+          onClick={() => {
+            const sel = window.getSelection();
+            if (sel && sel.toString().trim().length > 0) return;
+            onSelectTask(t);
+          }}
           className="flex items-center justify-between cursor-pointer"
         >
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
@@ -295,12 +299,16 @@ export const ListView: React.FC<ListViewProps> = ({
               )}
             </button>
 
-            <span className="font-mono text-zinc-400 text-[11px] shrink-0 font-semibold">
+            <span
+              onMouseDown={(e) => e.stopPropagation()}
+              className="font-mono text-zinc-400 text-[11px] shrink-0 font-semibold cursor-text select-text"
+            >
               {t.id}
             </span>
 
             <span
-              className={`font-medium truncate transition-colors text-xs ${
+              onMouseDown={(e) => e.stopPropagation()}
+              className={`font-medium truncate transition-colors text-xs cursor-text select-text ${
                 t.status === 'Done'
                   ? 'line-through text-zinc-500'
                   : 'text-zinc-100 group-hover:text-orange-400'
@@ -394,7 +402,11 @@ export const ListView: React.FC<ListViewProps> = ({
               return (
                 <div
                   key={st.id}
-                  onClick={(e) => handleToggleSubtask(st.id, st.done, e)}
+                  onClick={(e) => {
+                    const sel = window.getSelection();
+                    if (sel && sel.toString().trim().length > 0) return;
+                    handleToggleSubtask(st.id, st.done, e);
+                  }}
                   className="flex items-center justify-between text-xs py-1 px-2 rounded-[6px] hover:bg-[#18181b] transition-colors cursor-pointer"
                 >
                   <div className="flex items-center gap-2.5">
@@ -406,7 +418,8 @@ export const ListView: React.FC<ListViewProps> = ({
                       {done && <span className="material-symbols-outlined text-[12px]">check</span>}
                     </div>
                     <span
-                      className={done ? 'line-through text-zinc-500' : 'text-zinc-200 font-medium'}
+                      onMouseDown={(e) => e.stopPropagation()}
+                      className={`cursor-text select-text ${done ? 'line-through text-zinc-500' : 'text-zinc-200 font-medium'}`}
                     >
                       {st.text}
                     </span>

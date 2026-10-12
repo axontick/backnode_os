@@ -254,7 +254,7 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
       {/* 2. Main Gantt / Roadmap Timeline Canvas */}
       <div className="flex-1 flex flex-row overflow-hidden relative bg-[#09090b]">
         {/* 2A. Left Task Key & Breakdown Panel (340px width) */}
-        <div className="w-[340px] shrink-0 border-r border-[#27272a] bg-[#121214] flex flex-col z-10 select-none">
+        <div className="w-[340px] shrink-0 border-r border-[#27272a] bg-[#121214] flex flex-col z-10">
           {/* Panel Header */}
           <div className="h-14 px-4 border-b border-[#27272a] flex items-center justify-between bg-[#18181b]">
             <div className="flex items-center gap-2">

@@ -17,6 +17,21 @@
     -webkit-user-select: text;
   }
 
+  body, #root, main, p, span, h1, h2, h3, h4, h5, h6, td, th, li, code, pre, input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  ::selection {
+    background-color: #ea580c !important;
+    color: #ffffff !important;
+  }
+
+  ::-moz-selection {
+    background-color: #ea580c !important;
+    color: #ffffff !important;
+  }
+
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-headline);
   }

@@ -357,6 +357,8 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
+                        const sel = window.getSelection();
+                        if (sel && sel.toString().trim().length > 0) return;
                         onSelectTask(t);
                       }}
                       onMouseEnter={(e) => {
@@ -368,17 +370,23 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
                         setHoveredTask(null);
                         setHoverPosition(null);
                       }}
-                      className={`px-2 py-1 rounded-[6px] bg-[#18181b] border border-[#27272a] text-[11px] flex items-center justify-between gap-1.5 hover:border-orange-500/60 hover:bg-orange-950/20 transition-all shadow-xs group ${
-                        isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
-                      } ${isThisDragging ? 'opacity-30 ring-1 ring-orange-500' : ''}`}
+                      className={`px-2 py-1 rounded-[6px] bg-[#18181b] border border-[#27272a] text-[11px] flex items-center justify-between gap-1.5 hover:border-orange-500/60 hover:bg-orange-950/20 transition-all shadow-xs group cursor-pointer ${
+                        isThisDragging ? 'opacity-30 ring-1 ring-orange-500' : ''
+                      }`}
                     >
                       <div className="flex items-center gap-1.5 truncate min-w-0">
                         <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${getStatusDot(t.status)}`} />
-                        <span className="truncate font-medium text-zinc-200 group-hover:text-zinc-100">
+                        <span
+                          onMouseDown={(e) => e.stopPropagation()}
+                          className="truncate font-medium text-zinc-200 group-hover:text-zinc-100 cursor-text select-text"
+                        >
                           {t.title}
                         </span>
                       </div>
-                      <span className="font-mono text-[9px] text-zinc-500 group-hover:text-orange-400 shrink-0">
+                      <span
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="font-mono text-[9px] text-zinc-500 group-hover:text-orange-400 shrink-0 cursor-text select-text"
+                      >
                         {t.id}
                       </span>
                     </div>

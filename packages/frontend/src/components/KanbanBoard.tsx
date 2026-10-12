@@ -268,10 +268,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           setDragOverColumn(null);
                           setDropTarget(null);
                         }}
-                        onClick={() => onSelectTask(t)}
-                        className={`bg-[#18181b] transition-all duration-150 rounded-[6px] p-3.5 relative ${
-                          isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
-                        } group ${
+                        onClick={() => {
+                          const sel = window.getSelection();
+                          if (sel && sel.toString().trim().length > 0) return;
+                          onSelectTask(t);
+                        }}
+                        className={`bg-[#18181b] transition-all duration-150 rounded-[6px] p-3.5 relative cursor-pointer group ${
                           isDraggingThis ? 'opacity-30 scale-[0.98] ring-2 ring-orange-500/40' : ''
                         } ${
                           isSelected
@@ -329,19 +331,28 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                               <span className="material-symbols-outlined text-[13px]">edit</span>
                             </button>
                           )}
-                          <span className="font-mono text-xs text-zinc-400 group-hover:text-orange-400 transition-colors">
+                          <span
+                            onMouseDown={(e) => e.stopPropagation()}
+                            className="font-mono text-xs text-zinc-400 group-hover:text-orange-400 transition-colors cursor-text select-text"
+                          >
                             {t.id}
                           </span>
                         </div>
                       </div>
 
                       {/* Card Title */}
-                      <h3 className="text-[13px] font-semibold text-zinc-100 mb-1.5 group-hover:text-orange-400 transition-colors leading-snug">
+                      <h3
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="text-[13px] font-semibold text-zinc-100 mb-1.5 group-hover:text-orange-400 transition-colors leading-snug cursor-text select-text"
+                      >
                         {t.title}
                       </h3>
 
                       {/* Description Summary */}
-                      <p className="text-xs text-zinc-400 mb-3 line-clamp-2 leading-relaxed">
+                      <p
+                        onMouseDown={(e) => e.stopPropagation()}
+                        className="text-xs text-zinc-400 mb-3 line-clamp-2 leading-relaxed cursor-text select-text"
+                      >
                         {t.description}
                       </p>
 

@@ -1659,7 +1659,11 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                             e.dataTransfer.setData('text/plain', deal.id);
                             e.dataTransfer.effectAllowed = 'move';
                           }}
-                          onClick={() => onSelectDeal(deal)}
+                          onClick={() => {
+                            const sel = window.getSelection();
+                            if (sel && sel.toString().trim().length > 0) return;
+                            onSelectDeal(deal);
+                          }}
                           className={`p-3.5 bg-[#18181b] rounded-[6px] transition-all cursor-pointer group relative text-xs ${
                             isSelected
                               ? 'border-2 border-orange-500 shadow-md ring-2 ring-orange-500/10'
@@ -1669,11 +1673,17 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2 mb-1.5">
-                            <span className="font-semibold text-xs text-zinc-100 leading-tight group-hover:text-orange-400 transition-colors">
+                            <span
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="font-semibold text-xs text-zinc-100 leading-tight group-hover:text-orange-400 transition-colors cursor-text select-text"
+                            >
                               {deal.title}
                             </span>
                             {!isFeatured && (
-                              <span className="font-mono text-xs font-bold text-zinc-100 shrink-0">
+                              <span
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="font-mono text-xs font-bold text-zinc-100 shrink-0 cursor-text select-text"
+                              >
                                 {deal.formattedValue}
                               </span>
                             )}
@@ -1681,7 +1691,10 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
 
                           {/* Featured Deal Big Price Row */}
                           {isFeatured && (
-                            <div className="font-mono text-xl font-bold text-orange-400 mb-2">
+                            <div
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="font-mono text-xl font-bold text-orange-400 mb-2 cursor-text select-text"
+                            >
                               {deal.formattedValue}
                             </div>
                           )}
@@ -1691,7 +1704,10 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                               <span className="w-4 h-4 rounded-full bg-[#121214] border border-[#27272a] text-zinc-200 font-mono text-[9px] flex items-center justify-center font-bold">
                                 {deal.contact.initials}
                               </span>
-                              <span className="text-zinc-300 font-medium truncate">
+                              <span
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="text-zinc-300 font-medium truncate cursor-text select-text"
+                              >
                                 {deal.contact.name}
                               </span>
                             </div>
@@ -1705,7 +1721,10 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
                           </div>
 
                           {deal.nextStep && (
-                            <div className="bg-[#121214] border border-[#27272a] p-1.5 rounded-[6px] font-mono text-[10px] text-zinc-400 mb-2">
+                            <div
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className="bg-[#121214] border border-[#27272a] p-1.5 rounded-[6px] font-mono text-[10px] text-zinc-400 mb-2 cursor-text select-text"
+                            >
                               <span className="font-semibold text-orange-400">Next step:</span>{' '}
                               {deal.nextStep}
                             </div>
