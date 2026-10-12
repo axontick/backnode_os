@@ -238,6 +238,20 @@ export interface ActivityEvent {
   detail?: string;
 }
 
+export type RecurrenceCadence = 'daily' | 'weekly' | 'biweekly' | 'monthly';
+export type RecurrenceAction = 'create_new' | 'reset_existing';
+
+export interface RecurrenceConfig {
+  cadence: RecurrenceCadence;
+  daysOfWeek?: string[]; // e.g. ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
+  dailyMode?: 'all_days' | 'weekdays_only';
+  monthlyMode?: 'day_of_month' | 'specific_date';
+  dayOfMonth?: number; // 1 to 31
+  specificDate?: string; // YYYY-MM-DD
+  action: RecurrenceAction; // 'create_new' | 'reset_existing'
+  targetStatus: TaskStatus | string; // e.g. 'Backlog', 'In Progress'
+}
+
 export interface TaskItem {
   id: string;
   title: string;
@@ -258,6 +272,7 @@ export interface TaskItem {
   dueDate: string;
   isRecurring?: boolean;
   recurrenceRule?: string;
+  recurrenceConfig?: RecurrenceConfig;
   gitBranch?: string;
   replicationHash?: string;
   timeInStage?: string;

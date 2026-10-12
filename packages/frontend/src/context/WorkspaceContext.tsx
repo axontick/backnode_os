@@ -49,6 +49,7 @@ import {
   pluginsApi,
   docsApi,
 } from '../services/api';
+import { parseRecurrenceConfig, calculateNextDueDate } from '../utils/recurrenceUtils';
 import { useAuth } from './AuthContext';
 import {
   getAllItemsFromFolder,
@@ -1512,32 +1513,6 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setTargetSubFolderIdForNewList(null);
   };
 
-  const handleUpdateTask = (updatedTask: TaskItem) => {
-    if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
-      const updateScope = effectivePermissions.tasks.update;
-      if (updateScope === 'none') {
-        showToast('Permission denied: You do not have permission to update tasks.');
-        return;
-      }
-      if (updateScope === 'assigned') {
-        const userName = (user?.name || '').toLowerCase();
-        const isAssigned =
-          updatedTask.assigneeId === user?.id ||
-          (updatedTask.assignee?.name && updatedTask.assignee.name.toLowerCase() === userName) ||
-          updatedTask.creatorId === user?.id;
-        if (!isAssigned) {
-          showToast('Permission denied: You can only update tasks assigned to you.');
-          return;
-        }
-      }
-    }
-    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-    tasksApi.update(updatedTask.id, updatedTask).catch((err) => {
-      console.error('Failed to update task in DB:', err);
-    });
-    showToast(`Task ${updatedTask.id} updated`);
-  };
-
   const handleCreateTask = (newTask: Partial<TaskItem>) => {
     if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
       if (effectivePermissions.tasks.create === false) {
@@ -1579,6 +1554,103 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.error('Failed to create task in DB:', err);
     });
     showToast(`Task ${created.id} created successfully`);
+  };
+
+  const checkIsClosedStatus = (statusName: string): boolean => {
+    const sName = statusName.toLowerCase();
+    if (sName === 'done') return true;
+    const def = statuses.find((s) => s.name.toLowerCase() === sName);
+    return !!def?.isClosed || def?.stageMapping?.toLowerCase() === 'done';
+  };
+
+  const processRecurrenceOnCompletion = (
+    currentTask: TaskItem,
+    targetStatus: TaskStatus
+  ): boolean => {
+    if (!currentTask.isRecurring || !currentTask.recurrenceRule) return false;
+
+    const wasClosed = checkIsClosedStatus(currentTask.status);
+    const isNowClosed = checkIsClosedStatus(targetStatus);
+
+    // Only trigger when moving from open status to closed status
+    if (!isNowClosed || wasClosed) return false;
+
+    const config = parseRecurrenceConfig(currentTask.recurrenceRule);
+    const nextDueDate = calculateNextDueDate(currentTask.dueDate, config);
+    const targetStatusName = (config.targetStatus || 'Backlog') as TaskStatus;
+
+    if (config.action === 'reset_existing') {
+      const resetTask: TaskItem = {
+        ...currentTask,
+        status: targetStatusName,
+        dueDate: nextDueDate,
+        subtasks: currentTask.subtasks?.map((st) => ({ ...st, done: false })) || [],
+      };
+      setTasks((prev) => prev.map((t) => (t.id === currentTask.id ? resetTask : t)));
+      tasksApi.update(currentTask.id, resetTask).catch((err) => {
+        console.error('Failed to reset recurring task in DB:', err);
+      });
+      showToast(`Recurring task moved back to ${targetStatusName} (Due: ${nextDueDate})`);
+      return true;
+    } else {
+      setTimeout(() => {
+        const nextCycleTask: Partial<TaskItem> = {
+          title: currentTask.title,
+          description: currentTask.description,
+          specMarkdown: currentTask.specMarkdown,
+          status: targetStatusName,
+          priority: currentTask.priority,
+          assignee: currentTask.assignee,
+          tags: currentTask.tags ? [...currentTask.tags] : ['Deliverable'],
+          subtasks: currentTask.subtasks?.map((st) => ({ ...st, done: false })) || [],
+          estimation: currentTask.estimation,
+          targetCycle: currentTask.targetCycle,
+          dueDate: nextDueDate,
+          isRecurring: true,
+          recurrenceRule: currentTask.recurrenceRule,
+          customLinks: currentTask.customLinks ? { ...currentTask.customLinks } : {},
+          linkedCrmDeal: currentTask.linkedCrmDeal,
+        };
+        handleCreateTask(nextCycleTask);
+        showToast(`Next cycle task scheduled in ${targetStatusName} (Due: ${nextDueDate})`);
+      }, 300);
+      return false;
+    }
+  };
+
+  const handleUpdateTask = (updatedTask: TaskItem) => {
+    if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
+      const updateScope = effectivePermissions.tasks.update;
+      if (updateScope === 'none') {
+        showToast('Permission denied: You do not have permission to update tasks.');
+        return;
+      }
+      if (updateScope === 'assigned') {
+        const userName = (user?.name || '').toLowerCase();
+        const isAssigned =
+          updatedTask.assigneeId === user?.id ||
+          (updatedTask.assignee?.name && updatedTask.assignee.name.toLowerCase() === userName) ||
+          updatedTask.creatorId === user?.id;
+        if (!isAssigned) {
+          showToast('Permission denied: You can only update tasks assigned to you.');
+          return;
+        }
+      }
+    }
+
+    const existing = tasks.find((t) => t.id === updatedTask.id);
+    if (existing) {
+      const wasReset = processRecurrenceOnCompletion(existing, updatedTask.status);
+      if (wasReset) {
+        return;
+      }
+    }
+
+    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
+    tasksApi.update(updatedTask.id, updatedTask).catch((err) => {
+      console.error('Failed to update task in DB:', err);
+    });
+    showToast(`Task ${updatedTask.id} updated`);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -1790,6 +1862,14 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
       }
     }
+
+    if (task) {
+      const wasReset = processRecurrenceOnCompletion(task, newStatus);
+      if (wasReset) {
+        return;
+      }
+    }
+
     setTasks((prev) => {
       const task = prev.find((t) => t.id === taskId);
       if (!task) return prev;

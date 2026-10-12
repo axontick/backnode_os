@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
+import { Repeat } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
+import { PriorityDropdown } from './PriorityDropdown';
+import { formatRecurrenceLabel } from '../utils/recurrenceUtils';
 
 export interface DeliverablesTableViewProps {
   tasks: TaskItem[];
@@ -36,7 +39,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { listSettings, statuses } = useWorkspace();
+  const { listSettings, statuses, handleUpdateTask } = useWorkspace();
   const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [selectedIds, setSelectedIds] = useState<string[]>(['ENG-101', 'ENG-103']);
@@ -511,6 +514,15 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                           <span className={`truncate group-hover:text-orange-400 transition-colors ${t.status === 'Done' ? 'line-through text-zinc-500' : ''}`}>
                             {t.title}
                           </span>
+                          {t.isRecurring && (
+                            <span
+                              className="inline-flex items-center gap-1 font-mono text-[9px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1.5 py-0.5 rounded-[4px] shrink-0"
+                              title={formatRecurrenceLabel(t.recurrenceRule)}
+                            >
+                              <Repeat className="w-2.5 h-2.5 text-orange-400" />
+                              <span>Recurring</span>
+                            </span>
+                          )}
                         </div>
                       </td>
 
@@ -520,8 +532,14 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                       </td>
 
                       {/* Priority */}
-                      <td className="px-3 py-2">
-                        {getPriorityBadge(t.priority)}
+                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                        <PriorityDropdown
+                          priority={t.priority}
+                          disabled={isReadOnly}
+                          onChange={(newPriority) => {
+                            handleUpdateTask({ ...t, priority: newPriority });
+                          }}
+                        />
                       </td>
 
                       {/* Due Date */}

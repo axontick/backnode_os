@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import { Repeat } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { formatEstimationValue } from '../utils/taskSpaceSettingsUtils';
+import { PriorityDropdown } from './PriorityDropdown';
+import { formatRecurrenceLabel } from '../utils/recurrenceUtils';
 
 interface KanbanBoardProps {
   tasks: TaskItem[];
@@ -29,7 +32,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { statuses, listSettings } = useWorkspace();
+  const { statuses, listSettings, handleUpdateTask } = useWorkspace();
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
@@ -280,7 +283,24 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                       >
                         {/* Top Meta: Priority & ID */}
                         <div className="flex items-center justify-between mb-2">
-                          {getPriorityBadge(t.priority)}
+                          <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                            <PriorityDropdown
+                              priority={t.priority}
+                              disabled={isReadOnly}
+                              onChange={(newPriority) => {
+                                handleUpdateTask({ ...t, priority: newPriority });
+                              }}
+                            />
+                            {t.isRecurring && (
+                              <span
+                                className="font-mono text-[9px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1.5 py-0.5 rounded-[4px] inline-flex items-center gap-1"
+                                title={formatRecurrenceLabel(t.recurrenceRule)}
+                              >
+                                <Repeat className="w-2.5 h-2.5 text-orange-400" />
+                                <span>Recurring</span>
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-1.5">
                             {!isReadOnly && (
                               <svg

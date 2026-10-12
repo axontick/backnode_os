@@ -1,8 +1,11 @@
 import React, { useState, useMemo } from 'react';
+import { Repeat } from 'lucide-react';
 import { TaskItem, TaskStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { formatEstimationValue } from '../utils/taskSpaceSettingsUtils';
+import { PriorityDropdown } from './PriorityDropdown';
+import { formatRecurrenceLabel } from '../utils/recurrenceUtils';
 
 interface ListViewProps {
   tasks: TaskItem[];
@@ -29,7 +32,7 @@ export const ListView: React.FC<ListViewProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { statuses, listSettings } = useWorkspace();
+  const { statuses, listSettings, handleUpdateTask } = useWorkspace();
   const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
@@ -306,6 +309,16 @@ export const ListView: React.FC<ListViewProps> = ({
               {t.title}
             </span>
 
+            {t.isRecurring && (
+              <span
+                className="inline-flex items-center gap-1 font-mono text-[9px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1.5 py-0.5 rounded-[6px] shrink-0"
+                title={formatRecurrenceLabel(t.recurrenceRule)}
+              >
+                <Repeat className="w-2.5 h-2.5 text-orange-400" />
+                <span>Recurring</span>
+              </span>
+            )}
+
             {/* Subtask pill trigger */}
             {hasSubtasks && (
               <button
@@ -336,7 +349,15 @@ export const ListView: React.FC<ListViewProps> = ({
                 {formatEstimationValue(t.estimation, listSettings?.estimationUnit)}
               </span>
             )}
-            {getPriorityBadge(t.priority)}
+            <div onClick={(e) => e.stopPropagation()} className="w-16 flex justify-center">
+              <PriorityDropdown
+                priority={t.priority}
+                disabled={isReadOnly}
+                onChange={(newPriority) => {
+                  handleUpdateTask({ ...t, priority: newPriority });
+                }}
+              />
+            </div>
             <span className="w-16 text-center font-mono text-orange-400 font-semibold text-[11px]">
               {t.dueDate || 'Today'}
             </span>

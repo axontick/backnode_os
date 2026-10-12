@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { TaskItem, TaskStatus, PriorityLevel, TeamMember, CrmDeal, SpaceFolder } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 import { RecurringCadenceSelector, DynamicEntityLinker } from '../modules/shared';
+import { PriorityDropdown } from './PriorityDropdown';
 
 interface UniversalAddEditModalProps {
   isOpen: boolean;
@@ -37,6 +39,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
   activeSpace = '',
 }) => {
   const { user } = useAuth();
+  const { statuses } = useWorkspace();
 
   const isEditing = Boolean(taskToEdit || dealToEdit);
   const [modalType, setModalType] = useState<'task' | 'deal'>(initialType);
@@ -419,16 +422,11 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                     <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                       Priority Level
                     </label>
-                    <select
-                      value={priority}
-                      onChange={(e) => setPriority(e.target.value as PriorityLevel)}
-                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
-                    >
-                      <option value="Urgent">P0 - Urgent Blocker</option>
-                      <option value="High">P1 - High Priority</option>
-                      <option value="Normal">P2 - Normal</option>
-                      <option value="Low">P3 - Low</option>
-                    </select>
+                    <PriorityDropdown
+                      variant="card"
+                      priority={priority}
+                      onChange={(p) => setPriority(p)}
+                    />
                   </div>
                 </div>
 
@@ -466,9 +464,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                   <div className="space-y-1">
                     <RecurringCadenceSelector
                       isRecurring={isRecurring}
-                      cadence={recurrenceRule}
+                      rule={recurrenceRule}
+                      availableStatuses={statuses}
                       onToggle={setIsRecurring}
-                      onCadenceChange={setRecurrenceRule}
+                      onRuleChange={setRecurrenceRule}
                     />
                   </div>
                 </div>

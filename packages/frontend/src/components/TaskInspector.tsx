@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { formatDateDisplay, formatDateIso, parseTaskDueDate } from '../utils/dateUtils';
 import { CalendarPopover, RecurringCadenceSelector, DynamicEntityLinker } from '../modules/shared';
+import { PriorityDropdown } from './PriorityDropdown';
 
 interface TaskInspectorProps {
   task: TaskItem;
@@ -26,7 +27,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 }) => {
   const { user, effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { listSettings } = useWorkspace();
+  const { listSettings, statuses } = useWorkspace();
   const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const authorName = user?.name || 'Operator';
@@ -385,6 +386,19 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </div>
           </div>
 
+          {/* Priority Field */}
+          <div className="flex flex-col gap-1 relative">
+            <span className="font-mono text-[10px] text-zinc-400 font-medium">PRIORITY</span>
+            <PriorityDropdown
+              variant="card"
+              priority={task.priority}
+              disabled={isReadOnly}
+              onChange={(newPriority) => {
+                onUpdateTask({ ...task, priority: newPriority });
+              }}
+            />
+          </div>
+
           {/* Story Points Field (When Primary) */}
           {isPoints && (
             <div className="flex flex-col gap-1">
@@ -545,14 +559,16 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           <div className="col-span-2 pt-2 border-t border-[#27272a]">
             <RecurringCadenceSelector
               isRecurring={!!task.isRecurring}
-              cadence={task.recurrenceRule || 'weekly'}
+              rule={task.recurrenceRule}
+              availableStatuses={statuses}
+              readOnly={isReadOnly}
               onToggle={(isRecurring) => {
                 if (isReadOnly) return;
                 onUpdateTask({ ...task, isRecurring });
               }}
-              onCadenceChange={(cadence) => {
+              onRuleChange={(rule) => {
                 if (isReadOnly) return;
-                onUpdateTask({ ...task, isRecurring: true, recurrenceRule: cadence });
+                onUpdateTask({ ...task, isRecurring: true, recurrenceRule: rule });
               }}
             />
           </div>
