@@ -15,6 +15,8 @@ import { NewPipelineSubFolderModal } from '../components/NewPipelineSubFolderMod
 import { NewContactModal } from '../components/NewContactModal';
 import { NewWorkspaceModal } from '../components/NewWorkspaceModal';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
+import { SpaceImportModal } from '../components/SpaceImportModal';
+import { SpaceExportModal } from '../components/SpaceExportModal';
 import { CommandPalette } from '../components/CommandPalette';
 import { findFolderByListId } from '../utils/treeUtils';
 import { mapDefaultViewToSlug } from '../utils/taskSpaceSettingsUtils';
@@ -136,6 +138,12 @@ export const DashboardLayout: React.FC = () => {
     handleConfirmDeleteTask,
     isCommandPaletteOpen,
     setIsCommandPaletteOpen,
+    isSpaceImportModalOpen,
+    setIsSpaceImportModalOpen,
+    isSpaceExportModalOpen,
+    setIsSpaceExportModalOpen,
+    targetSpaceForImportExport,
+    targetListIdForExport,
     toastMessage,
   } = useWorkspace();
 
@@ -581,6 +589,25 @@ export const DashboardLayout: React.FC = () => {
         }}
         onConfirmDelete={handleConfirmDeleteTask}
       />
+
+      {/* Space Import Modal */}
+      {isSpaceImportModalOpen && (
+        <SpaceImportModal
+          isOpen={isSpaceImportModalOpen}
+          onClose={() => setIsSpaceImportModalOpen(false)}
+          defaultSpace={targetSpaceForImportExport}
+        />
+      )}
+
+      {/* Space Export Modal */}
+      {isSpaceExportModalOpen && (
+        <SpaceExportModal
+          isOpen={isSpaceExportModalOpen}
+          onClose={() => setIsSpaceExportModalOpen(false)}
+          defaultSpace={targetSpaceForImportExport}
+          defaultListId={targetListIdForExport}
+        />
+      )}
 
       {/* Command Palette */}
       <CommandPalette

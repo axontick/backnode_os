@@ -3,6 +3,8 @@ import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { SpaceFolder, FolderChildItem } from '../types';
 import { getAllItemsFromFolder } from '../utils/treeUtils';
+import { ActionContextMenu } from '../components/ActionContextMenu';
+import { MoveListModal } from '../components/MoveListModal';
 
 export const SpacePage: React.FC = () => {
   const { spaceId, folderId, subFolderId } = useParams<{ spaceId?: string; folderId?: string; subFolderId?: string }>();
@@ -22,10 +24,16 @@ export const SpacePage: React.FC = () => {
     handleUpdateListSettings,
     statuses,
     handleUpdateStatuses,
+    handleOpenSpaceImport,
+    handleOpenSpaceExport,
+    setItemToDelete,
   } = useWorkspace();
 
   const currentSpaceId = spaceId || activeUserSpaceId || userSpaces[0]?.id || 'space-main';
   const spacePrefix = `/space/${currentSpaceId}`;
+
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [listToMove, setListToMove] = useState<{ list: FolderChildItem; folderId: string; subFolderId?: string } | null>(null);
 
   // Find the target folder/space
   const targetFolderId = folderId || (spaceId && folders.some((f) => f.id === spaceId) ? spaceId : folders[0]?.id);
@@ -147,6 +155,24 @@ export const SpacePage: React.FC = () => {
 
           {/* Quick Actions */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleOpenSpaceImport(folder)}
+              className="px-3 py-1.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-[#27272a] hover:border-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Import tasks from CSV or JSON into this space"
+            >
+              <span className="material-symbols-outlined text-[16px] text-orange-400">upload_file</span>
+              <span>Import</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleOpenSpaceExport(folder)}
+              className="px-3 py-1.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-zinc-100 border border-[#27272a] hover:border-zinc-700 text-xs font-semibold transition-all flex items-center gap-1.5 cursor-pointer"
+              title="Export this space to JSON or CSV"
+            >
+              <span className="material-symbols-outlined text-[16px]">download</span>
+              <span>Export</span>
+            </button>
             <button
               type="button"
               onClick={() => handleOpenAddListToFolder(folder)}
@@ -323,9 +349,62 @@ export const SpacePage: React.FC = () => {
                               {item.name}
                             </span>
                           </div>
-                          <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                            {item.taskCount} tasks
-                          </span>
+                          <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
+                            <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono bg-zinc-800 text-zinc-400">
+                              {item.taskCount} tasks
+                            </span>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuId(activeMenuId === `card-list-${item.id}` ? null : `card-list-${item.id}`);
+                                }}
+                                aria-haspopup="menu"
+                                aria-expanded={activeMenuId === `card-list-${item.id}`}
+                                className={`w-6 h-6 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none cursor-pointer ${
+                                  activeMenuId === `card-list-${item.id}` ? 'opacity-100 text-orange-400 bg-zinc-800' : 'opacity-0 group-hover:opacity-100'
+                                }`}
+                                title="List actions"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">more_vert</span>
+                              </button>
+                              <ActionContextMenu
+                                isOpen={activeMenuId === `card-list-${item.id}`}
+                                onClose={() => setActiveMenuId(null)}
+                                items={[
+                                  {
+                                    label: 'List Settings',
+                                    icon: 'tune',
+                                    iconColor: 'text-orange-400',
+                                    onClick: () => {
+                                      navigate(
+                                        currentSubFolder
+                                          ? `${spacePrefix}/spaces/${folder.id}/folders/${currentSubFolder.id}/lists/${item.id}/settings`
+                                          : `${spacePrefix}/spaces/${folder.id}/lists/${item.id}/settings`
+                                      );
+                                    },
+                                  },
+                                  {
+                                    label: 'Move to Folder',
+                                    icon: 'drive_file_move',
+                                    iconColor: 'text-zinc-300',
+                                    onClick: () => {
+                                      setListToMove({ list: item, folderId: folder.id, subFolderId: currentSubFolder?.id });
+                                    },
+                                  },
+                                  {
+                                    label: 'Delete List',
+                                    icon: 'delete',
+                                    danger: true,
+                                    onClick: () => {
+                                      setItemToDelete({ type: 'list', item, folderId: folder.id });
+                                    },
+                                  },
+                                ]}
+                              />
+                            </div>
+                          </div>
                         </div>
                         <p className="text-[11px] text-zinc-400 mb-3">
                           Status: <span className="text-zinc-200 font-medium">{item.status || 'Active'}</span>
@@ -406,21 +485,72 @@ export const SpacePage: React.FC = () => {
                           {sub.items.map((subItem) => (
                             <div
                               key={subItem.id}
-                              onClick={() => navigate(`${spacePrefix}/spaces/${folder.id}/lists/${subItem.id}/board`)}
-                              className="flex items-center justify-between py-1.5 px-2 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-xs text-zinc-200 cursor-pointer transition-colors"
+                              className="flex items-center justify-between py-1 px-2 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-xs text-zinc-200 transition-colors group/subitem"
                             >
-                                <div className="flex items-center gap-2 truncate">
-                                  <span
-                                    className={`material-symbols-outlined text-[14px] shrink-0 ${subItem.color ? '' : 'text-zinc-500'}`}
-                                    style={subItem.color ? { color: subItem.color } : undefined}
+                              <div
+                                onClick={() => navigate(`${spacePrefix}/spaces/${folder.id}/folders/${sub.id}/lists/${subItem.id}/board`)}
+                                className="flex items-center gap-2 truncate flex-1 min-w-0 cursor-pointer"
+                              >
+                                <span
+                                  className={`material-symbols-outlined text-[14px] shrink-0 ${subItem.color ? '' : 'text-zinc-500'}`}
+                                  style={subItem.color ? { color: subItem.color } : undefined}
+                                >
+                                  {subItem.icon || 'checklist'}
+                                </span>
+                                <span className="truncate">{subItem.name}</span>
+                              </div>
+                              <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
+                                <span className="text-[10px] font-mono text-orange-400 font-semibold">
+                                  {subItem.taskCount} tasks
+                                </span>
+                                <div className="relative">
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setActiveMenuId(activeMenuId === `subcard-list-${subItem.id}` ? null : `subcard-list-${subItem.id}`);
+                                    }}
+                                    aria-haspopup="menu"
+                                    aria-expanded={activeMenuId === `subcard-list-${subItem.id}`}
+                                    className={`w-5 h-5 rounded-[6px] hover:bg-zinc-700 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none cursor-pointer ${
+                                      activeMenuId === `subcard-list-${subItem.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/subitem:opacity-100'
+                                    }`}
+                                    title="List actions"
                                   >
-                                    {subItem.icon || 'checklist'}
-                                  </span>
-                                  <span className="truncate">{subItem.name}</span>
+                                    <span className="material-symbols-outlined text-[14px]">more_vert</span>
+                                  </button>
+                                  <ActionContextMenu
+                                    isOpen={activeMenuId === `subcard-list-${subItem.id}`}
+                                    onClose={() => setActiveMenuId(null)}
+                                    items={[
+                                      {
+                                        label: 'List Settings',
+                                        icon: 'tune',
+                                        iconColor: 'text-orange-400',
+                                        onClick: () => {
+                                          navigate(`${spacePrefix}/spaces/${folder.id}/folders/${sub.id}/lists/${subItem.id}/settings`);
+                                        },
+                                      },
+                                      {
+                                        label: 'Move to Folder',
+                                        icon: 'drive_file_move',
+                                        iconColor: 'text-zinc-300',
+                                        onClick: () => {
+                                          setListToMove({ list: subItem, folderId: folder.id, subFolderId: sub.id });
+                                        },
+                                      },
+                                      {
+                                        label: 'Delete List',
+                                        icon: 'delete',
+                                        danger: true,
+                                        onClick: () => {
+                                          setItemToDelete({ type: 'list', item: subItem, folderId: folder.id });
+                                        },
+                                      },
+                                    ]}
+                                  />
                                 </div>
-                              <span className="text-[10px] font-mono text-orange-400 font-semibold">
-                                {subItem.taskCount} tasks
-                              </span>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -567,6 +697,16 @@ export const SpacePage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {listToMove && (
+        <MoveListModal
+          isOpen={!!listToMove}
+          onClose={() => setListToMove(null)}
+          list={listToMove.list}
+          currentFolderId={listToMove.folderId}
+          currentSubFolderId={listToMove.subFolderId}
+        />
+      )}
     </div>
   );
 };

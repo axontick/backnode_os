@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface TaskSpaceViewsBarProps {
   currentView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs';
@@ -35,6 +36,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   onOpenCreateTask,
 }) => {
   const { user, effectiveRole } = useAuth();
+  const { handleOpenSpaceImport, handleOpenSpaceExport, folders, activeSpace } = useWorkspace();
   const isReadOnly = effectiveRole === 'VIEWER';
   const userInitials = user?.name
     ? user.name
@@ -350,6 +352,33 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
               <span className="leading-none">Reset</span>
             </button>
           )}
+
+          {/* Import & Export Space / List */}
+          <button
+            type="button"
+            onClick={() => {
+              const parentFolder = folders.find((f) => f.items.some((i) => i.id === activeSpace)) || folders[0];
+              handleOpenSpaceImport(parentFolder);
+            }}
+            className="h-7 flex items-center gap-1 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 text-zinc-300 hover:text-zinc-100 text-[11px] transition-colors cursor-pointer"
+            title="Import tasks into this space"
+          >
+            <span className="material-symbols-outlined text-[14px] text-orange-400 leading-none shrink-0">upload_file</span>
+            <span className="leading-none">Import</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              const parentFolder = folders.find((f) => f.items.some((i) => i.id === activeSpace)) || folders[0];
+              handleOpenSpaceExport(parentFolder, activeSpace);
+            }}
+            className="h-7 flex items-center gap-1 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 text-zinc-300 hover:text-zinc-100 text-[11px] transition-colors cursor-pointer"
+            title="Export tasks in this space or list"
+          >
+            <span className="material-symbols-outlined text-[14px] text-zinc-400 leading-none shrink-0">download</span>
+            <span className="leading-none">Export</span>
+          </button>
 
           {!isReadOnly && onOpenCreateTask && (
             <button

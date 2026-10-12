@@ -3,6 +3,9 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { DocItem, DocClassification } from '../types';
 import { SecurityPolicy, SecurityUserContext } from '../utils/security';
+import { ActionContextMenu } from './ActionContextMenu';
+import { DocSettingsModal } from './DocSettingsModal';
+import { MoveDocModal } from './MoveDocModal';
 
 interface DocsCanvasViewProps {
   onNavigateToTasks?: () => void;
@@ -54,6 +57,9 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
   const [newDocClassification, setNewDocClassification] = useState<DocClassification>('Internal');
   const [newDocTag, setNewDocTag] = useState('');
   const [docToDelete, setDocToDelete] = useState<DocItem | null>(null);
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [docForSettings, setDocForSettings] = useState<DocItem | null>(null);
+  const [docToMove, setDocToMove] = useState<DocItem | null>(null);
 
   // Editable local buffers
   const [localTitle, setLocalTitle] = useState(activeDoc?.title || '');
@@ -395,19 +401,78 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
                   >
                     <div className="flex items-center justify-between gap-2">
                       <span
-                        className={`font-semibold text-xs truncate ${
+                        className={`font-semibold text-xs truncate flex-1 min-w-0 ${
                           isActive ? 'text-orange-400' : 'text-zinc-200 group-hover:text-zinc-100'
                         }`}
                       >
                         {doc.title || 'Untitled Document'}
                       </span>
-                      <span
-                        className={`px-1.5 py-0.2 rounded-[6px] font-mono text-[9px] border font-bold shrink-0 ${getClassificationColor(
-                          doc.classification
-                        )}`}
-                      >
-                        {doc.classification}
-                      </span>
+                      <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                        <span
+                          className={`px-1.5 py-0.2 rounded-[6px] font-mono text-[9px] border font-bold shrink-0 ${getClassificationColor(
+                            doc.classification
+                          )}`}
+                        >
+                          {doc.classification}
+                        </span>
+                        {!isReadOnly && (
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveMenuId(activeMenuId === `doc-${doc.id}` ? null : `doc-${doc.id}`);
+                              }}
+                              aria-haspopup="menu"
+                              aria-expanded={activeMenuId === `doc-${doc.id}`}
+                              className={`w-5 h-5 rounded-[6px] hover:bg-zinc-700 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none cursor-pointer ${
+                                activeMenuId === `doc-${doc.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
+                              }`}
+                              title="Document actions"
+                            >
+                              <span className="material-symbols-outlined text-[14px]">more_vert</span>
+                            </button>
+                            <ActionContextMenu
+                              isOpen={activeMenuId === `doc-${doc.id}`}
+                              onClose={() => setActiveMenuId(null)}
+                              items={[
+                                {
+                                  label: 'Doc Settings',
+                                  icon: 'tune',
+                                  iconColor: 'text-orange-400',
+                                  onClick: () => {
+                                    setDocForSettings(doc);
+                                  },
+                                },
+                                {
+                                  label: 'Move to Folder',
+                                  icon: 'drive_file_move',
+                                  iconColor: 'text-zinc-300',
+                                  onClick: () => {
+                                    setDocToMove(doc);
+                                  },
+                                },
+                                {
+                                  label: 'Duplicate Doc',
+                                  icon: 'content_copy',
+                                  iconColor: 'text-zinc-300',
+                                  onClick: () => {
+                                    handleDuplicateDoc(doc.id);
+                                  },
+                                },
+                                {
+                                  label: 'Delete Document',
+                                  icon: 'delete',
+                                  danger: true,
+                                  onClick: () => {
+                                    setDocToDelete(doc);
+                                  },
+                                },
+                              ]}
+                            />
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between text-[10px] text-zinc-500 font-mono">
@@ -639,6 +704,67 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
             >
               Delete
             </button>
+
+            {activeDoc && !isReadOnly && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveMenuId(activeMenuId === 'toolbar-doc-menu' ? null : 'toolbar-doc-menu');
+                  }}
+                  aria-haspopup="menu"
+                  aria-expanded={activeMenuId === 'toolbar-doc-menu'}
+                  className={`w-7 h-7 rounded-[6px] border border-[#27272a] bg-[#18181b] hover:bg-zinc-800 text-zinc-300 hover:text-orange-400 flex items-center justify-center transition-colors cursor-pointer ${
+                    activeMenuId === 'toolbar-doc-menu' ? 'text-orange-400 border-orange-500/50' : ''
+                  }`}
+                  title="Document options"
+                >
+                  <span className="material-symbols-outlined text-[16px]">more_vert</span>
+                </button>
+                <ActionContextMenu
+                  isOpen={activeMenuId === 'toolbar-doc-menu'}
+                  onClose={() => setActiveMenuId(null)}
+                  items={[
+                    {
+                      label: 'Doc Settings',
+                      icon: 'tune',
+                      iconColor: 'text-orange-400',
+                      onClick: () => {
+                        setDocForSettings(activeDoc);
+                      },
+                    },
+                    {
+                      label: 'Move to Folder',
+                      icon: 'drive_file_move',
+                      iconColor: 'text-zinc-300',
+                      onClick: () => {
+                        setDocToMove(activeDoc);
+                      },
+                    },
+                    {
+                      label: 'Duplicate Doc',
+                      icon: 'content_copy',
+                      iconColor: 'text-zinc-300',
+                      onClick: () => {
+                        handleDuplicateDoc(activeDoc.id);
+                      },
+                    },
+                    ...(canEditActiveDoc
+                      ? [
+                          {
+                            label: 'Delete Document',
+                            icon: 'delete',
+                            danger: true,
+                            onClick: () => {
+                              setDocToDelete(activeDoc);
+                            },
+                          },
+                        ]
+                      : []),
+                  ]}
+                />
+              </div>
+            )}
 
             <button
               type="button"
@@ -887,6 +1013,24 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Doc Settings Modal */}
+      {docForSettings && (
+        <DocSettingsModal
+          isOpen={!!docForSettings}
+          onClose={() => setDocForSettings(null)}
+          doc={docForSettings}
+        />
+      )}
+
+      {/* Move Doc Modal */}
+      {docToMove && (
+        <MoveDocModal
+          isOpen={!!docToMove}
+          onClose={() => setDocToMove(null)}
+          doc={docToMove}
+        />
       )}
     </div>
   );

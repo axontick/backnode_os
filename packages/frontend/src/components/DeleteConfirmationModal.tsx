@@ -1,13 +1,24 @@
 import React, { useEffect } from 'react';
-import { TaskItem, SpaceFolder, CrmPipeline, SpaceSubFolder, CrmPipelineSubFolder, CrmDeal } from '../types';
+import {
+  TaskItem,
+  SpaceFolder,
+  CrmPipeline,
+  SpaceSubFolder,
+  CrmPipelineSubFolder,
+  CrmDeal,
+  FolderChildItem,
+  DocItem,
+} from '../types';
 
 export type DeletionTarget =
   | { type: 'task'; item: TaskItem }
   | { type: 'deal'; item: CrmDeal }
   | { type: 'folder'; item: SpaceFolder }
-  | { type: 'pipeline'; item: CrmPipeline }
   | { type: 'subfolder'; item: SpaceSubFolder; folderId: string }
-  | { type: 'pipeline-subfolder'; item: CrmPipelineSubFolder; pipelineId: string };
+  | { type: 'list'; item: FolderChildItem; folderId?: string }
+  | { type: 'pipeline'; item: CrmPipeline }
+  | { type: 'pipeline-subfolder'; item: CrmPipelineSubFolder; pipelineId: string }
+  | { type: 'doc'; item: DocItem };
 
 export interface DeleteConfirmationModalProps {
   isOpen: boolean;
@@ -74,11 +85,13 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
               </span>
               <h2 id="delete-dialog-title" className="text-[17px] font-bold text-zinc-100 leading-tight font-headline">
                 {activeTarget.type === 'folder' && 'Delete Folder Permanently?'}
-                {activeTarget.type === 'pipeline' && 'Delete Pipeline Permanently?'}
                 {activeTarget.type === 'subfolder' && 'Delete Sub-folder Permanently?'}
+                {activeTarget.type === 'list' && 'Delete List Permanently?'}
+                {activeTarget.type === 'pipeline' && 'Delete Pipeline Permanently?'}
                 {activeTarget.type === 'pipeline-subfolder' && 'Delete Pipeline Sub-folder?'}
                 {activeTarget.type === 'deal' && 'Delete Opportunity Permanently?'}
                 {activeTarget.type === 'task' && 'Delete Deliverable Permanently?'}
+                {activeTarget.type === 'doc' && 'Delete Document Permanently?'}
               </h2>
             </div>
           </div>
@@ -137,6 +150,49 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
                 <span className="material-symbols-outlined text-[16px] text-amber-400 shrink-0">folder_off</span>
                 <div className="text-[12px] leading-tight">
                   Lists inside this sub-folder will be removed. Active view will reset if necessary.
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTarget.type === 'list' && (
+            <>
+              <div className="text-zinc-300 text-[13px] leading-relaxed">
+                Are you sure you want to delete deliverable list{' '}
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
+                  {activeTarget.item.name}
+                </span>
+                ? This will permanently remove the list and purge its{' '}
+                <span className="font-semibold text-zinc-100">{activeTarget.item.taskCount || 0} tasks</span>.
+              </div>
+
+              <div className="bg-amber-950/20 border border-amber-500/30 text-amber-300 text-xs px-3.5 py-2.5 rounded-[6px] flex items-center gap-2.5">
+                <span className="material-symbols-outlined text-[16px] text-amber-400 shrink-0">playlist_remove</span>
+                <div className="text-[12px] leading-tight">
+                  Tasks assigned to this list will be purged from active sprint execution views.
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTarget.type === 'doc' && (
+            <>
+              <div className="text-zinc-300 text-[13px] leading-relaxed">
+                Are you sure you want to delete document{' '}
+                <span className="font-semibold text-zinc-100 bg-[#18181b] px-1.5 py-0.5 rounded-[6px] border border-[#27272a] font-mono text-[12px]">
+                  {activeTarget.item.title || 'Untitled Document'}
+                </span>
+                ? This document will be permanently removed from this workspace.
+              </div>
+
+              <div className="bg-[#18181b] rounded-[6px] border border-[#27272a] p-3 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-zinc-400">
+                  <span className="text-zinc-500 font-mono text-[11px]">Security Clearance:</span>
+                  <span className="font-semibold text-orange-400 font-mono">{activeTarget.item.classification}</span>
+                </div>
+                <div className="flex items-center justify-between text-zinc-400">
+                  <span className="text-zinc-500 font-mono text-[11px]">Author:</span>
+                  <span className="text-zinc-200">{activeTarget.item.authorName}</span>
                 </div>
               </div>
             </>

@@ -7,6 +7,7 @@ import {
   Delete,
   Body,
   Param,
+  Query,
   UseGuards,
   Inject,
 } from '@nestjs/common';
@@ -79,6 +80,25 @@ export class WorkspaceController {
     @Param('id') id: string,
   ) {
     return this.workspaceService.deleteFolder(user.accountId, id);
+  }
+
+  // Space Import & Export
+  @Get('spaces/:id/export')
+  async exportSpace(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Query('listId') listId?: string,
+  ) {
+    return this.workspaceService.exportSpace(user.accountId, id, listId);
+  }
+
+  @Post('spaces/:id/import')
+  async importSpace(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+    @Body() payload: any,
+  ) {
+    return this.workspaceService.importSpace(user.accountId, id, payload);
   }
 
   // Status Definitions

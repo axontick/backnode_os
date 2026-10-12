@@ -26,7 +26,7 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
   onEditFolder,
   onDeleteFolder,
 }) => {
-  const { listSettings } = useWorkspace();
+  const { listSettings, handleOpenSpaceImport, handleOpenSpaceExport } = useWorkspace();
   const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
@@ -74,6 +74,26 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
 
           {/* Action Controls Cluster */}
           <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => handleOpenSpaceImport(folders[0])}
+              className="px-3.5 py-1.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-200 border border-[#27272a] hover:border-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              title="Import tasks from CSV or JSON"
+            >
+              <span className="material-symbols-outlined text-[16px] text-orange-400">upload_file</span>
+              <span>Import</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleOpenSpaceExport(folders[0])}
+              className="px-3.5 py-1.5 rounded-[6px] bg-[#18181b] hover:bg-zinc-800 text-zinc-200 border border-[#27272a] hover:border-zinc-700 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+              title="Export tasks from space"
+            >
+              <span className="material-symbols-outlined text-[16px]">download</span>
+              <span>Export</span>
+            </button>
+
             <button
               type="button"
               onClick={onOpenAddFolder}

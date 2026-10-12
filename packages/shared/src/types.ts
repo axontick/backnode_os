@@ -289,6 +289,8 @@ export interface TaskItem {
     company?: string;
   };
   customLinks?: Record<string, any>;
+  dependencies?: string[];
+  externalId?: string;
   activity: ActivityEvent[];
   accountId?: string;
 }
@@ -1061,5 +1063,107 @@ export interface ExplicitPermissionCategory {
   category: string;
   module: string;
   permissions: ExplicitPermissionDefinition[];
+}
+
+// ==========================================
+// Space Import & Export System Types
+// ==========================================
+
+export interface SpaceExportMetadata {
+  version: string;
+  exportedAt: string;
+  spaceId: string;
+  spaceName: string;
+  spaceColor?: string;
+  spaceIcon?: string;
+  spaceDescription?: string;
+  totalTasks: number;
+  totalLists: number;
+}
+
+export interface SpaceExportPayload {
+  metadata: SpaceExportMetadata;
+  space: SpaceFolder;
+  statuses: StatusDefinition[];
+  listSettings?: ListSettings;
+  tasks: TaskItem[];
+}
+
+export type InternalFieldTarget =
+  | 'title'
+  | 'id'
+  | 'targetCycle'
+  | 'status'
+  | 'priority'
+  | 'assignee'
+  | 'description'
+  | 'dueDate'
+  | 'tags'
+  | 'estimationPoints'
+  | 'estimationHours'
+  | 'dependencies'
+  | 'subtasks'
+  | 'gitBranch'
+  | 'customField'
+  | 'ignore';
+
+export interface FieldMapping {
+  sourceColumn: string;
+  targetField: InternalFieldTarget;
+  customFieldName?: string;
+  sampleValues: string[];
+}
+
+export interface StatusMapping {
+  sourceStatus: string;
+  targetStatus: string;
+  isNewStatus?: boolean;
+  color?: string;
+  taskCount: number;
+}
+
+export interface ListResolutionConfig {
+  unspecifiedListAction: 'map_to_existing' | 'create_new';
+  unspecifiedListTargetListId?: string;
+  unspecifiedNewListName?: string;
+  listMappings: Record<
+    string,
+    {
+      action: 'create_new' | 'map_to_existing';
+      targetListId?: string;
+      newListName?: string;
+      taskCount: number;
+    }
+  >;
+}
+
+export interface ImportPreviewItem {
+  rawIndex: number;
+  sourceId?: string;
+  internalId: string;
+  title: string;
+  targetListName: string;
+  targetListId: string;
+  isNewList: boolean;
+  status: string;
+  priority: string;
+  assigneeName?: string;
+  dependencies: string[];
+  rawDependencies: string[];
+  unresolvedDependencies: string[];
+  customFields: Record<string, any>;
+  errors: string[];
+  warnings: string[];
+}
+
+export interface ImportExecutionResult {
+  success: boolean;
+  totalImported: number;
+  listsCreated: { id: string; name: string }[];
+  statusesCreated: string[];
+  dependenciesRemappedCount: number;
+  idMappingTable: Record<string, string>;
+  tasks: TaskItem[];
+  errors?: string[];
 }
 

@@ -37,6 +37,8 @@ export class WorkspaceService {
     private readonly memberRepo: Repository<TeamMember>,
     @InjectRepository(Department)
     private readonly departmentRepo: Repository<Department>,
+    @InjectRepository(TaskItem)
+    private readonly taskRepo: Repository<TaskItem>,
     @InjectDataSource()
     private readonly dataSource: DataSource,
   ) { }
@@ -339,6 +341,172 @@ export class WorkspaceService {
     await this.folderRepo.remove(folder);
     return { id };
   }
+
+  // Space Import & Export
+  async exportSpace(accountId: string, spaceId: string, filterListId?: string) {
+    const space = await this.folderRepo.findOne({ where: { id: spaceId, accountId } });
+    if (!space) {
+      throw new NotFoundException(`Space Folder ${spaceId} not found in this account`);
+    }
+
+    const statuses = await this.getStatuses(accountId);
+    const listSettings = await this.getListSettings(accountId);
+
+    // Collect child list names and IDs
+    const childListNames = new Set<string>();
+    const childListIds = new Set<string>();
+
+    const collectListItems = (items: any[]) => {
+      if (Array.isArray(items)) {
+        items.forEach((item) => {
+          if (item?.id) childListIds.add(String(item.id).toLowerCase());
+          if (item?.name) childListNames.add(String(item.name).toLowerCase());
+        });
+      }
+    };
+
+    collectListItems(space.items);
+    if (Array.isArray(space.subFolders)) {
+      space.subFolders.forEach((sf: any) => {
+        collectListItems(sf.items);
+      });
+    }
+
+    const allTasks = await this.taskRepo.find({
+      where: { accountId },
+      relations: { assignee: true },
+      order: { createdAt: 'ASC' },
+    });
+
+    let matchedTasks = allTasks.filter((t) => {
+      const tc = (t.targetCycle || '').toLowerCase();
+      return childListNames.has(tc) || childListIds.has(tc) || tc.includes(space.name.toLowerCase());
+    });
+
+    if (filterListId) {
+      matchedTasks = matchedTasks.filter((t) => {
+        const tc = (t.targetCycle || '').toLowerCase();
+        return tc === filterListId.toLowerCase();
+      });
+    }
+
+    return {
+      metadata: {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        spaceId: space.id,
+        spaceName: space.name,
+        spaceColor: space.color,
+        spaceIcon: space.icon,
+        spaceDescription: space.description,
+        totalTasks: matchedTasks.length,
+        totalLists: filterListId ? 1 : (space.items?.length || 0),
+      },
+      space,
+      statuses,
+      listSettings,
+      tasks: matchedTasks,
+    };
+  }
+
+  async importSpace(accountId: string, spaceId: string, payload: {
+    tasks: any[];
+    newLists?: { id: string; name: string }[];
+    newStatuses?: any[];
+  }) {
+    const space = await this.folderRepo.findOne({ where: { id: spaceId, accountId } });
+    if (!space) {
+      throw new NotFoundException(`Space Folder ${spaceId} not found in this account`);
+    }
+
+    // 1. Create any new lists if specified
+    if (Array.isArray(payload.newLists) && payload.newLists.length > 0) {
+      const currentItems = Array.isArray(space.items) ? [...space.items] : [];
+      payload.newLists.forEach((nl) => {
+        const exists = currentItems.some(
+          (item) => item.id === nl.id || item.name.toLowerCase() === nl.name.toLowerCase()
+        );
+        if (!exists) {
+          currentItems.push({
+            id: nl.id,
+            name: nl.name,
+            taskCount: 0,
+            status: 'Active',
+            active: true,
+            icon: 'folder',
+            color: '#ea580c',
+          });
+        }
+      });
+      space.items = currentItems;
+      await this.folderRepo.save(space);
+    }
+
+    // 2. Create any new statuses if specified
+    if (Array.isArray(payload.newStatuses) && payload.newStatuses.length > 0) {
+      const existingStatuses = await this.getStatuses(accountId);
+      let highestOrder = existingStatuses.reduce((max, s) => Math.max(max, s.order || 0), 0);
+
+      for (const ns of payload.newStatuses) {
+        const exists = existingStatuses.some(
+          (s) => s.name.toLowerCase() === (ns.name || ns).toLowerCase()
+        );
+        if (!exists) {
+          highestOrder++;
+          const statusName = typeof ns === 'string' ? ns : ns.name;
+          await this.statusRepo.save({
+            id: `status-${Date.now()}-${highestOrder}`,
+            order: highestOrder,
+            name: statusName,
+            description: ns.description || 'Imported status',
+            color: ns.color || '#ea580c',
+            stageMapping: ns.stageMapping || '',
+            activeVolume: 0,
+            isDefault: false,
+            isClosed: Boolean(ns.isClosed),
+            accountId,
+          });
+        }
+      }
+    }
+
+    // 3. Save tasks
+    const savedTasks: TaskItem[] = [];
+    if (Array.isArray(payload.tasks) && payload.tasks.length > 0) {
+      for (const t of payload.tasks) {
+        const taskEntity = this.taskRepo.create({
+          ...t,
+          accountId,
+          assigneeId: t.assigneeId || (t.assignee ? t.assignee.id : null),
+        });
+        const saved = await this.taskRepo.save(taskEntity as any);
+        savedTasks.push(saved as TaskItem);
+      }
+    }
+
+    // 4. Update list task counts on space
+    if (Array.isArray(space.items)) {
+      const updatedItems = space.items.map((item: any) => {
+        const count = savedTasks.filter(
+          (st) => st.targetCycle === item.name || st.targetCycle === item.id
+        ).length;
+        return {
+          ...item,
+          taskCount: (item.taskCount || 0) + count,
+        };
+      });
+      space.items = updatedItems;
+      await this.folderRepo.save(space);
+    }
+
+    return {
+      success: true,
+      totalImported: savedTasks.length,
+      space,
+      tasks: savedTasks,
+    };
+  }
+
 
   // Status Definitions
   async getStatuses(accountId: string) {

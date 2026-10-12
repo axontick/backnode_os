@@ -65,6 +65,8 @@ import {
   flattenPipelineSubFolders,
   updateListItemInSubFoldersRecursively,
   deleteListItemFromSubFoldersRecursively,
+  moveListToFolder,
+  movePipelineSubFolder,
 } from '../utils/treeUtils';
 
 interface WorkspaceContextType {
@@ -183,6 +185,18 @@ interface WorkspaceContextType {
   toastMessage: string | null;
   showToast: (msg: string) => void;
 
+  // Space Import & Export
+  isSpaceImportModalOpen: boolean;
+  setIsSpaceImportModalOpen: (open: boolean) => void;
+  isSpaceExportModalOpen: boolean;
+  setIsSpaceExportModalOpen: (open: boolean) => void;
+  targetSpaceForImportExport: SpaceFolder | null;
+  setTargetSpaceForImportExport: (space: SpaceFolder | null) => void;
+  targetListIdForExport: string | null;
+  setTargetListIdForExport: (listId: string | null) => void;
+  handleOpenSpaceImport: (space?: SpaceFolder) => void;
+  handleOpenSpaceExport: (space?: SpaceFolder, listId?: string) => void;
+
   // Inspector & Modal Targets
   folderToEdit: SpaceFolder | null;
   setFolderToEdit: (folder: SpaceFolder | null) => void;
@@ -261,6 +275,9 @@ interface WorkspaceContextType {
   handleCreateDocFolder: (data: Partial<DocFolder>) => Promise<DocFolder>;
   handleUpdateDocFolder: (id: string, data: Partial<DocFolder>) => Promise<DocFolder>;
   handleDeleteDocFolder: (id: string) => Promise<void>;
+  handleMoveListToFolder: (listId: string, targetFolderId: string, targetSubFolderId?: string) => Promise<boolean>;
+  handleMovePipelineSubFolder: (subFolderId: string, targetPipelineId: string, targetParentSubFolderId?: string) => Promise<boolean>;
+  handleMoveDocToFolder: (docId: string, targetFolderId: string | null) => Promise<boolean>;
 
   // Plugins System
   enabledPlugins: Record<string, boolean>;
@@ -489,6 +506,23 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [newItemDefaultStatus, setNewItemDefaultStatus] = useState<TaskStatus>('Backlog');
   const [newItemDefaultDealStage, setNewItemDefaultDealStage] = useState<CrmDeal['stage']>('Proposal Submitted');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Space Import & Export state
+  const [isSpaceImportModalOpen, setIsSpaceImportModalOpen] = useState(false);
+  const [isSpaceExportModalOpen, setIsSpaceExportModalOpen] = useState(false);
+  const [targetSpaceForImportExport, setTargetSpaceForImportExport] = useState<SpaceFolder | null>(null);
+  const [targetListIdForExport, setTargetListIdForExport] = useState<string | null>(null);
+
+  const handleOpenSpaceImport = (space?: SpaceFolder) => {
+    setTargetSpaceForImportExport(space || folders[0] || null);
+    setIsSpaceImportModalOpen(true);
+  };
+
+  const handleOpenSpaceExport = (space?: SpaceFolder, listId?: string) => {
+    setTargetSpaceForImportExport(space || folders[0] || null);
+    setTargetListIdForExport(listId || null);
+    setIsSpaceExportModalOpen(true);
+  };
 
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -2126,6 +2160,26 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     showToast(`Task space "${deletedItemName || listId}" deleted`);
   };
 
+  const handleMoveListToFolder = async (
+    listId: string,
+    targetFolderId: string,
+    targetSubFolderId?: string
+  ): Promise<boolean> => {
+    const res = moveListToFolder(folders, listId, targetFolderId, targetSubFolderId);
+    if (!res.success) {
+      showToast('Failed to move list to destination folder');
+      return false;
+    }
+    setFolders(res.updatedFolders);
+    for (const f of res.updatedFolders) {
+      workspaceApi.updateFolder(f.id, f).catch((err) => {
+        console.error(`Failed to update folder ${f.id} after move:`, err);
+      });
+    }
+    showToast(`List "${res.movedItem?.name || listId}" moved to "${res.targetName || targetFolderId}"`);
+    return true;
+  };
+
   const handleCreateSubFolder = (folderId: string, newSubFolder: SpaceSubFolder) => {
     const target = folders.find((f) => f.id === folderId);
     if (!target) return;
@@ -2324,6 +2378,26 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     showToast('Pipeline sub-folder deleted');
   };
 
+  const handleMovePipelineSubFolder = async (
+    subFolderId: string,
+    targetPipelineId: string,
+    targetParentSubFolderId?: string
+  ): Promise<boolean> => {
+    const res = movePipelineSubFolder(pipelines, subFolderId, targetPipelineId, targetParentSubFolderId);
+    if (!res.success) {
+      showToast('Failed to move pipeline sub-folder');
+      return false;
+    }
+    setPipelines(res.updatedPipelines);
+    for (const p of res.updatedPipelines) {
+      pipelinesApi.update(p.id, p).catch((err) => {
+        console.error(`Failed to update pipeline ${p.id} after move:`, err);
+      });
+    }
+    showToast(`Sub-folder "${res.movedSubFolder?.name || subFolderId}" moved to "${res.targetName || targetPipelineId}"`);
+    return true;
+  };
+
   const handleConfirmDeleteItem = () => {
     if (!itemToDelete?.item?.id) return;
     if (itemToDelete.type === 'task') {
@@ -2352,6 +2426,10 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       if (rootPipe) {
         handleDeletePipelineSubFolder(rootPipe.id, itemToDelete.item.id);
       }
+    } else if (itemToDelete.type === 'list') {
+      handleDeleteTaskSpace(itemToDelete.item.id);
+    } else if (itemToDelete.type === 'doc') {
+      handleDeleteDoc(itemToDelete.item.id);
     }
     setItemToDelete(null);
   };
@@ -2511,6 +2589,21 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     showToast('Folder deleted');
   };
 
+  const handleMoveDocToFolder = async (
+    docId: string,
+    targetFolderId: string | null
+  ): Promise<boolean> => {
+    try {
+      await handleUpdateDoc(docId, { folderId: targetFolderId || undefined });
+      const targetFolder = docFolders.find((f) => f.id === targetFolderId);
+      showToast(`Document moved to ${targetFolder ? `"${targetFolder.name}"` : 'All Workspace Docs'}`);
+      return true;
+    } catch (err) {
+      showToast('Failed to move document');
+      return false;
+    }
+  };
+
   const handleTogglePlugin = async (pluginId: string, enabled: boolean) => {
     try {
       const res = await pluginsApi.togglePlugin(pluginId, enabled);
@@ -2646,6 +2739,16 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setNewItemDefaultDealStage,
         toastMessage,
         showToast,
+        isSpaceImportModalOpen,
+        setIsSpaceImportModalOpen,
+        isSpaceExportModalOpen,
+        setIsSpaceExportModalOpen,
+        targetSpaceForImportExport,
+        setTargetSpaceForImportExport,
+        targetListIdForExport,
+        setTargetListIdForExport,
+        handleOpenSpaceImport,
+        handleOpenSpaceExport,
         filteredTasks,
         filteredDeals,
         selectedTask,
@@ -2707,6 +2810,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleCreateDocFolder,
         handleUpdateDocFolder,
         handleDeleteDocFolder,
+        handleMoveListToFolder,
+        handleMovePipelineSubFolder,
+        handleMoveDocToFolder,
         enabledPlugins,
         isPluginEnabled,
         handleTogglePlugin,

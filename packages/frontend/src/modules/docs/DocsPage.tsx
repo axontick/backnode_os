@@ -16,6 +16,9 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { DocsCanvasView } from '../../components/DocsCanvasView';
+import { ActionContextMenu } from '../../components/ActionContextMenu';
+import { DocSettingsModal } from '../../components/DocSettingsModal';
+import { MoveDocModal } from '../../components/MoveDocModal';
 
 export const DocsPage: React.FC = () => {
   const {
@@ -23,6 +26,7 @@ export const DocsPage: React.FC = () => {
     activeDocId,
     setActiveDocId,
     handleCreateDoc,
+    handleDeleteDoc,
     docFolders = [],
     handleCreateDocFolder,
     handleUpdateDocFolder,
@@ -36,6 +40,9 @@ export const DocsPage: React.FC = () => {
   const [selectedFolderId, setSelectedFolderId] = useState<string | null>(null);
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({});
   const [folderSearchQuery, setFolderSearchQuery] = useState('');
+  const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
+  const [docForSettings, setDocForSettings] = useState<DocItem | null>(null);
+  const [docToMove, setDocToMove] = useState<DocItem | null>(null);
 
   // Modals for folder creation / rename
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
@@ -250,43 +257,199 @@ export const DocsPage: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Subfolders */}
-                {isExpanded && subFolders.length > 0 && (
-                  <div className="pl-6 space-y-0.5 border-l border-[#27272a] ml-3.5 mt-0.5">
+                {/* Subfolders & Direct Docs */}
+                {isExpanded && (
+                  <div className="pl-4 space-y-0.5 border-l border-[#27272a] ml-3.5 mt-0.5">
                     {subFolders.map((sub) => {
                       const isSubSelected = selectedFolderId === sub.id;
-                      const subDocCount = docs.filter((d) => d.folderId === sub.id).length;
+                      const subDocs = docs.filter((d) => d.folderId === sub.id);
+                      const isSubExpanded = !!expandedFolderIds[sub.id];
+
                       return (
-                        <div
-                          key={sub.id}
-                          onClick={() => setSelectedFolderId(sub.id)}
-                          className={`group flex items-center justify-between px-2 py-1 rounded-[6px] text-xs cursor-pointer transition-colors ${
-                            isSubSelected
-                              ? 'bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30'
-                              : 'text-zinc-400 hover:bg-[#18181b] hover:text-zinc-200'
-                          }`}
-                        >
-                          <div className="flex items-center gap-1.5 truncate">
-                            <Folder className="w-3 h-3 text-orange-400/70" />
-                            <span className="truncate">{sub.name}</span>
+                        <div key={sub.id} className="space-y-0.5">
+                          <div
+                            onClick={() => setSelectedFolderId(sub.id)}
+                            className={`group/sub flex items-center justify-between px-2 py-1 rounded-[6px] text-xs cursor-pointer transition-colors ${
+                              isSubSelected
+                                ? 'bg-orange-950/40 text-orange-400 font-semibold border border-orange-500/30'
+                                : 'text-zinc-400 hover:bg-[#18181b] hover:text-zinc-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                              {subDocs.length > 0 ? (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    toggleFolderExpand(sub.id);
+                                  }}
+                                  className="p-0.5 hover:text-orange-400"
+                                >
+                                  {isSubExpanded ? (
+                                    <ChevronDown className="w-3 h-3 text-zinc-400" />
+                                  ) : (
+                                    <ChevronRight className="w-3 h-3 text-zinc-400" />
+                                  )}
+                                </button>
+                              ) : (
+                                <span className="w-3" />
+                              )}
+                              <Folder className="w-3 h-3 text-orange-400/70 shrink-0" />
+                              <span className="truncate">{sub.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1 opacity-0 group-hover/sub:opacity-100 transition-opacity">
+                              {!isReadOnly && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => handleDeleteFolder(sub.id, e)}
+                                  className="p-0.5 rounded text-zinc-400 hover:text-red-400 cursor-pointer"
+                                  title="Delete Folder"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                              <span className="font-mono text-[10px] text-zinc-500">
+                                {subDocs.length}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                            {!isReadOnly && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleDeleteFolder(sub.id, e)}
-                                className="p-0.5 rounded text-zinc-400 hover:text-red-400"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            )}
-                            <span className="font-mono text-[10px] text-zinc-500">
-                              {subDocCount}
-                            </span>
-                          </div>
+
+                          {/* Subfolder Docs */}
+                          {isSubExpanded && subDocs.length > 0 && (
+                            <div className="pl-4 space-y-0.5 border-l border-[#27272a] ml-3 mt-0.5">
+                              {subDocs.map((doc) => {
+                                const isDocActive = activeDocId === doc.id;
+                                return (
+                                  <div
+                                    key={doc.id}
+                                    onClick={() => setActiveDocId(doc.id)}
+                                    className={`group/doc flex items-center justify-between px-2 py-1 rounded-[6px] text-[11px] cursor-pointer transition-colors ${
+                                      isDocActive
+                                        ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                        : 'text-zinc-400 hover:bg-[#18181b] hover:text-zinc-200'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                                      <FileText className="w-3 h-3 text-zinc-500 shrink-0" />
+                                      <span className="truncate">{doc.title || 'Untitled Document'}</span>
+                                    </div>
+                                    {!isReadOnly && (
+                                      <div className="relative shrink-0 flex items-center">
+                                        <button
+                                          type="button"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setActiveMenuId(activeMenuId === `doc-tree-${doc.id}` ? null : `doc-tree-${doc.id}`);
+                                          }}
+                                          aria-haspopup="menu"
+                                          aria-expanded={activeMenuId === `doc-tree-${doc.id}`}
+                                          className={`p-0.5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all ${
+                                            activeMenuId === `doc-tree-${doc.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/doc:opacity-100'
+                                          }`}
+                                          title="Document actions"
+                                        >
+                                          <MoreVertical className="w-3 h-3" />
+                                        </button>
+                                        <ActionContextMenu
+                                          isOpen={activeMenuId === `doc-tree-${doc.id}`}
+                                          onClose={() => setActiveMenuId(null)}
+                                          items={[
+                                            {
+                                              label: 'Doc Settings',
+                                              icon: 'tune',
+                                              iconColor: 'text-orange-400',
+                                              onClick: () => setDocForSettings(doc),
+                                            },
+                                            {
+                                              label: 'Move to Folder',
+                                              icon: 'drive_file_move',
+                                              iconColor: 'text-zinc-300',
+                                              onClick: () => setDocToMove(doc),
+                                            },
+                                            {
+                                              label: 'Delete Document',
+                                              icon: 'delete',
+                                              danger: true,
+                                              onClick: () => handleDeleteDoc(doc.id),
+                                            },
+                                          ]}
+                                        />
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
+
+                    {/* Direct Docs under Root Folder */}
+                    {docs
+                      .filter((d) => d.folderId === folder.id)
+                      .map((doc) => {
+                        const isDocActive = activeDocId === doc.id;
+                        return (
+                          <div
+                            key={doc.id}
+                            onClick={() => setActiveDocId(doc.id)}
+                            className={`group/doc flex items-center justify-between px-2 py-1 rounded-[6px] text-[11px] cursor-pointer transition-colors ${
+                              isDocActive
+                                ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
+                                : 'text-zinc-400 hover:bg-[#18181b] hover:text-zinc-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+                              <FileText className="w-3 h-3 text-zinc-500 shrink-0" />
+                              <span className="truncate">{doc.title || 'Untitled Document'}</span>
+                            </div>
+                            {!isReadOnly && (
+                              <div className="relative shrink-0 flex items-center">
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveMenuId(activeMenuId === `doc-tree-${doc.id}` ? null : `doc-tree-${doc.id}`);
+                                  }}
+                                  aria-haspopup="menu"
+                                  aria-expanded={activeMenuId === `doc-tree-${doc.id}`}
+                                  className={`p-0.5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all ${
+                                    activeMenuId === `doc-tree-${doc.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/doc:opacity-100'
+                                  }`}
+                                  title="Document actions"
+                                >
+                                  <MoreVertical className="w-3 h-3" />
+                                </button>
+                                <ActionContextMenu
+                                  isOpen={activeMenuId === `doc-tree-${doc.id}`}
+                                  onClose={() => setActiveMenuId(null)}
+                                  items={[
+                                    {
+                                      label: 'Doc Settings',
+                                      icon: 'tune',
+                                      iconColor: 'text-orange-400',
+                                      onClick: () => setDocForSettings(doc),
+                                    },
+                                    {
+                                      label: 'Move to Folder',
+                                      icon: 'drive_file_move',
+                                      iconColor: 'text-zinc-300',
+                                      onClick: () => setDocToMove(doc),
+                                    },
+                                    {
+                                      label: 'Delete Document',
+                                      icon: 'delete',
+                                      danger: true,
+                                      onClick: () => handleDeleteDoc(doc.id),
+                                    },
+                                  ]}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
                   </div>
                 )}
               </div>
@@ -373,6 +536,24 @@ export const DocsPage: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Doc Settings Modal */}
+      {docForSettings && (
+        <DocSettingsModal
+          isOpen={!!docForSettings}
+          onClose={() => setDocForSettings(null)}
+          doc={docForSettings}
+        />
+      )}
+
+      {/* Move Doc Modal */}
+      {docToMove && (
+        <MoveDocModal
+          isOpen={!!docToMove}
+          onClose={() => setDocToMove(null)}
+          doc={docToMove}
+        />
       )}
     </div>
   );

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { SpaceFolder, SpaceSubFolder, CrmPipeline, CrmPipelineSubFolder } from '../types';
+import { SpaceFolder, SpaceSubFolder, CrmPipeline, CrmPipelineSubFolder, FolderChildItem } from '../types';
 import { ActionContextMenu } from './ActionContextMenu';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { SecurityPolicy } from '../utils/security';
+import { MoveListModal } from './MoveListModal';
+import { MovePipelineSubFolderModal } from './MovePipelineSubFolderModal';
 
 export interface InnerSidebarProps {
   currentHub: string;
@@ -57,6 +59,8 @@ interface RecursiveSubFolderNodeProps {
   onOpenAddSubFolder?: (folder: SpaceFolder, parentSubFolderId?: string) => void;
   onEditSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
   onDeleteSubFolder?: (folder: SpaceFolder, subFolder: SpaceSubFolder) => void;
+  onOpenMoveList?: (list: FolderChildItem, folderId: string, subFolderId?: string) => void;
+  onDeleteList?: (list: FolderChildItem, folderId: string) => void;
   activeMenuId: string | null;
   setActiveMenuId: (id: string | null) => void;
   filterText: string;
@@ -76,6 +80,8 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
   onOpenAddSubFolder,
   onEditSubFolder,
   onDeleteSubFolder,
+  onOpenMoveList,
+  onDeleteList,
   activeMenuId,
   setActiveMenuId,
   filterText,
@@ -215,37 +221,93 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                 const spaceColor = (subItem as any).color || (isMatchingListSettings && listSettings?.color ? listSettings.color : null);
 
                 return (
-                  <button
+                  <div
                     key={subItem.id}
-                    type="button"
-                    onClick={() => onSelectSpace?.(subItem.id)}
-                    className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer group ${
+                    className={`flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all group/item ${
                       isActive
                         ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                         : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                     }`}
                   >
-                    <div className="flex items-center gap-1.5 truncate">
+                    <button
+                      type="button"
+                      onClick={() => onSelectSpace?.(subItem.id)}
+                      className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left cursor-pointer"
+                    >
                       <span
                         className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${
-                          spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300')
+                          spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover/item:text-zinc-300')
                         }`}
                         style={spaceColor ? { color: spaceColor } : undefined}
                       >
                         {spaceIcon}
                       </span>
                       <span className="truncate">{subItem.name}</span>
+                    </button>
+
+                    <div className="flex items-center gap-1 shrink-0 ml-1.5">
+                      <span
+                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 font-semibold ${
+                          isActive
+                            ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
+                            : 'bg-zinc-800/80 text-zinc-400'
+                        }`}
+                      >
+                        {subItem.taskCount}
+                      </span>
+
+                      {!isReadOnly && (
+                        <div className="relative shrink-0 flex items-center">
+                          <button
+                            type="button"
+                            onMouseDown={(e) => e.stopPropagation()}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setActiveMenuId(activeMenuId === `sublist-${subItem.id}` ? null : `sublist-${subItem.id}`);
+                            }}
+                            aria-haspopup="menu"
+                            aria-expanded={activeMenuId === `sublist-${subItem.id}`}
+                            className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                              activeMenuId === `sublist-${subItem.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/item:opacity-100'
+                            }`}
+                            title="List actions"
+                          >
+                            <span className="material-symbols-outlined text-[14px]">more_vert</span>
+                          </button>
+                          <ActionContextMenu
+                            isOpen={activeMenuId === `sublist-${subItem.id}`}
+                            onClose={() => setActiveMenuId(null)}
+                            items={[
+                              {
+                                label: 'List Settings',
+                                icon: 'tune',
+                                iconColor: 'text-orange-400',
+                                onClick: () => {
+                                  navigate(`${spacePrefix}/spaces/${folder.id}/folders/${subFolder.id}/lists/${subItem.id}/settings`);
+                                },
+                              },
+                              {
+                                label: 'Move to Folder',
+                                icon: 'drive_file_move',
+                                iconColor: 'text-zinc-300',
+                                onClick: () => {
+                                  onOpenMoveList?.(subItem, folder.id, subFolder.id);
+                                },
+                              },
+                              {
+                                label: 'Delete List',
+                                icon: 'delete',
+                                danger: true,
+                                onClick: () => {
+                                  onDeleteList?.(subItem, folder.id);
+                                },
+                              },
+                            ]}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <span
-                      className={`text-[9px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 ml-1 font-semibold ${
-                        isActive
-                          ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
-                          : 'bg-zinc-800/80 text-zinc-400'
-                      }`}
-                    >
-                      {subItem.taskCount}
-                    </span>
-                  </button>
+                  </div>
                 );
               })}
 
@@ -278,6 +340,8 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                   onOpenAddSubFolder={onOpenAddSubFolder}
                   onEditSubFolder={onEditSubFolder}
                   onDeleteSubFolder={onDeleteSubFolder}
+                  onOpenMoveList={onOpenMoveList}
+                  onDeleteList={onDeleteList}
                   activeMenuId={activeMenuId}
                   setActiveMenuId={setActiveMenuId}
                   filterText={filterText}
@@ -305,6 +369,7 @@ interface RecursivePipelineSubFolderNodeProps {
   onOpenAddPipelineSubFolder?: (pipeline: CrmPipeline, parentSubFolderId?: string) => void;
   onEditPipelineSubFolder?: (pipeline: CrmPipeline, subFolder: CrmPipelineSubFolder) => void;
   onDeletePipelineSubFolder?: (pipeline: CrmPipeline, subFolder: CrmPipelineSubFolder) => void;
+  onOpenMovePipelineSubFolder?: (subFolder: CrmPipelineSubFolder, pipelineId: string) => void;
   activeMenuId: string | null;
   setActiveMenuId: (id: string | null) => void;
   filterText: string;
@@ -322,6 +387,7 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
   onOpenAddPipelineSubFolder,
   onEditPipelineSubFolder,
   onDeletePipelineSubFolder,
+  onOpenMovePipelineSubFolder,
   activeMenuId,
   setActiveMenuId,
   filterText,
@@ -414,13 +480,45 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
                 <ActionContextMenu
                   isOpen={activeMenuId === `pipe-sub-${subFolder.id}`}
                   onClose={() => setActiveMenuId(null)}
-                  onEdit={() => onEditPipelineSubFolder?.(pipe, subFolder)}
-                  onDelete={() => onDeletePipelineSubFolder?.(pipe, subFolder)}
-                  onAddSubFolder={onOpenAddPipelineSubFolder ? () => onOpenAddPipelineSubFolder(pipe, subFolder.id) : undefined}
-                  addSubFolderLabel="Add Sub-folder"
-                  addSubFolderIcon="create_new_folder"
-                  editLabel="Edit Sub-folder"
-                  deleteLabel="Delete Sub-folder"
+                  items={[
+                    ...(onOpenAddPipelineSubFolder
+                      ? [
+                          {
+                            label: 'Add Sub-folder',
+                            icon: 'create_new_folder',
+                            iconColor: 'text-orange-400',
+                            onClick: () => onOpenAddPipelineSubFolder(pipe, subFolder.id),
+                          },
+                        ]
+                      : []),
+                    {
+                      label: 'Move to Pipeline',
+                      icon: 'drive_file_move',
+                      iconColor: 'text-zinc-300',
+                      onClick: () => {
+                        onOpenMovePipelineSubFolder?.(subFolder, pipe.id);
+                      },
+                    },
+                    ...(onEditPipelineSubFolder
+                      ? [
+                          {
+                            label: 'Edit Sub-folder',
+                            icon: 'edit',
+                            onClick: () => onEditPipelineSubFolder(pipe, subFolder),
+                          },
+                        ]
+                      : []),
+                    ...(onDeletePipelineSubFolder
+                      ? [
+                          {
+                            label: 'Delete Sub-folder',
+                            icon: 'delete',
+                            danger: true,
+                            onClick: () => onDeletePipelineSubFolder(pipe, subFolder),
+                          },
+                        ]
+                      : []),
+                  ]}
                 />
               </div>
             )}
@@ -455,6 +553,7 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
                 onOpenAddPipelineSubFolder={onOpenAddPipelineSubFolder}
                 onEditPipelineSubFolder={onEditPipelineSubFolder}
                 onDeletePipelineSubFolder={onDeletePipelineSubFolder}
+                onOpenMovePipelineSubFolder={onOpenMovePipelineSubFolder}
                 activeMenuId={activeMenuId}
                 setActiveMenuId={setActiveMenuId}
                 filterText={filterText}
@@ -506,12 +605,14 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const { effectiveRole } = useAuth();
-  const { listSettings, crmSettings, filteredDeals: deals } = useWorkspace();
+  const { listSettings, crmSettings, filteredDeals: deals, setItemToDelete } = useWorkspace();
   const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
   const { spaceId } = useParams<{ spaceId?: string }>();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
   const [filterText, setFilterText] = useState('');
+  const [listToMove, setListToMove] = useState<{ list: FolderChildItem; folderId: string; subFolderId?: string } | null>(null);
+  const [pipeSubFolderToMove, setPipeSubFolderToMove] = useState<{ subFolder: CrmPipelineSubFolder; pipelineId: string } | null>(null);
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
     'fld-engineering': true,
     'fld-client-deliverables': true,
@@ -846,37 +947,93 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                   const spaceColor = (subItem as any).color || (isMatchingListSettings && listSettings?.color ? listSettings.color : null);
 
                                   return (
-                                    <button
+                                    <div
                                       key={subItem.id}
-                                      type="button"
-                                      onClick={() => onSelectSpace?.(subItem.id)}
-                                      className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer group ${
+                                      className={`flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all group/item ${
                                         isActive
                                           ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                                           : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
                                       }`}
                                     >
-                                      <div className="flex items-center gap-1.5 truncate">
+                                      <button
+                                        type="button"
+                                        onClick={() => onSelectSpace?.(subItem.id)}
+                                        className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left cursor-pointer"
+                                      >
                                         <span
-                                          className={`material-symbols-outlined text-[14px] shrink-0 transition-colors ${
-                                            spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover:text-zinc-300')
+                                          className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${
+                                            spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover/item:text-zinc-300')
                                           }`}
                                           style={spaceColor ? { color: spaceColor } : undefined}
                                         >
                                           {spaceIcon}
                                         </span>
                                         <span className="truncate">{subItem.name}</span>
+                                      </button>
+
+                                      <div className="flex items-center gap-1 shrink-0 ml-1.5">
+                                        <span
+                                          className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 font-semibold ${
+                                            isActive
+                                              ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
+                                              : 'bg-zinc-800/80 text-zinc-400'
+                                          }`}
+                                        >
+                                          {subItem.taskCount}
+                                        </span>
+
+                                        {!isReadOnly && (
+                                          <div className="relative shrink-0 flex items-center">
+                                            <button
+                                              type="button"
+                                              onMouseDown={(e) => e.stopPropagation()}
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setActiveMenuId(activeMenuId === `list-${subItem.id}` ? null : `list-${subItem.id}`);
+                                              }}
+                                              aria-haspopup="menu"
+                                              aria-expanded={activeMenuId === `list-${subItem.id}`}
+                                              className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
+                                                activeMenuId === `list-${subItem.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/item:opacity-100'
+                                              }`}
+                                              title="List actions"
+                                            >
+                                              <span className="material-symbols-outlined text-[14px]">more_vert</span>
+                                            </button>
+                                            <ActionContextMenu
+                                              isOpen={activeMenuId === `list-${subItem.id}`}
+                                              onClose={() => setActiveMenuId(null)}
+                                              items={[
+                                                {
+                                                  label: 'List Settings',
+                                                  icon: 'tune',
+                                                  iconColor: 'text-orange-400',
+                                                  onClick: () => {
+                                                    navigate(`${spacePrefix}/spaces/${folder.id}/lists/${subItem.id}/settings`);
+                                                  },
+                                                },
+                                                {
+                                                  label: 'Move to Folder',
+                                                  icon: 'drive_file_move',
+                                                  iconColor: 'text-zinc-300',
+                                                  onClick: () => {
+                                                    setListToMove({ list: subItem, folderId: folder.id });
+                                                  },
+                                                },
+                                                {
+                                                  label: 'Delete List',
+                                                  icon: 'delete',
+                                                  danger: true,
+                                                  onClick: () => {
+                                                    setItemToDelete({ type: 'list', item: subItem, folderId: folder.id });
+                                                  },
+                                                },
+                                              ]}
+                                            />
+                                          </div>
+                                        )}
                                       </div>
-                                      <span
-                                        className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 ml-1 font-semibold ${
-                                          isActive
-                                            ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
-                                            : 'bg-zinc-800/80 text-zinc-400'
-                                        }`}
-                                      >
-                                        {subItem.taskCount}
-                                      </span>
-                                    </button>
+                                    </div>
                                   );
                                 })}
 
@@ -903,6 +1060,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                     onOpenAddSubFolder={onOpenAddSubFolder}
                                     onEditSubFolder={onEditSubFolder}
                                     onDeleteSubFolder={onDeleteSubFolder}
+                                    onOpenMoveList={(list, folderId, subFolderId) => setListToMove({ list, folderId, subFolderId })}
+                                    onDeleteList={(list, folderId) => setItemToDelete({ type: 'list', item: list, folderId })}
                                     activeMenuId={activeMenuId}
                                     setActiveMenuId={setActiveMenuId}
                                     filterText={filterText}
@@ -1039,13 +1198,50 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                   <ActionContextMenu
                                     isOpen={activeMenuId === `pipe-${pipe.id}`}
                                     onClose={() => setActiveMenuId(null)}
-                                    onEdit={() => onEditPipeline?.(pipe)}
-                                    onDelete={() => onDeletePipeline?.(pipe)}
-                                    onAddSubFolder={onOpenAddPipelineSubFolder ? () => onOpenAddPipelineSubFolder(pipe) : undefined}
-                                    addSubFolderLabel="Add Sub-folder"
-                                    addSubFolderIcon="create_new_folder"
-                                    editLabel="Edit Pipeline"
-                                    deleteLabel="Delete Pipeline"
+                                    items={[
+                                      {
+                                        label: 'Pipeline Settings',
+                                        icon: 'tune',
+                                        iconColor: 'text-orange-400',
+                                        onClick: () => {
+                                          if (onSelectPipelineView) {
+                                            onSelectPipeline?.(pipe.id);
+                                            onSelectPipelineView(pipe.id, 'settings');
+                                          } else {
+                                            navigate(`${spacePrefix}/crm/pipelines/${pipe.id}/settings`);
+                                          }
+                                        },
+                                      },
+                                      ...(onOpenAddPipelineSubFolder
+                                        ? [
+                                            {
+                                              label: 'Add Sub-folder',
+                                              icon: 'create_new_folder',
+                                              iconColor: 'text-orange-400',
+                                              onClick: () => onOpenAddPipelineSubFolder(pipe),
+                                            },
+                                          ]
+                                        : []),
+                                      ...(onEditPipeline
+                                        ? [
+                                            {
+                                              label: 'Edit Pipeline',
+                                              icon: 'edit',
+                                              onClick: () => onEditPipeline(pipe),
+                                            },
+                                          ]
+                                        : []),
+                                      ...(onDeletePipeline
+                                        ? [
+                                            {
+                                              label: 'Delete Pipeline',
+                                              icon: 'delete',
+                                              danger: true,
+                                              onClick: () => onDeletePipeline(pipe),
+                                            },
+                                          ]
+                                        : []),
+                                    ]}
                                   />
                                 </div>
                               )}
@@ -1212,6 +1408,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                       onOpenAddPipelineSubFolder={onOpenAddPipelineSubFolder}
                                       onEditPipelineSubFolder={onEditPipelineSubFolder}
                                       onDeletePipelineSubFolder={onDeletePipelineSubFolder}
+                                      onOpenMovePipelineSubFolder={(subFolder, pipelineId) => setPipeSubFolderToMove({ subFolder, pipelineId })}
                                       activeMenuId={activeMenuId}
                                       setActiveMenuId={setActiveMenuId}
                                       filterText={filterText}
@@ -1233,6 +1430,25 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
           )}
         </div>
       </div>
+
+      {listToMove && (
+        <MoveListModal
+          isOpen={!!listToMove}
+          onClose={() => setListToMove(null)}
+          list={listToMove.list}
+          currentFolderId={listToMove.folderId}
+          currentSubFolderId={listToMove.subFolderId}
+        />
+      )}
+
+      {pipeSubFolderToMove && (
+        <MovePipelineSubFolderModal
+          isOpen={!!pipeSubFolderToMove}
+          onClose={() => setPipeSubFolderToMove(null)}
+          subFolder={pipeSubFolderToMove.subFolder}
+          currentPipelineId={pipeSubFolderToMove.pipelineId}
+        />
+      )}
     </aside>
   );
 };

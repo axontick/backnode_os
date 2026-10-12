@@ -236,6 +236,16 @@ export const workspaceApi = {
     const res = await apiClient.delete<{ id: string }>(`/folders/${id}`);
     return res.data;
   },
+  exportSpace: async (spaceId: string, listId?: string): Promise<any> => {
+    const res = await apiClient.get<any>(`/spaces/${spaceId}/export`, {
+      params: listId ? { listId } : undefined,
+    });
+    return res.data;
+  },
+  importSpace: async (spaceId: string, payload: any): Promise<any> => {
+    const res = await apiClient.post<any>(`/spaces/${spaceId}/import`, payload);
+    return res.data;
+  },
   getStatuses: async (): Promise<StatusDefinition[]> => {
     const res = await apiClient.get<StatusDefinition[]>('/statuses');
     return res.data;

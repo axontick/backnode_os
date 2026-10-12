@@ -249,6 +249,190 @@ export function deleteListItemFromSubFoldersRecursively(
 }
 
 /**
+ * Recursively moves a list item from its existing location in `folders`
+ * into a target folder (or target subfolder).
+ */
+export function moveListToFolder(
+  folders: SpaceFolder[],
+  listId: string,
+  targetFolderId: string,
+  targetSubFolderId?: string
+): {
+  updatedFolders: SpaceFolder[];
+  success: boolean;
+  movedItem?: FolderChildItem;
+  targetName?: string;
+  sourceName?: string;
+} {
+  let movedItem: FolderChildItem | undefined;
+  let sourceName = '';
+  let targetName = '';
+
+  // 1. Remove the list item from its current folder / subfolder
+  const foldersWithoutItem = folders.map((f) => {
+    let changed = false;
+    let items = f.items ? [...f.items] : [];
+    const directIdx = items.findIndex((i) => i.id === listId);
+    if (directIdx !== -1) {
+      movedItem = items[directIdx];
+      sourceName = f.name;
+      items.splice(directIdx, 1);
+      changed = true;
+    }
+
+    let subFolders = f.subFolders;
+    if (!movedItem && subFolders && subFolders.length > 0) {
+      const res = deleteListItemFromSubFoldersRecursively(subFolders, listId);
+      if (res.deleted) {
+        movedItem = res.deleted;
+        sourceName = f.name;
+        subFolders = res.updated;
+        changed = true;
+      }
+    }
+
+    if (changed) {
+      return {
+        ...f,
+        items,
+        subFolders,
+      };
+    }
+    return f;
+  });
+
+  if (!movedItem) {
+    return { updatedFolders: folders, success: false };
+  }
+
+  // 2. Add the list item to the destination
+  let added = false;
+  const finalFolders = foldersWithoutItem.map((f) => {
+    if (f.id === targetFolderId) {
+      if (!targetSubFolderId) {
+        // Adding directly to root folder
+        targetName = f.name;
+        added = true;
+        return {
+          ...f,
+          items: [...(f.items || []), movedItem!],
+        };
+      } else {
+        // Adding to a subfolder within this folder
+        const addRes = addListToSubFolderRecursively(f.subFolders, targetSubFolderId, movedItem!);
+        if (addRes.added) {
+          added = true;
+          const flat = flattenSubFolders(f.subFolders);
+          const foundSub = flat.find((s) => s.subFolder.id === targetSubFolderId);
+          targetName = foundSub ? `${f.name} / ${foundSub.subFolder.name}` : f.name;
+          return {
+            ...f,
+            subFolders: addRes.updated,
+          };
+        }
+      }
+    }
+    return f;
+  });
+
+  return {
+    updatedFolders: finalFolders,
+    success: added,
+    movedItem,
+    targetName,
+    sourceName,
+  };
+}
+
+/**
+ * Recursively moves a pipeline sub-folder from its existing location in `pipelines`
+ * into a target pipeline (or target parent sub-folder).
+ */
+export function movePipelineSubFolder(
+  pipelines: CrmPipeline[],
+  subFolderId: string,
+  targetPipelineId: string,
+  targetParentSubFolderId?: string
+): {
+  updatedPipelines: CrmPipeline[];
+  success: boolean;
+  movedSubFolder?: CrmPipelineSubFolder;
+  targetName?: string;
+} {
+  let movedSubFolder: CrmPipelineSubFolder | undefined;
+  let targetName = '';
+
+  // 1. Remove subfolder from its current pipeline / parent
+  const pipesWithoutSub = pipelines.map((p) => {
+    if (!p.subFolders || p.subFolders.length === 0) return p;
+    const res = deletePipelineSubFolderRecursively(p.subFolders, subFolderId);
+    if (res.deleted) {
+      movedSubFolder = res.deleted;
+      return {
+        ...p,
+        subFolders: res.updated,
+      };
+    }
+    return p;
+  });
+
+  if (!movedSubFolder) {
+    return { updatedPipelines: pipelines, success: false };
+  }
+
+  // 2. Add subfolder to destination pipeline / parent subfolder
+  let added = false;
+  const finalPipelines = pipesWithoutSub.map((p) => {
+    if (p.id === targetPipelineId) {
+      if (!targetParentSubFolderId) {
+        // Add to top level of pipeline
+        targetName = p.name;
+        added = true;
+        const updatedItem = {
+          ...movedSubFolder!,
+          pipelineId: p.id,
+          parentId: undefined,
+        };
+        return {
+          ...p,
+          subFolders: [...(p.subFolders || []), updatedItem],
+        };
+      } else {
+        // Add as child of target parent subfolder
+        const updatedItem = {
+          ...movedSubFolder!,
+          pipelineId: p.id,
+          parentId: targetParentSubFolderId,
+        };
+        const addRes = addPipelineSubFolderRecursively(
+          p.subFolders,
+          targetParentSubFolderId,
+          updatedItem
+        );
+        if (addRes.added) {
+          added = true;
+          const flat = flattenPipelineSubFolders(p.subFolders);
+          const found = flat.find((s) => s.subFolder.id === targetParentSubFolderId);
+          targetName = found ? `${p.name} / ${found.subFolder.name}` : p.name;
+          return {
+            ...p,
+            subFolders: addRes.updated,
+          };
+        }
+      }
+    }
+    return p;
+  });
+
+  return {
+    updatedPipelines: finalPipelines,
+    success: added,
+    movedSubFolder,
+    targetName,
+  };
+}
+
+/**
  * Find the breadcrumb trail for an active space ID across folders and nested subfolders.
  */
 export function findSpaceBreadcrumbs(
