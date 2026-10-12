@@ -257,7 +257,7 @@ export const ListView: React.FC<ListViewProps> = ({
         {/* Parent Row */}
         <div
           onClick={() => onSelectTask(t)}
-          className="flex items-center justify-between cursor-pointer select-none"
+          className="flex items-center justify-between cursor-pointer"
         >
           <div className="flex items-center gap-2.5 flex-1 min-w-0">
             {/* Drag Handle Indicator */}
@@ -422,7 +422,7 @@ export const ListView: React.FC<ListViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto select-none p-6 text-xs custom-scrollbar">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar">
       {/* Header Summary Stats Strip */}
       <div className="flex items-center justify-between bg-[#121214] border border-[#27272a] rounded-[6px] px-4 py-2.5 shadow-sm mb-5 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-3 text-xs flex-wrap">

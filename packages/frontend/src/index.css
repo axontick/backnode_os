@@ -9,10 +9,12 @@
 
   body {
     font-family: var(--font-body);
-    color: #1a1b22;
-    background-color: #fbf8ff;
+    color: #f4f4f5;
+    background-color: #09090b;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    user-select: text;
+    -webkit-user-select: text;
   }
 
   h1, h2, h3, h4, h5, h6 {

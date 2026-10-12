@@ -182,7 +182,7 @@ export const DepartmentSettingsView: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-zinc-100 select-none">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-zinc-100">
       {/* Top Banner / Header */}
       <div className="border-b border-[#27272a] bg-[#0c0a09] px-8 py-5 shrink-0">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -495,7 +495,7 @@ export const DepartmentSettingsView: React.FC = () => {
       {/* Create / Edit Department Modal */}
       {isModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs transition-all select-none animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs transition-all animate-in fade-in"
           onClick={() => !isSubmitting && setIsModalOpen(false)}
         >
           <div
@@ -700,7 +700,7 @@ export const DepartmentSettingsView: React.FC = () => {
       {/* Delete Department Confirmation Modal */}
       {deptToDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs transition-all select-none animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs transition-all animate-in fade-in"
           onClick={() => !isDeleting && setDeptToDelete(null)}
         >
           <div

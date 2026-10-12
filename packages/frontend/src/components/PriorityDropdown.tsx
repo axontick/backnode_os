@@ -113,7 +113,7 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({
 
   if (variant === 'card') {
     return (
-      <div ref={containerRef} className={`relative select-none ${className}`}>
+      <div ref={containerRef} className={`relative ${className}`}>
         <div
           onClick={handleToggle}
           className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
@@ -177,7 +177,7 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({
 
   // Default 'badge' variant
   return (
-    <div ref={containerRef} className={`relative inline-block select-none ${className}`}>
+    <div ref={containerRef} className={`relative inline-block ${className}`}>
       <button
         type="button"
         onClick={handleToggle}

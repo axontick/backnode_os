@@ -273,7 +273,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs transition-all duration-200 select-none animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xs transition-all duration-200 animate-in fade-in"
       onClick={onClose}
     >
       {/* Centered Modal Card */}

@@ -153,7 +153,7 @@ export const PipelineWinLossView: React.FC<PipelineWinLossViewProps> = ({
   const pipelineColor = pipeline.color && pipeline.color !== '#9900c2' ? pipeline.color : '#ea580c';
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto select-none p-6 text-xs custom-scrollbar text-zinc-100">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar text-zinc-100">
       {/* 1. Header Banner */}
       <div className="bg-[#121214] rounded-[6px] border border-[#27272a] shadow-xs p-6 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all">
         <div>

@@ -153,7 +153,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden select-none text-xs">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden text-xs">
       {/* 1. Calendar Controls & Month Switcher Bar */}
       <div className="px-6 py-2 bg-[#121214] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11">
         {/* Left: View Title & Record Count */}
@@ -482,7 +482,7 @@ export const MonthlyCalendarView: React.FC<MonthlyCalendarViewProps> = ({
           onClick={() => setScheduleTargetCell(null)}
         >
           <div
-            className="bg-[#121214] border border-[#27272a] rounded-[6px] max-w-lg w-full p-4 flex flex-col gap-3 shadow-2xl relative select-none"
+            className="bg-[#121214] border border-[#27272a] rounded-[6px] max-w-lg w-full p-4 flex flex-col gap-3 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}

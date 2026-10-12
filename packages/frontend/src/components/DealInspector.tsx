@@ -141,7 +141,7 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
 
   return (
     <aside
-      className="fixed top-0 right-0 w-[760px] max-w-[95vw] h-screen bg-[#121214] border-l border-[#27272a] shadow-2xl flex flex-col justify-between z-50 overflow-hidden animate-in slide-in-from-right duration-200 select-none text-zinc-100"
+      className="fixed top-0 right-0 w-[760px] max-w-[95vw] h-screen bg-[#121214] border-l border-[#27272a] shadow-2xl flex flex-col justify-between z-50 overflow-hidden animate-in slide-in-from-right duration-200 text-zinc-100"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Top Inspection Navigation & Deal Header */}

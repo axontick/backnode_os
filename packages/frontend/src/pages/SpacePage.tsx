@@ -56,7 +56,7 @@ export const SpacePage: React.FC = () => {
 
   if (!folder) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8 bg-[#09090b] text-zinc-400 select-none">
+      <div className="flex-1 flex items-center justify-center p-8 bg-[#09090b] text-zinc-400">
         <div className="flex flex-col items-center gap-3">
           <span className="material-symbols-outlined text-3xl text-zinc-600">folder_off</span>
           <p className="text-sm">No Space found matching this identifier.</p>

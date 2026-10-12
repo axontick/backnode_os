@@ -269,7 +269,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           setDropTarget(null);
                         }}
                         onClick={() => onSelectTask(t)}
-                        className={`bg-[#18181b] transition-all duration-150 rounded-[6px] p-3.5 select-none relative ${
+                        className={`bg-[#18181b] transition-all duration-150 rounded-[6px] p-3.5 relative ${
                           isReadOnly ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'
                         } group ${
                           isDraggingThis ? 'opacity-30 scale-[0.98] ring-2 ring-orange-500/40' : ''

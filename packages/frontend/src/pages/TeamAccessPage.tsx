@@ -346,7 +346,7 @@ export const TeamAccessPage: React.FC<TeamAccessPageProps> = ({ defaultTab }) =>
   if (memberId) {
     if (!editingMember) {
       return (
-        <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#09090b] text-zinc-100 p-8 select-none">
+        <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#09090b] text-zinc-100 p-8">
           <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-8 max-w-md w-full flex flex-col items-center gap-4 text-center">
             <div className="w-12 h-12 rounded-[6px] bg-zinc-800 text-zinc-400 flex items-center justify-center">
               <span className="material-symbols-outlined text-2xl">person_off</span>
@@ -386,7 +386,7 @@ export const TeamAccessPage: React.FC<TeamAccessPageProps> = ({ defaultTab }) =>
 
   // Otherwise, render the primary Team & Access Roster view
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] select-none text-zinc-100 overflow-hidden">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-zinc-100 overflow-hidden">
       {/* 1. Header Toolbar */}
       <div className="px-8 pt-6 pb-0 border-b border-[#27272a] bg-[#0c0a09] shrink-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
@@ -1844,7 +1844,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
   const isDealScopeConstrained = liveEffective.deals.view === 'assigned';
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto custom-scrollbar select-none text-zinc-100">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto custom-scrollbar text-zinc-100">
       {/* 1. Header Toolbar & Breadcrumbs */}
       <div className="px-8 pt-6 pb-6 border-b border-[#27272a] bg-[#0c0a09] shrink-0">
         <div className="max-w-7xl mx-auto flex flex-col gap-3">

@@ -701,7 +701,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 right-0 z-20 h-14 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between px-6 w-full shrink-0 select-none text-zinc-100">
+    <header className="sticky top-0 right-0 z-20 h-14 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between px-6 w-full shrink-0 text-zinc-100">
       {/* Left: BacknodeLogo, Breadcrumbs & Search Bar */}
       <div className="flex items-center gap-5 flex-1 min-w-0">
         <div className="flex items-center gap-3 shrink-0">

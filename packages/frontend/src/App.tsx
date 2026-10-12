@@ -28,7 +28,7 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) =
 
   if (isLoading) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#09090b] text-zinc-100 select-none">
+      <div className="flex h-screen w-screen items-center justify-center bg-[#09090b] text-zinc-100">
         <div className="flex flex-col items-center gap-4">
           <div className="relative flex items-center justify-center">
             <div className="w-12 h-12 rounded-[6px] bg-orange-600 flex items-center justify-center text-white shadow-[0_0_25px_rgba(234,88,12,0.4)] animate-pulse">

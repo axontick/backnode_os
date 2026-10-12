@@ -84,7 +84,7 @@ export const ExecutiveCockpitView: React.FC<ExecutiveCockpitViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100">
       {/* Top KPI Executive Metric Ribbon */}
       <section className="px-6 py-4 bg-[#0c0a09] border-b border-[#27272a] grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 shrink-0">
         {/* Metric 1: Total Pipeline ARR */}

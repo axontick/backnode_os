@@ -79,7 +79,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   const hasActiveFilters = Boolean(filterPriority || filterStatus || quickFilter);
 
   return (
-    <section className="bg-[#121214] border-b border-[#27272a] px-6 flex flex-col shrink-0 select-none z-10">
+    <section className="bg-[#121214] border-b border-[#27272a] px-6 flex flex-col shrink-0 z-10">
       {/* Top Row: View Switcher Tabs & Secondary Controls */}
       <div className="flex items-center justify-between h-10 text-xs">
         {/* View Switcher Tabs */}

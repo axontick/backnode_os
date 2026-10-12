@@ -522,7 +522,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] select-none text-zinc-100">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100">
       {/* Internal Navigation Sub-Bar */}
       <div className="px-6 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11 text-xs">
         {/* Left Side: Pipeline Selector & Add Pipeline CTA + View Tabs */}
@@ -790,7 +790,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
       </div>
 
       {/* CRM Filter & Quick Actions Bar */}
-      <div className="px-6 min-h-[40px] py-1.5 bg-[#121214] border-b border-[#27272a] flex flex-wrap items-center justify-between gap-2.5 text-xs shrink-0 select-none">
+      <div className="px-6 min-h-[40px] py-1.5 bg-[#121214] border-b border-[#27272a] flex flex-wrap items-center justify-between gap-2.5 text-xs shrink-0">
         {/* Left: Quick Actions Filter Pills */}
         <div className="flex items-center gap-2 flex-wrap">
           <span className="font-mono text-[10px] uppercase font-semibold text-zinc-400 shrink-0 mr-1 flex items-center gap-1.5 h-7">

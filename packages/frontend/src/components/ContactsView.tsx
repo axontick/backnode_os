@@ -7,7 +7,7 @@ interface ContactsViewProps {
 
 export const ContactsView: React.FC<ContactsViewProps> = ({ members }) => {
   return (
-    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#09090b] select-none text-zinc-100">
+    <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#09090b] text-zinc-100">
       <div className="max-w-[1280px] mx-auto flex flex-col gap-6">
         <div className="flex items-center justify-between border-b border-[#27272a] pb-4">
           <div>

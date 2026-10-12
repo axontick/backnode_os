@@ -192,7 +192,7 @@ export const GanttTimelineView: React.FC<GanttTimelineViewProps> = ({
   const canvasHeight = Math.max(tasks.length * 54, 378);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden select-none text-xs">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden text-xs">
       {/* 1. Timeline Controls Toolbar */}
       <div className="h-11 px-6 bg-[#121214] border-b border-[#27272a] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2">

@@ -407,7 +407,7 @@ export const DashboardLayout: React.FC = () => {
           {hasPageClearance ? (
             <Outlet />
           ) : (
-            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#09090b] text-zinc-100 select-none">
+            <div className="flex-1 flex flex-col items-center justify-center p-8 bg-[#09090b] text-zinc-100">
               <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-8 max-w-lg w-full flex flex-col items-center gap-4 text-center shadow-lg">
                 <div className="w-14 h-14 rounded-[6px] bg-amber-950/40 border border-amber-500/30 text-amber-400 flex items-center justify-center shadow-xs">
                   <span className="material-symbols-outlined text-[28px]">shield_lock</span>

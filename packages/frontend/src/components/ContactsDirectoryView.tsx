@@ -171,7 +171,7 @@ export const ContactsDirectoryView: React.FC<ContactsDirectoryViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] select-none text-xs text-zinc-100 font-sans">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-xs text-zinc-100 font-sans">
       {/* SUBHEADER VIEW SWITCHER / TABS */}
       <div className="px-6 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11">
         <div className="flex items-center gap-6 h-full">

@@ -290,7 +290,7 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex overflow-hidden bg-[#09090b] select-none text-xs text-zinc-200">
+    <div className="flex-1 flex overflow-hidden bg-[#09090b] text-xs text-zinc-200">
       {/* 1. Left Documents Directory & Outline Rail (280px fixed) */}
       <aside className="w-[280px] shrink-0 border-r border-[#27272a] bg-[#121214] flex flex-col justify-between overflow-hidden">
         {/* Rail Top Bar Tabs */}
@@ -833,7 +833,7 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
       {/* Delete Confirmation Modal */}
       {docToDelete && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 select-none animate-in fade-in duration-150"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 animate-in fade-in duration-150"
           onClick={() => setDocToDelete(null)}
         >
           <div

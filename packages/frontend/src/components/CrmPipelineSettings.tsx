@@ -112,7 +112,7 @@ export const CrmPipelineSettings: React.FC<CrmPipelineSettingsProps> = ({
   });
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100">
       {/* Top Breadcrumb & App Bar */}
       <header className="sticky top-0 z-20 bg-[#0c0a09] border-b border-[#27272a] h-14 px-6 flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 text-xs">

@@ -114,7 +114,7 @@ export const WorkspaceSettingsPage: React.FC = () => {
   const isOnlyWorkspace = userSpaces.length <= 1;
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-hidden bg-[#09090b] text-zinc-100">
       {/* Sub-Header Navigation Tabs Bar */}
       <div className="h-[44px] bg-[#121214] border-b border-[#27272a] px-8 flex items-center justify-between shrink-0">
         <div className="max-w-6xl w-full mx-auto flex items-center gap-2">
@@ -411,7 +411,7 @@ export const WorkspaceSettingsPage: React.FC = () => {
       {/* Delete Workspace Confirmation Modal */}
       {isDeleteModalOpen && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs transition-all select-none animate-in fade-in"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-xs transition-all animate-in fade-in"
           onClick={() => setIsDeleteModalOpen(false)}
         >
           <div

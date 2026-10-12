@@ -191,7 +191,7 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden select-none text-xs">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-hidden text-xs">
       {/* Table Utility Controls Toolbar */}
       <div className="px-6 py-2 bg-[#121214] border-b border-[#27272a] flex items-center justify-between shrink-0 h-11">
         {/* Left Table Context */}
