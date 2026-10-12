@@ -114,7 +114,7 @@ export const SpacePage: React.FC = () => {
     : folder.items;
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-zinc-100 overflow-y-auto select-none font-sans">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] text-zinc-100 overflow-y-auto font-sans">
       {/* Space Hero & Header */}
       <div className="px-6 py-5 bg-[#121214] border-b border-[#27272a] shrink-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">

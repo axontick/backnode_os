@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { TaskItem, CrmDeal, UserRole } from '../types';
+import { TaskItem, CrmDeal } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { BacknodeLogo } from './BacknodeLogo';
@@ -67,7 +67,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     logout,
     setIsAuthModalOpen,
     effectiveRole,
-    setEffectiveRole,
     effectiveDepartment,
     setEffectiveDepartment,
   } = useAuth();
@@ -98,13 +97,11 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
-  const roleRef = useRef<HTMLDivElement>(null);
 
   // Derive active hub from route
   let effectiveHub = currentHub;
@@ -141,9 +138,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       if (profileRef.current && !profileRef.current.contains(target)) {
         setIsProfileOpen(false);
       }
-      if (roleRef.current && !roleRef.current.contains(target)) {
-        setIsRoleMenuOpen(false);
-      }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -153,7 +147,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         setIsNotificationsOpen(false);
         setIsHelpOpen(false);
         setIsProfileOpen(false);
-        setIsRoleMenuOpen(false);
       }
     };
 
@@ -173,9 +166,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       }
       if (profileRef.current && target && !profileRef.current.contains(target)) {
         setIsProfileOpen(false);
-      }
-      if (roleRef.current && target && !roleRef.current.contains(target)) {
-        setIsRoleMenuOpen(false);
       }
     };
 
@@ -1124,75 +1114,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           )}
         </div>
 
-        {/* Interactive RBAC & ABAC Role Switcher */}
-        <div ref={roleRef} className="relative">
-          <button
-            type="button"
-            onClick={() => setIsRoleMenuOpen(!isRoleMenuOpen)}
-            className={`px-2.5 py-1 rounded-[6px] border text-[11px] font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer ${
-              effectiveRole === 'OWNER'
-                ? 'bg-orange-950/40 text-orange-400 border-orange-500/40 hover:bg-orange-950/60'
-                : effectiveRole === 'ADMIN'
-                ? 'bg-sky-950/40 text-sky-400 border-sky-500/40 hover:bg-sky-950/60'
-                : effectiveRole === 'MEMBER'
-                ? 'bg-emerald-950/40 text-emerald-400 border-emerald-500/40 hover:bg-emerald-950/60'
-                : 'bg-amber-950/60 text-amber-300 border-amber-500/50 hover:bg-amber-950/80 animate-pulse'
-            }`}
-            title="Interactive RBAC Security Switcher: Click to simulate different roles (Owner, Admin, Member, Viewer)"
-          >
-            <span className="material-symbols-outlined text-[13px]">
-              {effectiveRole === 'VIEWER' ? 'visibility' : 'verified_user'}
-            </span>
-            <span>{effectiveRole}</span>
-            <span className="material-symbols-outlined text-[12px] opacity-70">
-              {isRoleMenuOpen ? 'expand_less' : 'expand_more'}
-            </span>
-          </button>
-
-          {isRoleMenuOpen && (
-            <div className="absolute right-0 top-full mt-2 w-64 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2.5 flex flex-col gap-1.5 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="px-2 py-1 border-b border-[#27272a] flex items-center justify-between font-mono text-[10px] text-zinc-400 font-semibold uppercase">
-                <span>RBAC Security Matrix</span>
-                <span className="text-zinc-500">{effectiveDepartment}</span>
-              </div>
-              {(['OWNER', 'ADMIN', 'MEMBER', 'VIEWER'] as UserRole[]).map((r) => {
-                const isSelected = effectiveRole === r;
-                return (
-                  <button
-                    key={r}
-                    type="button"
-                    onClick={() => {
-                      setEffectiveRole(r);
-                      setIsRoleMenuOpen(false);
-                    }}
-                    className={`w-full text-left px-2.5 py-1.5 rounded-[6px] text-xs font-mono flex items-center justify-between transition-colors cursor-pointer ${
-                      isSelected
-                        ? 'bg-orange-600 text-white font-bold'
-                        : 'text-zinc-300 hover:bg-[#18181b] hover:text-zinc-100'
-                    }`}
-                  >
-                    <div className="flex flex-col">
-                      <span className="font-bold">{r}</span>
-                      <span className={`text-[10px] ${isSelected ? 'text-zinc-200' : 'text-zinc-500'}`}>
-                        {r === 'OWNER'
-                          ? 'Full master jurisdiction'
-                          : r === 'ADMIN'
-                          ? 'Team & Operational admin'
-                          : r === 'MEMBER'
-                          ? 'Standard collaborative write'
-                          : 'Strict read-only observer'}
-                      </span>
-                    </div>
-                    {isSelected && (
-                      <span className="material-symbols-outlined text-[14px]">check</span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
         {/* Primary CTA Button */}
         <button
           disabled={effectiveRole === 'VIEWER'}
@@ -1209,12 +1130,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           <span className="material-symbols-outlined text-[16px]">add</span>
           <span>{currentHub === 'crm' ? 'Add Deal' : 'Create Task'}</span>
         </button>
-
-        {/* Telemetry Peer Node Sync Status */}
-        <div className="hidden lg:flex items-center gap-1.5 px-2 py-1 rounded-[6px] bg-emerald-950/40 border border-emerald-500/30 text-emerald-400 font-mono text-[10px]">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span>{syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'offline' ? 'Offline' : 'Connected'}</span>
-        </div>
 
         <div className="h-4 w-px bg-[#27272a] mx-1"></div>
 

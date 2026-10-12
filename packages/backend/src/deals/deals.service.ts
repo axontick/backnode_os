@@ -30,10 +30,23 @@ export class DealsService {
   }
 
   async findAll(accountId: string, pipelineId?: string, currentUser?: CurrentUserPayload) {
+    let canViewAll = true;
+    let canViewMe = false;
+
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.deals.view === 'none') {
-        return [];
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      canViewAll = isWildcard || explicitPerms.includes('deals.view.all');
+      canViewMe = explicitPerms.includes('deals.view.me');
+
+      if (!canViewAll && !canViewMe) {
+        const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+        if (perms?.deals?.view === 'none') {
+          return [];
+        }
+        if (perms?.deals?.view === 'assigned') {
+          canViewMe = true;
+        }
       }
     }
 
@@ -47,11 +60,8 @@ export class DealsService {
       },
     });
 
-    if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.deals.view === 'assigned') {
-        return deals.filter((d) => this.isDealOwner(d, currentUser));
-      }
+    if (currentUser && !canViewAll && canViewMe) {
+      return deals.filter((d) => this.isDealOwner(d, currentUser));
     }
 
     return deals;
@@ -67,12 +77,15 @@ export class DealsService {
     }
 
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.deals.view === 'none') {
-        throw new ForbiddenException('You do not have permission to view CRM deals.');
-      }
-      if (perms.deals.view === 'assigned' && !this.isDealOwner(deal, currentUser)) {
-        throw new ForbiddenException('Access restricted: You can only view deals where you are the designated owner.');
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canViewAll = isWildcard || explicitPerms.includes('deals.view.all');
+      const canViewMe = explicitPerms.includes('deals.view.me');
+
+      if (!canViewAll) {
+        if (!canViewMe || !this.isDealOwner(deal, currentUser)) {
+          throw new ForbiddenException('Access restricted: You can only view deals where you are the designated owner.');
+        }
       }
     }
 
@@ -81,11 +94,14 @@ export class DealsService {
 
   async create(accountId: string, data: any, currentUser?: CurrentUserPayload) {
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (!perms.deals.create) {
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canCreate = isWildcard || explicitPerms.includes('deals.create');
+      if (!canCreate) {
         throw new ForbiddenException('You do not have permission to create CRM deals.');
       }
-      if (!perms.deals.assign && data.owner && data.owner !== currentUser.name) {
+      const canAssign = isWildcard || explicitPerms.includes('deals.assign');
+      if (!canAssign && data.owner && data.owner !== currentUser.name) {
         throw new ForbiddenException('You do not have permission to assign deals to other operators.');
       }
     }
@@ -96,8 +112,8 @@ export class DealsService {
       id = `crm-${count + 1}`;
     }
 
-    const defaultOwner = currentUser?.name || 'Alex Wong';
-    const defaultInitials = (defaultOwner || 'AW')
+    const defaultOwner = currentUser?.name || 'Operator';
+    const defaultInitials = (defaultOwner || 'OP')
       .split(' ')
       .map((n) => n[0])
       .join('')
@@ -127,6 +143,7 @@ export class DealsService {
       wonReason = null,
       cycleDays = 0,
       closedAt = null,
+      customLinks = {},
     } = data;
 
     const deal = this.dealRepo.create({
@@ -153,6 +170,7 @@ export class DealsService {
       isArchived: Boolean(isArchived),
       pipelineId,
       subFolderId: subFolderId || undefined,
+      customLinks: customLinks || {},
       accountId,
     });
 
@@ -163,26 +181,30 @@ export class DealsService {
     const deal = await this.findOne(accountId, id, currentUser);
 
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canEditAll = isWildcard || explicitPerms.includes('deals.edit.all') || explicitPerms.includes('deals.edit');
+      const canEditMe = explicitPerms.includes('deals.edit.me');
 
-      if (perms.deals.update === 'none') {
-        throw new ForbiddenException('You do not have permission to update CRM deals.');
-      }
-      if (perms.deals.update === 'assigned' && !this.isDealOwner(deal, currentUser)) {
-        throw new ForbiddenException('Access restricted: You can only edit deals where you are the designated owner.');
+      if (!canEditAll) {
+        if (!canEditMe || !this.isDealOwner(deal, currentUser)) {
+          throw new ForbiddenException('Access restricted: You can only edit deals where you are the designated owner.');
+        }
       }
 
       if (data.stage !== undefined && data.stage !== deal.stage) {
-        if (perms.deals.change_stage === 'none') {
-          throw new ForbiddenException('You do not have permission to change pipeline deal stages.');
-        }
-        if (perms.deals.change_stage === 'assigned' && !this.isDealOwner(deal, currentUser)) {
-          throw new ForbiddenException('Access restricted: You can only advance stages for deals assigned to you.');
+        const canStageAll = isWildcard || explicitPerms.includes('deals.stage.all') || explicitPerms.includes('deals.change_stage.all') || canEditAll;
+        const canStageMe = explicitPerms.includes('deals.stage.me') || explicitPerms.includes('deals.change_stage.me') || canEditMe;
+        if (!canStageAll) {
+          if (!canStageMe || !this.isDealOwner(deal, currentUser)) {
+            throw new ForbiddenException('Access restricted: You can only advance stages for deals assigned to you.');
+          }
         }
       }
 
       if (data.owner !== undefined && data.owner !== deal.owner) {
-        if (!perms.deals.assign) {
+        const canAssign = isWildcard || explicitPerms.includes('deals.assign');
+        if (!canAssign) {
           throw new ForbiddenException('You do not have permission to reassign deal ownership.');
         }
       }
@@ -215,6 +237,7 @@ export class DealsService {
     if (data.isArchived !== undefined) deal.isArchived = Boolean(data.isArchived);
     if (data.pipelineId !== undefined) deal.pipelineId = data.pipelineId;
     if (data.subFolderId !== undefined) deal.subFolderId = data.subFolderId;
+    if (data.customLinks !== undefined) deal.customLinks = data.customLinks;
 
     return this.dealRepo.save(deal);
   }
@@ -223,12 +246,15 @@ export class DealsService {
     const deal = await this.findOne(accountId, id, currentUser);
 
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.deals.delete === 'none') {
-        throw new ForbiddenException('You do not have permission to delete CRM deals.');
-      }
-      if (perms.deals.delete === 'assigned' && !this.isDealOwner(deal, currentUser)) {
-        throw new ForbiddenException('Access restricted: You can only delete deals where you are the designated owner.');
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canDeleteAll = isWildcard || explicitPerms.includes('deals.delete.all') || explicitPerms.includes('deals.delete');
+      const canDeleteMe = explicitPerms.includes('deals.delete.me');
+
+      if (!canDeleteAll) {
+        if (!canDeleteMe || !this.isDealOwner(deal, currentUser)) {
+          throw new ForbiddenException('Access restricted: You can only delete deals where you are the designated owner.');
+        }
       }
     }
 

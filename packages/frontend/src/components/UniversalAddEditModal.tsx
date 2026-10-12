@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { TaskItem, TaskStatus, PriorityLevel, TeamMember, CrmDeal, SpaceFolder } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { RecurringCadenceSelector, DynamicEntityLinker } from '../modules/shared';
 
 interface UniversalAddEditModalProps {
   isOpen: boolean;
@@ -47,6 +48,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
   const [priority, setPriority] = useState<PriorityLevel>('Medium');
   const [assigneeId, setAssigneeId] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurrenceRule, setRecurrenceRule] = useState<string>('weekly');
+  const [customLinks, setCustomLinks] = useState<Record<string, any>>({});
   const [linkedDeal, setLinkedDeal] = useState('');
   const [specMarkdown, setSpecMarkdown] = useState('');
   const [subtasks, setSubtasks] = useState<{ id: string; text: string; done: boolean }[]>([]);
@@ -76,6 +80,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setPriority((taskToEdit.priority as PriorityLevel) || 'Medium');
       setAssigneeId(taskToEdit.assignee?.id || members[0]?.id || '');
       setDueDate(taskToEdit.dueDate || '');
+      setIsRecurring(!!taskToEdit.isRecurring);
+      setRecurrenceRule(taskToEdit.recurrenceRule || 'weekly');
+      setCustomLinks(taskToEdit.customLinks || {});
       setLinkedDeal(taskToEdit.linkedCrmDeal?.name || '');
       setSpecMarkdown(taskToEdit.specMarkdown || taskToEdit.description || '');
       setSubtasks(taskToEdit.subtasks?.map((s) => ({ id: s.id, text: s.text, done: s.done })) || []);
@@ -87,6 +94,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setDealStage(dealToEdit.stage || defaultDealStage);
       setDealOwner(dealToEdit.owner || members[0]?.name || user?.name || '');
       setDueDate(dealToEdit.targetCloseDate || '');
+      setCustomLinks(dealToEdit.customLinks || {});
       setDealCompetitor(dealToEdit.competitor || '');
       setDealLossReason(dealToEdit.lossReason || '');
       setDealWonReason(dealToEdit.wonReason || '');
@@ -100,6 +108,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setPriority('Medium');
       setAssigneeId(members[0]?.id || '');
       setDueDate('');
+      setIsRecurring(false);
+      setRecurrenceRule('weekly');
+      setCustomLinks({});
       setLinkedDeal('');
       setSpecMarkdown('');
       setSubtasks([]);
@@ -162,6 +173,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           assignee: assignedMember,
           targetCycle: space,
           dueDate: dueDate,
+          isRecurring: isRecurring,
+          recurrenceRule: isRecurring ? recurrenceRule : undefined,
+          customLinks: customLinks,
           subtasks: subtasks.map((s) => ({
             id: s.id,
             text: s.text,
@@ -182,6 +196,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           priority: priority,
           assignee: assignedMember,
           tags: ['Deliverable'],
+          isRecurring: isRecurring,
+          recurrenceRule: isRecurring ? recurrenceRule : undefined,
+          customLinks: customLinks,
           subtasks: subtasks.map((s) => ({
             id: s.id,
             text: s.text,
@@ -218,6 +235,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           stage: dealStage,
           owner: dealOwner || 'Operator',
           targetCloseDate: dueDate || 'Q4 2026',
+          customLinks: customLinks,
           competitor: dealCompetitor.trim() || undefined,
           lossReason: dealStage === 'Closed Lost' ? (dealLossReason.trim() || undefined) : undefined,
           wonReason: dealStage === 'Closed Won' ? (dealWonReason.trim() || undefined) : undefined,
@@ -236,6 +254,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           probability: dealStage === 'Closed Won' ? 100 : dealStage === 'Closed Lost' ? 0 : dealStage === 'Contract & Legal' ? 85 : 60,
           targetCloseDate: dueDate || 'Q4 2026',
           owner: dealOwner || 'Operator',
+          customLinks: customLinks,
           competitor: dealCompetitor.trim() || undefined,
           lossReason: dealStage === 'Closed Lost' ? (dealLossReason.trim() || undefined) : undefined,
           wonReason: dealStage === 'Closed Won' ? (dealWonReason.trim() || undefined) : undefined,
@@ -437,26 +456,30 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                       Due Date
                     </label>
                     <input
-                      type="text"
-                      value={dueDate}
+                      type="date"
+                      value={dueDate && dueDate.match(/^\d{4}-\d{2}-\d{2}$/) ? dueDate : ''}
                       onChange={(e) => setDueDate(e.target.value)}
-                      placeholder="e.g. Oct 24, 2026 or Today"
                       className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                      Linked CRM Account
-                    </label>
-                    <input
-                      type="text"
-                      value={linkedDeal}
-                      onChange={(e) => setLinkedDeal(e.target.value)}
-                      placeholder="e.g. Acme Corp ($180k ARR)"
-                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-orange-500"
+                    <RecurringCadenceSelector
+                      isRecurring={isRecurring}
+                      cadence={recurrenceRule}
+                      onToggle={setIsRecurring}
+                      onCadenceChange={setRecurrenceRule}
                     />
                   </div>
+                </div>
+
+                {/* Dynamic Cross-Module Linkages for Tasks */}
+                <div className="p-3 rounded-[6px] bg-[#18181b]/40 border border-[#27272a]">
+                  <DynamicEntityLinker
+                    sourceModule="tasks"
+                    customLinks={customLinks}
+                    onChange={setCustomLinks}
+                  />
                 </div>
 
                 {/* Technical Specification & Description */}
@@ -731,6 +754,15 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                     onChange={(e) => setDueDate(e.target.value)}
                     placeholder="e.g. Q4 2026, Dec 15, 2026"
                     className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
+                  />
+                </div>
+
+                {/* Dynamic Cross-Module Linkages for CRM Deals */}
+                <div className="p-3 rounded-[6px] bg-[#18181b]/40 border border-[#27272a]">
+                  <DynamicEntityLinker
+                    sourceModule="crm"
+                    customLinks={customLinks}
+                    onChange={setCustomLinks}
                   />
                 </div>
               </div>

@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { TaskItem, TaskStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
+import { formatEstimationValue } from '../utils/taskSpaceSettingsUtils';
 
 interface ListViewProps {
   tasks: TaskItem[];
@@ -27,6 +29,8 @@ export const ListView: React.FC<ListViewProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
+  const { statuses, listSettings } = useWorkspace();
+  const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverSection, setDragOverSection] = useState<TaskStatus | null>(null);
@@ -34,7 +38,7 @@ export const ListView: React.FC<ListViewProps> = ({
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
 
   // Collapsible section states
-  const [openSections, setOpenSections] = useState<Record<TaskStatus, boolean>>({
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
     'In Progress': true,
     'In Review': true,
     'Blocked': true,
@@ -48,10 +52,10 @@ export const ListView: React.FC<ListViewProps> = ({
   // Local subtask check state
   const [localSubtasks, setLocalSubtasks] = useState<Record<string, boolean>>({});
 
-  const toggleSection = (status: TaskStatus) => {
+  const toggleSection = (status: string) => {
     setOpenSections((prev) => ({
       ...prev,
-      [status]: !prev[status],
+      [status]: prev[status] !== undefined ? !prev[status] : false,
     }));
   };
 
@@ -76,45 +80,71 @@ export const ListView: React.FC<ListViewProps> = ({
     return localSubtasks[subtaskId] !== undefined ? localSubtasks[subtaskId] : originalDone;
   };
 
-  const statuses: { status: TaskStatus; label: string; color: string; dotClass: string; badgeClass: string }[] = [
-    {
-      status: 'In Progress',
-      label: 'IN PROGRESS',
-      color: '#ea580c',
-      dotClass: 'bg-orange-500',
-      badgeClass: 'bg-orange-950/50 text-orange-400 border border-orange-500/30',
-    },
-    {
-      status: 'In Review',
-      label: 'IN REVIEW',
-      color: '#f59e0b',
-      dotClass: 'bg-amber-500',
-      badgeClass: 'bg-amber-950/40 text-amber-400 border border-amber-500/30',
-    },
-    {
-      status: 'Blocked',
-      label: 'BLOCKED',
-      color: '#ef4444',
-      dotClass: 'bg-red-500',
-      badgeClass: 'bg-red-950/40 text-red-400 border border-red-500/30',
-    },
-    {
-      status: 'Backlog',
-      label: 'BACKLOG',
-      color: '#71717a',
-      dotClass: 'bg-zinc-500',
-      badgeClass: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
-    },
-    {
-      status: 'Done',
-      label: 'DONE',
-      color: '#10b981',
-      dotClass: 'bg-emerald-500',
-      badgeClass: 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30',
-    },
-  ];
+  const statusGroups = useMemo(() => {
+    if (statuses && statuses.length > 0) {
+      const seen = new Set<string>();
+      return [...statuses]
+        .filter((st) => {
+          const key = (st.name || '').trim().toLowerCase();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((st) => ({
+          id: st.id,
+          status: st.name as TaskStatus,
+          label: st.name.toUpperCase(),
+          color: st.color || '#ea580c',
+          badgeClass:
+            st.name === 'In Progress'
+              ? 'bg-orange-950/50 text-orange-400 border border-orange-500/30'
+              : st.name === 'Done'
+              ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+              : 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+        }));
+    }
+    return [
+      {
+        id: 'in_progress',
+        status: 'In Progress' as TaskStatus,
+        label: 'IN PROGRESS',
+        color: '#ea580c',
+        badgeClass: 'bg-orange-950/50 text-orange-400 border border-orange-500/30',
+      },
+      {
+        id: 'in_review',
+        status: 'In Review' as TaskStatus,
+        label: 'IN REVIEW',
+        color: '#f59e0b',
+        badgeClass: 'bg-amber-950/40 text-amber-400 border border-amber-500/30',
+      },
+      {
+        id: 'blocked',
+        status: 'Blocked' as TaskStatus,
+        label: 'BLOCKED',
+        color: '#ef4444',
+        badgeClass: 'bg-red-950/40 text-red-400 border border-red-500/30',
+      },
+      {
+        id: 'backlog',
+        status: 'Backlog' as TaskStatus,
+        label: 'BACKLOG',
+        color: '#71717a',
+        badgeClass: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+      },
+      {
+        id: 'done',
+        status: 'Done' as TaskStatus,
+        label: 'DONE',
+        color: '#10b981',
+        badgeClass: 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30',
+      },
+    ];
+  }, [statuses]);
 
   const totalHours = tasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0);
+  const totalPoints = tasks.reduce((acc, t) => acc + (t.estimation?.points || 0), 0);
 
   const getPriorityBadge = (priority: TaskItem['priority']) => {
     switch (priority) {
@@ -298,6 +328,14 @@ export const ListView: React.FC<ListViewProps> = ({
           </div>
 
           <div className="flex items-center gap-3 shrink-0">
+            {t.estimation && (
+              <span
+                className="font-mono text-[10px] text-zinc-400 bg-[#18181b] border border-[#27272a] px-1.5 py-0.5 rounded-[6px]"
+                title={isPoints ? 'Story Points' : 'Estimated Hours'}
+              >
+                {formatEstimationValue(t.estimation, listSettings?.estimationUnit)}
+              </span>
+            )}
             {getPriorityBadge(t.priority)}
             <span className="w-16 text-center font-mono text-orange-400 font-semibold text-[11px]">
               {t.dueDate || 'Today'}
@@ -370,20 +408,22 @@ export const ListView: React.FC<ListViewProps> = ({
           <span className="font-bold text-zinc-100 font-headline">
             {tasks.length} Total Deliverables
           </span>
-          {statuses.map(({ status, dotClass }) => {
+          {statusGroups.map(({ id, status, color }) => {
             const count = tasks.filter((t) => t.status === status).length;
             return (
-              <React.Fragment key={status}>
+              <React.Fragment key={id || status}>
                 <span className="text-zinc-700">•</span>
                 <span className="text-zinc-300 flex items-center gap-1.5 font-medium">
-                  <span className={`w-1.5 h-1.5 rounded-full ${dotClass}`}></span>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
                   {count} {status}
                 </span>
               </React.Fragment>
             );
           })}
           <span className="text-zinc-700">•</span>
-          <span className="text-zinc-400 font-mono">Est: {totalHours} hrs</span>
+          <span className="text-zinc-400 font-mono">
+            {isPoints ? `Est: ${totalPoints} pts` : `Est: ${totalHours} hrs`}
+          </span>
         </div>
 
         {/* Benchmark Badge */}
@@ -397,14 +437,14 @@ export const ListView: React.FC<ListViewProps> = ({
 
       {/* PRIMARY HIERARCHICAL CONTENT CARD */}
       <div className="bg-[#121214] rounded-[6px] border border-[#27272a] shadow-sm p-6 flex flex-col gap-6">
-        {statuses.map(({ status, label, dotClass, badgeClass }) => {
+        {statusGroups.map(({ id, status, label, color, badgeClass }) => {
           const groupTasks = tasks.filter((t) => t.status === status);
           const isOpen = openSections[status] ?? true;
           const isSectionOver = dragOverSection === status;
 
           return (
             <div
-              key={status}
+              key={id || status}
               onDragOver={(e) => {
                 if (isReadOnly || !draggingTaskId) return;
                 e.preventDefault();
@@ -447,7 +487,7 @@ export const ListView: React.FC<ListViewProps> = ({
                   <span className="material-symbols-outlined text-[16px] text-zinc-400">
                     {isOpen ? 'arrow_drop_down' : 'arrow_right'}
                   </span>
-                  <span className={`w-2 h-2 rounded-full ${dotClass}`}></span>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></span>
                   <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-100">
                     {label}
                   </h3>

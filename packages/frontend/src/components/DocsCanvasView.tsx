@@ -654,72 +654,99 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
 
         {/* Editor Body */}
         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 flex justify-center">
-          <div className="max-w-[860px] w-full flex flex-col gap-4">
-            {/* Document Title Header Input */}
-            <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 shadow-sm space-y-3">
-              <input
-                type="text"
-                value={localTitle}
-                readOnly={isReadOnly || !canEditActiveDoc}
-                onChange={(e) => setLocalTitle(e.target.value)}
-                placeholder="Untitled Document / Architecture RFC..."
-                className="w-full text-xl md:text-2xl font-bold bg-transparent text-zinc-100 placeholder:text-zinc-600 outline-none font-headline disabled:opacity-70"
-              />
-              <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 font-mono">
-                <span className="flex items-center gap-1">
-                  <span className="text-zinc-500">Author:</span>
-                  <span className="text-zinc-200">{activeDoc?.authorName || 'Current User'}</span>
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <span className="text-zinc-500">Dept:</span>
-                  <span className="text-orange-400">{activeDoc?.authorDepartment || 'Engineering'}</span>
-                </span>
-                <span>•</span>
-                <span className="flex items-center gap-1">
-                  <span className="text-zinc-500">Clearance:</span>
-                  <span className={`px-1.5 py-0.2 rounded-[6px] border ${getClassificationColor(activeDoc?.classification || 'Internal')}`}>
-                    {activeDoc?.classification || 'Internal'}
-                  </span>
-                </span>
-                <span>•</span>
-                <span className="text-emerald-400">{saveStatus}</span>
+          {!activeDoc ? (
+            <div className="max-w-[480px] w-full m-auto text-center flex flex-col items-center justify-center p-8 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-sm">
+              <div className="w-12 h-12 rounded-[6px] bg-orange-950/40 border border-orange-500/30 flex items-center justify-center text-orange-400 mb-4">
+                <span className="material-symbols-outlined text-[28px]">description</span>
               </div>
+              <h3 className="text-sm font-bold text-zinc-100 font-headline mb-1.5">No Documents in Workspace</h3>
+              <p className="text-xs text-zinc-400 mb-5 max-w-sm leading-relaxed">
+                Create documentation, technical specifications, and architecture RFCs for your team.
+              </p>
+              {!isReadOnly && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const newDoc = handleCreateDoc({
+                      title: 'New Architecture Document',
+                    });
+                    setActiveDocId(newDoc.id);
+                  }}
+                  className="px-3.5 py-1.5 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors shadow-sm"
+                >
+                  <span className="material-symbols-outlined text-[16px]">add</span>
+                  <span>Create First Document</span>
+                </button>
+              )}
             </div>
-
-            {/* Split / Edit / Preview Workspace */}
-            {viewMode === 'split' ? (
-              <div className="grid grid-cols-2 gap-4 flex-1">
-                {/* Editor Column */}
-                <textarea
-                  value={localContent}
+          ) : (
+            <div className="max-w-[860px] w-full flex flex-col gap-4">
+              {/* Document Title Header Input */}
+              <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 shadow-sm space-y-3">
+                <input
+                  type="text"
+                  value={localTitle}
                   readOnly={isReadOnly || !canEditActiveDoc}
-                  onChange={(e) => setLocalContent(e.target.value)}
-                  placeholder="Type documentation, RFC specs, architecture notes, or task breakdowns here..."
-                  className="w-full min-h-[500px] bg-[#121214] border border-[#27272a] rounded-[6px] p-4 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-orange-500 resize-y leading-relaxed select-text disabled:opacity-60"
+                  onChange={(e) => setLocalTitle(e.target.value)}
+                  placeholder="Untitled Document / Architecture RFC..."
+                  className="w-full text-xl md:text-2xl font-bold bg-transparent text-zinc-100 placeholder:text-zinc-600 outline-none font-headline disabled:opacity-70"
                 />
-
-                {/* Live Preview Column */}
-                <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 min-h-[500px] overflow-y-auto custom-scrollbar">
-                  {renderMarkdownPreview(localContent)}
+                <div className="flex flex-wrap items-center gap-3 text-xs text-zinc-400 font-mono">
+                  <span className="flex items-center gap-1">
+                    <span className="text-zinc-500">Author:</span>
+                    <span className="text-zinc-200">{activeDoc.authorName || 'Current User'}</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-zinc-500">Dept:</span>
+                    <span className="text-orange-400">{activeDoc.authorDepartment || 'Engineering'}</span>
+                  </span>
+                  <span>•</span>
+                  <span className="flex items-center gap-1">
+                    <span className="text-zinc-500">Clearance:</span>
+                    <span className={`px-1.5 py-0.2 rounded-[6px] border ${getClassificationColor(activeDoc.classification || 'Internal')}`}>
+                      {activeDoc.classification || 'Internal'}
+                    </span>
+                  </span>
+                  <span>•</span>
+                  <span className="text-emerald-400">{saveStatus}</span>
                 </div>
               </div>
-            ) : viewMode === 'edit' ? (
-              <div className="flex-1 flex flex-col">
-                <textarea
-                  value={localContent}
-                  readOnly={isReadOnly || !canEditActiveDoc}
-                  onChange={(e) => setLocalContent(e.target.value)}
-                  placeholder="Type documentation, RFC specs, architecture notes, or task breakdowns here... (Markdown supported)"
-                  className="w-full min-h-[540px] bg-[#121214] border border-[#27272a] rounded-[6px] p-5 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-orange-500 resize-y leading-relaxed select-text disabled:opacity-60"
-                />
-              </div>
-            ) : (
-              <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-8 min-h-[540px] shadow-sm">
-                {renderMarkdownPreview(localContent)}
-              </div>
-            )}
-          </div>
+
+              {/* Split / Edit / Preview Workspace */}
+              {viewMode === 'split' ? (
+                <div className="grid grid-cols-2 gap-4 flex-1">
+                  {/* Editor Column */}
+                  <textarea
+                    value={localContent}
+                    readOnly={isReadOnly || !canEditActiveDoc}
+                    onChange={(e) => setLocalContent(e.target.value)}
+                    placeholder="Type documentation, RFC specs, architecture notes, or task breakdowns here..."
+                    className="w-full min-h-[500px] bg-[#121214] border border-[#27272a] rounded-[6px] p-4 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-orange-500 resize-y leading-relaxed select-text disabled:opacity-60"
+                  />
+
+                  {/* Live Preview Column */}
+                  <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-5 min-h-[500px] overflow-y-auto custom-scrollbar">
+                    {renderMarkdownPreview(localContent)}
+                  </div>
+                </div>
+              ) : viewMode === 'edit' ? (
+                <div className="flex-1 flex flex-col">
+                  <textarea
+                    value={localContent}
+                    readOnly={isReadOnly || !canEditActiveDoc}
+                    onChange={(e) => setLocalContent(e.target.value)}
+                    placeholder="Type documentation, RFC specs, architecture notes, or task breakdowns here... (Markdown supported)"
+                    className="w-full min-h-[540px] bg-[#121214] border border-[#27272a] rounded-[6px] p-5 text-xs font-mono text-zinc-200 placeholder:text-zinc-600 focus:outline-none focus:border-orange-500 resize-y leading-relaxed select-text disabled:opacity-60"
+                  />
+                </div>
+              ) : (
+                <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-8 min-h-[540px] shadow-sm">
+                  {renderMarkdownPreview(localContent)}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </section>
 

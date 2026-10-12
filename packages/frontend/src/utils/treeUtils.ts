@@ -211,6 +211,44 @@ export function addListToSubFolderRecursively(
 }
 
 /**
+ * Recursively deletes a list item from nested subfolders.
+ */
+export function deleteListItemFromSubFoldersRecursively(
+  subFolders: SpaceSubFolder[] | undefined,
+  listId: string
+): { updated: SpaceSubFolder[]; deleted?: FolderChildItem } {
+  if (!subFolders) return { updated: [], deleted: undefined };
+  let deleted: FolderChildItem | undefined;
+  const updated = subFolders.map((sf) => {
+    let sfChanged = false;
+    let items = sf.items;
+    if (items && items.some((item) => item.id === listId)) {
+      deleted = items.find((item) => item.id === listId);
+      items = items.filter((item) => item.id !== listId);
+      sfChanged = true;
+    }
+    let nestedSubFolders = sf.subFolders;
+    if (nestedSubFolders && nestedSubFolders.length > 0) {
+      const childRes = deleteListItemFromSubFoldersRecursively(nestedSubFolders, listId);
+      if (childRes.deleted) {
+        deleted = childRes.deleted;
+        nestedSubFolders = childRes.updated;
+        sfChanged = true;
+      }
+    }
+    if (sfChanged) {
+      return {
+        ...sf,
+        items,
+        subFolders: nestedSubFolders,
+      };
+    }
+    return sf;
+  });
+  return { updated, deleted };
+}
+
+/**
  * Find the breadcrumb trail for an active space ID across folders and nested subfolders.
  */
 export function findSpaceBreadcrumbs(

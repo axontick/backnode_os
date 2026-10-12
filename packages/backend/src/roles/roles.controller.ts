@@ -18,6 +18,16 @@ import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator'
 export class RolesController {
   constructor(@Inject(RolesService) private readonly rolesService: RolesService) {}
 
+  @Get('permissions/catalog')
+  async getPermissionsCatalog() {
+    return this.rolesService.getPermissionsCatalog();
+  }
+
+  @Get('permissions-catalog')
+  async getPermissionsCatalogAlias() {
+    return this.rolesService.getPermissionsCatalog();
+  }
+
   @Get()
   async findAll(@CurrentUser() user: CurrentUserPayload) {
     return this.rolesService.findAll(user.accountId);

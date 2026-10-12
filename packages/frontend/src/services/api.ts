@@ -20,6 +20,8 @@ import {
   Department,
   WorkspaceRole,
   RolePermissions,
+  DocItem,
+  DocFolder,
 } from '../types';
 
 export const API_BASE_URL =
@@ -297,6 +299,60 @@ export const rolesApi = {
   },
   duplicate: async (id: string): Promise<WorkspaceRole> => {
     const res = await apiClient.post<WorkspaceRole>(`/roles/${id}/duplicate`);
+    return res.data;
+  },
+  getPermissionsCatalog: async () => {
+    const res = await apiClient.get('/roles/permissions/catalog');
+    return res.data;
+  },
+};
+
+export const pluginsApi = {
+  getPlugins: async (): Promise<{ plugins: any[]; enabledPlugins: Record<string, boolean> }> => {
+    const res = await apiClient.get('/plugins');
+    return res.data;
+  },
+  togglePlugin: async (id: string, enabled: boolean): Promise<{ success: boolean; enabledPlugins: Record<string, boolean> }> => {
+    const res = await apiClient.post(`/plugins/${id}/toggle`, { enabled });
+    return res.data;
+  },
+};
+
+export const docsApi = {
+  getFolders: async (): Promise<DocFolder[]> => {
+    const res = await apiClient.get<DocFolder[]>('/docs/folders');
+    return res.data;
+  },
+  createFolder: async (data: Partial<DocFolder>): Promise<DocFolder> => {
+    const res = await apiClient.post<DocFolder>('/docs/folders', data);
+    return res.data;
+  },
+  updateFolder: async (id: string, data: Partial<DocFolder>): Promise<DocFolder> => {
+    const res = await apiClient.patch<DocFolder>(`/docs/folders/${id}`, data);
+    return res.data;
+  },
+  deleteFolder: async (id: string): Promise<{ id: string }> => {
+    const res = await apiClient.delete<{ id: string }>(`/docs/folders/${id}`);
+    return res.data;
+  },
+  getAll: async (params?: { folderId?: string; listId?: string }): Promise<DocItem[]> => {
+    const res = await apiClient.get<DocItem[]>('/docs', { params });
+    return res.data;
+  },
+  getById: async (id: string): Promise<DocItem> => {
+    const res = await apiClient.get<DocItem>(`/docs/${id}`);
+    return res.data;
+  },
+  create: async (data: Partial<DocItem>): Promise<DocItem> => {
+    const res = await apiClient.post<DocItem>('/docs', data);
+    return res.data;
+  },
+  update: async (id: string, data: Partial<DocItem>): Promise<DocItem> => {
+    const res = await apiClient.patch<DocItem>(`/docs/${id}`, data);
+    return res.data;
+  },
+  delete: async (id: string): Promise<{ id: string }> => {
+    const res = await apiClient.delete<{ id: string }>(`/docs/${id}`);
     return res.data;
   },
 };

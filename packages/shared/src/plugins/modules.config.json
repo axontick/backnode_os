@@ -1,0 +1,120 @@
+{
+  "modules": {
+    "tasks": {
+      "id": "tasks",
+      "name": "Task Spaces & Execution",
+      "icon": "folder_open",
+      "description": "Sprint cycles, kinetic kanban boards, and task triage",
+      "category": "Execution",
+      "isCore": true,
+      "features": [
+        "Kinetic Kanban Boards",
+        "Sprint Cycle Deliverables",
+        "High-Density Table Views",
+        "Cross-Module Entity Linking"
+      ],
+      "fieldLinks": [
+        {
+          "fieldId": "linkedContact",
+          "label": "Linked Contact",
+          "targetModule": "contacts",
+          "targetEntity": "contact",
+          "displayField": "name",
+          "placeholder": "Select stakeholder contact...",
+          "icon": "person"
+        },
+        {
+          "fieldId": "linkedDeal",
+          "label": "Linked CRM Deal",
+          "targetModule": "crm",
+          "targetEntity": "deal",
+          "displayField": "title",
+          "placeholder": "Select revenue pipeline deal...",
+          "icon": "handshake"
+        },
+        {
+          "fieldId": "linkedDoc",
+          "label": "Linked Specification Doc",
+          "targetModule": "docs",
+          "targetEntity": "doc",
+          "displayField": "title",
+          "placeholder": "Select spec or guide doc...",
+          "icon": "description"
+        }
+      ]
+    },
+    "crm": {
+      "id": "crm",
+      "name": "CRM Pipelines",
+      "icon": "leaderboard",
+      "description": "Multi-stage revenue pipelines, forecasting, and deal triage",
+      "category": "Revenue",
+      "isCore": false,
+      "features": [
+        "Multi-Pipeline Stages",
+        "Weighted Win Probability",
+        "Stage Velocity Telemetry",
+        "Client Entity Correlation"
+      ],
+      "fieldLinks": [
+        {
+          "fieldId": "linkedContact",
+          "label": "Primary Contact",
+          "targetModule": "contacts",
+          "targetEntity": "contact",
+          "displayField": "name",
+          "placeholder": "Select client contact...",
+          "icon": "person"
+        },
+        {
+          "fieldId": "linkedDoc",
+          "label": "Attached Proposal / Doc",
+          "targetModule": "docs",
+          "targetEntity": "doc",
+          "displayField": "title",
+          "placeholder": "Attach internal doc...",
+          "icon": "description"
+        }
+      ]
+    },
+    "docs": {
+      "id": "docs",
+      "name": "Docs & Specifications",
+      "icon": "description",
+      "description": "Internal knowledge base, specifications, and list documentation",
+      "category": "Knowledge",
+      "isCore": false,
+      "features": [
+        "Internal Markdown Authoring",
+        "Standalone Folders & Subfolders",
+        "List-Scoped Documentation",
+        "Classification Clearance Gates"
+      ],
+      "fieldLinks": [
+        {
+          "fieldId": "linkedList",
+          "label": "Linked Task List",
+          "targetModule": "tasks",
+          "targetEntity": "list",
+          "displayField": "name",
+          "placeholder": "Connect to a task list / sprint...",
+          "icon": "list_alt"
+        }
+      ]
+    },
+    "contacts": {
+      "id": "contacts",
+      "name": "Contacts Directory",
+      "icon": "group",
+      "description": "Client, stakeholder, and partner directory",
+      "category": "Directory",
+      "isCore": false,
+      "features": [
+        "Stakeholder Directory",
+        "Health Score Telemetry",
+        "Universal Entity Correlation"
+      ],
+      "fieldLinks": []
+    }
+  }
+}

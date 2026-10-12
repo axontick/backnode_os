@@ -52,6 +52,12 @@ export class TaskItem {
   @Column('varchar', { name: 'due_date', nullable: true })
   dueDate?: string;
 
+  @Column('boolean', { name: 'is_recurring', default: false })
+  isRecurring: boolean;
+
+  @Column('varchar', { name: 'recurrence_rule', nullable: true })
+  recurrenceRule?: string;
+
   @Column('varchar', { name: 'git_branch', nullable: true })
   gitBranch?: string;
 
@@ -63,6 +69,9 @@ export class TaskItem {
 
   @Column('jsonb', { name: 'linked_crm_deal', nullable: true })
   linkedCrmDeal?: any;
+
+  @Column('jsonb', { name: 'custom_links', default: {} })
+  customLinks: any;
 
   @Column('jsonb', { default: [] })
   activity: any;

@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation, useSearchParams } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { TeamMember } from '../types';
@@ -13,6 +13,8 @@ import {
   resolveEffectivePermissions,
   TaskPermissions,
   DealPermissions,
+  matchPermissionsQuery,
+  getUserExplicitPermissions,
 } from '@backnode/shared';
 import {
   SecurityPolicy,
@@ -21,10 +23,17 @@ import {
   WorkspacePageKey,
   WorkspaceActionKey,
 } from '../utils/security';
+import { RolesPage } from './RolesPage';
 
-export const TeamAccessPage: React.FC = () => {
-  const { spaceId, memberId } = useParams<{ spaceId?: string; memberId?: string }>();
+export interface TeamAccessPageProps {
+  defaultTab?: 'users' | 'roles';
+}
+
+export const TeamAccessPage: React.FC<TeamAccessPageProps> = ({ defaultTab }) => {
+  const { spaceId, memberId, roleId } = useParams<{ spaceId?: string; memberId?: string; roleId?: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { user, effectiveRole, effectiveDepartment } = useAuth();
   const {
@@ -42,6 +51,22 @@ export const TeamAccessPage: React.FC = () => {
 
   const currentSpaceId = spaceId || activeUserSpace?.id || 'default';
 
+  const isRolesPath = location.pathname.includes('/roles');
+  const queryTab = searchParams.get('tab') as 'users' | 'roles' | null;
+  const initialTab: 'users' | 'roles' = isRolesPath ? 'roles' : (defaultTab || queryTab || 'users');
+
+  const [activeTab, setActiveTab] = useState<'users' | 'roles'>(initialTab);
+
+  useEffect(() => {
+    if (isRolesPath) {
+      setActiveTab('roles');
+    } else if (defaultTab) {
+      setActiveTab(defaultTab);
+    } else if (queryTab && (queryTab === 'users' || queryTab === 'roles')) {
+      setActiveTab(queryTab);
+    }
+  }, [isRolesPath, defaultTab, queryTab]);
+
   const canManage = useMemo(() => {
     return SecurityPolicy.canManageTeam({
       id: user?.id || 'usr-operator',
@@ -52,11 +77,32 @@ export const TeamAccessPage: React.FC = () => {
     });
   }, [user, effectiveRole, effectiveDepartment]);
 
-  const [searchQuery, setSearchQuery] = useState('');
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('q') || '');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('ALL');
   const [selectedDeptFilter, setSelectedDeptFilter] = useState<string>('ALL');
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
   const [memberToRemove, setMemberToRemove] = useState<TeamMember | null>(null);
+
+  const handleSearchChange = (val: string) => {
+    setSearchQuery(val);
+    const nextParams = new URLSearchParams(searchParams);
+    if (val.trim()) {
+      nextParams.set('q', val);
+    } else {
+      nextParams.delete('q');
+    }
+    setSearchParams(nextParams, { replace: true });
+  };
+
+  const handleTabChange = (tab: 'users' | 'roles') => {
+    setActiveTab(tab);
+    const qParam = searchQuery ? `?q=${encodeURIComponent(searchQuery)}` : '';
+    if (tab === 'roles') {
+      navigate(`/space/${currentSpaceId}/roles${qParam}`);
+    } else {
+      navigate(`/space/${currentSpaceId}/team${qParam}`);
+    }
+  };
 
   // Quick Change Password Modal state
   const [passwordTargetMember, setPasswordTargetMember] = useState<TeamMember | null>(null);
@@ -112,17 +158,12 @@ export const TeamAccessPage: React.FC = () => {
   ]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Filtering
-  const filteredMembers = useMemo(() => {
-    return members.filter((m) => {
-      const q = searchQuery.toLowerCase().trim();
-      const matchesSearch =
-        !q ||
-        m.name.toLowerCase().includes(q) ||
-        (m.email && m.email.toLowerCase().includes(q)) ||
-        m.role.toLowerCase().includes(q) ||
-        m.department.toLowerCase().includes(q);
+  // Multi-attribute filtering: Name, Description, Role, and Explicit Permissions
+  const { filteredMembers, memberMatchDetails } = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+    const detailsMap: Record<string, string[]> = {};
 
+    const filtered = members.filter((m) => {
       const matchesRole =
         selectedRoleFilter === 'ALL' ||
         (selectedRoleFilter === 'INVITED'
@@ -132,9 +173,51 @@ export const TeamAccessPage: React.FC = () => {
       const matchesDept =
         selectedDeptFilter === 'ALL' || m.department === selectedDeptFilter;
 
-      return matchesSearch && matchesRole && matchesDept;
+      if (!matchesRole || !matchesDept) {
+        return false;
+      }
+
+      if (!q) return true;
+
+      // 1. Name match
+      if (m.name.toLowerCase().includes(q)) return true;
+
+      // 2. Email match
+      if (m.email && m.email.toLowerCase().includes(q)) return true;
+
+      // 3. Department match
+      if (m.department && m.department.toLowerCase().includes(q)) return true;
+
+      // 4. Role title match
+      if (m.role && m.role.toLowerCase().includes(q)) return true;
+
+      // 5. Member description / Role description match
+      const assignedRole = roles.find(
+        (r) =>
+          r.id === m.roleId ||
+          r.name.toLowerCase() === (m.role || '').toLowerCase() ||
+          (r.key && r.key.toLowerCase() === (m.accessLevel || '').toLowerCase())
+      );
+      if (assignedRole?.description && assignedRole.description.toLowerCase().includes(q)) {
+        return true;
+      }
+      if ((m as any).description && (m as any).description.toLowerCase().includes(q)) {
+        return true;
+      }
+
+      // 6. Explicit Permission Value match (e.g. tasks.view.all, deals.create, plugins.manage, etc.)
+      const userPermissions = getUserExplicitPermissions(m, roles);
+      const permMatch = matchPermissionsQuery(userPermissions, q);
+      if (permMatch.matches) {
+        detailsMap[m.id] = permMatch.matchedKeys.length > 0 ? permMatch.matchedKeys : ['All Permissions (*)'];
+        return true;
+      }
+
+      return false;
     });
-  }, [members, searchQuery, selectedRoleFilter, selectedDeptFilter]);
+
+    return { filteredMembers: filtered, memberMatchDetails: detailsMap };
+  }, [members, roles, searchQuery, selectedRoleFilter, selectedDeptFilter]);
 
   // Summary Metrics
   const totalCount = members.length;
@@ -303,17 +386,17 @@ export const TeamAccessPage: React.FC = () => {
 
   // Otherwise, render the primary Team & Access Roster view
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto custom-scrollbar select-none text-zinc-100">
+    <div className="flex-1 flex flex-col h-full bg-[#09090b] select-none text-zinc-100 overflow-hidden">
       {/* 1. Header Toolbar */}
-      <div className="px-8 pt-8 pb-6 border-b border-[#27272a] bg-[#0c0a09] shrink-0">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="px-8 pt-6 pb-0 border-b border-[#27272a] bg-[#0c0a09] shrink-0">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4">
           <div className="flex flex-col gap-1">
             <div className="flex items-center gap-2.5">
               <div className="w-8 h-8 rounded-[6px] bg-orange-600 flex items-center justify-center text-white shadow-sm shadow-orange-600/20">
                 <span className="material-symbols-outlined text-[18px]">shield_person</span>
               </div>
               <h1 className="text-xl font-bold text-zinc-100 tracking-tight font-headline">
-                Team &amp; Access Control
+                Team &amp; Roles
               </h1>
               <span className="px-2 py-0.5 rounded-[6px] text-[11px] font-mono font-semibold bg-orange-950/40 text-orange-400 border border-orange-500/30">
                 {activeUserSpace?.name || 'Current Space'}
@@ -341,121 +424,194 @@ export const TeamAccessPage: React.FC = () => {
               <span>Copy Invite Link</span>
             </button>
 
+            {activeTab === 'users' ? (
+              <button
+                disabled={!canManage}
+                onClick={() => setIsInviteModalOpen(true)}
+                className="h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
+                title={canManage ? 'Add new operator or invite member' : 'Requires Admin or Owner permissions'}
+              >
+                <span className="material-symbols-outlined text-[16px]">person_add</span>
+                <span>Add User</span>
+              </button>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Navigation Tabs and Search Bar */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#27272a]">
+          <div className="flex items-center gap-2">
             <button
-              disabled={!canManage}
-              onClick={() => setIsInviteModalOpen(true)}
-              className="h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm active:scale-[0.98] cursor-pointer"
-              title={canManage ? 'Add new operator or invite member' : 'Requires Admin or Owner permissions'}
+              type="button"
+              onClick={() => handleTabChange('users')}
+              className={`pb-3 px-3 text-xs font-semibold font-headline border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'users'
+                  ? 'border-orange-500 text-orange-400'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+              }`}
             >
-              <span className="material-symbols-outlined text-[16px]">person_add</span>
-              <span>Add User</span>
+              <span className="material-symbols-outlined text-[16px]">group</span>
+              <span>Users &amp; Operators</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-[6px] text-[10px] font-mono ${
+                  activeTab === 'users'
+                    ? 'bg-orange-950/40 border border-orange-500/30 text-orange-400'
+                    : 'bg-zinc-800 text-zinc-400'
+                }`}
+              >
+                {members.length}
+              </span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleTabChange('roles')}
+              className={`pb-3 px-3 text-xs font-semibold font-headline border-b-2 flex items-center gap-2 transition-all cursor-pointer ${
+                activeTab === 'roles'
+                  ? 'border-orange-500 text-orange-400'
+                  : 'border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
+              }`}
+            >
+              <span className="material-symbols-outlined text-[16px]">verified_user</span>
+              <span>Roles &amp; Permissions Matrix</span>
+              <span
+                className={`px-1.5 py-0.2 rounded-[6px] text-[10px] font-mono ${
+                  activeTab === 'roles'
+                    ? 'bg-orange-950/40 border border-orange-500/30 text-orange-400'
+                    : 'bg-zinc-800 text-zinc-400'
+                }`}
+              >
+                {roles.length}
+              </span>
             </button>
           </div>
-        </div>
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 mt-6 border-b border-[#27272a]">
-          <button
-            type="button"
-            className="pb-3 px-3 text-xs font-semibold font-headline border-b-2 border-orange-500 text-orange-400 flex items-center gap-2"
-          >
-            <span className="material-symbols-outlined text-[16px]">group</span>
-            <span>Operator Roster</span>
-            <span className="px-1.5 py-0.2 rounded-[6px] bg-orange-950/40 border border-orange-500/30 text-[10px] font-mono">
-              {members.length}
-            </span>
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/space/${currentSpaceId}/roles`)}
-            className="pb-3 px-3 text-xs font-medium font-headline border-b-2 border-transparent text-zinc-400 hover:text-zinc-200 hover:border-zinc-700 flex items-center gap-2 transition-all cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[16px]">verified_user</span>
-            <span>Roles &amp; Permissions Matrix</span>
-            <span className="px-1.5 py-0.2 rounded-[6px] bg-zinc-800 text-zinc-400 text-[10px] font-mono">
-              {roles.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Quick KPI Stat Strip */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
-              Total Roster
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">{totalCount}</span>
-              <span className="text-[11px] text-zinc-400">members</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
-              Owners &amp; Admins
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl md:text-3xl font-bold text-orange-400 font-mono">{adminCount}</span>
-              <span className="text-[11px] text-zinc-400">with elevated roles</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
-              Login Authorized
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl md:text-3xl font-bold text-emerald-400 font-mono">{activeCount}</span>
-              <span className="text-[11px] text-zinc-400">active sign-in</span>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
-            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
-              Login Disabled
-            </span>
-            <div className="flex items-baseline gap-2">
-              <span className="text-2xl md:text-3xl font-bold text-zinc-400 font-mono">{disabledCount}</span>
-              <span className="text-[11px] text-zinc-400">credentials locked</span>
+          <div className="pb-2.5 sm:pb-3 w-full sm:w-96">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-2.5 top-1/2 -translate-y-1/2 text-[16px] text-zinc-500 pointer-events-none select-none flex items-center justify-center">
+                search
+              </span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                placeholder="Search by name, description, permission (e.g. tasks.view.all)..."
+                className="w-full h-8 pl-8 pr-8 text-xs bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors font-body"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer flex items-center justify-center"
+                  title="Clear search"
+                >
+                  <span className="material-symbols-outlined text-[15px] leading-none select-none">close</span>
+                </button>
+              )}
             </div>
           </div>
         </div>
       </div>
 
-      {/* 2. Main Body Content */}
-      <div className="p-8 flex flex-col gap-6 max-w-7xl w-full mx-auto">
-        {/* Search & Filters Filter Bar */}
-        <div className="bg-[#121214] p-3.5 rounded-[6px] border border-[#27272a] shadow-xs flex flex-col md:flex-row items-center justify-between gap-3">
-          <div className="relative w-full md:w-80">
-            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-[18px] text-zinc-500">
-              search
-            </span>
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, role, email..."
-              className="w-full h-8 pl-9 pr-3 text-xs bg-[#18181b] border border-[#27272a] rounded-[6px] text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-orange-500 transition-colors font-body"
-            />
+      {activeTab === 'roles' ? (
+        <div className="flex-1 min-h-0 flex overflow-hidden">
+          <RolesPage
+            isEmbedded
+            initialRoleId={roleId}
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+          />
+        </div>
+      ) : (
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {/* Quick KPI Stat Strip */}
+          <div className="px-8 pt-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-7xl mx-auto">
+              <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                  Total Roster
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl md:text-3xl font-bold text-zinc-100 font-mono">{totalCount}</span>
+                  <span className="text-[11px] text-zinc-400">members</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                  Owners &amp; Admins
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl md:text-3xl font-bold text-orange-400 font-mono">{adminCount}</span>
+                  <span className="text-[11px] text-zinc-400">with elevated roles</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                  Login Authorized
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl md:text-3xl font-bold text-emerald-400 font-mono">{activeCount}</span>
+                  <span className="text-[11px] text-zinc-400">active sign-in</span>
+                </div>
+              </div>
+
+              <div className="p-4 rounded-[6px] bg-[#121214] border border-[#27272a] flex flex-col gap-1">
+                <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                  Login Disabled
+                </span>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl md:text-3xl font-bold text-zinc-400 font-mono">{disabledCount}</span>
+                  <span className="text-[11px] text-zinc-400">credentials locked</span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-            {/* Role Filter Pills */}
-            <div className="flex items-center gap-1 bg-[#18181b] p-1 rounded-[6px] border border-[#27272a]">
-              {['ALL', 'OWNER', 'ADMIN', 'MEMBER', 'VIEWER'].map((role) => (
-                <button
-                  key={role}
-                  onClick={() => setSelectedRoleFilter(role)}
-                  className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[6px] transition-colors cursor-pointer ${
-                    selectedRoleFilter === role
-                      ? 'bg-orange-600 text-white shadow-xs'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
-                  }`}
-                >
-                  {role}
-                </button>
-              ))}
-            </div>
+          {/* 2. Main Body Content */}
+          <div className="p-8 flex flex-col gap-6 max-w-7xl w-full mx-auto">
+            {/* Search & Filters Filter Bar */}
+            <div className="bg-[#121214] p-3 rounded-[6px] border border-[#27272a] shadow-xs flex flex-wrap items-center justify-between gap-3">
+              <div className="text-xs text-zinc-400 flex items-center gap-2">
+                {searchQuery ? (
+                  <span>
+                    Showing <strong className="text-zinc-100">{filteredMembers.length}</strong> operators matching <span className="text-orange-400 font-mono font-medium">"{searchQuery}"</span>
+                  </span>
+                ) : (
+                  <span>Total operators: <strong className="text-zinc-100">{filteredMembers.length}</strong></span>
+                )}
+                {(searchQuery || selectedRoleFilter !== 'ALL' || selectedDeptFilter !== 'ALL') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSearchChange('');
+                      setSelectedRoleFilter('ALL');
+                      setSelectedDeptFilter('ALL');
+                    }}
+                    className="text-[11px] text-orange-400 hover:text-orange-300 underline underline-offset-2 ml-1 cursor-pointer"
+                  >
+                    Clear filters
+                  </button>
+                )}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {/* Role Filter Pills */}
+                <div className="flex items-center gap-1 bg-[#18181b] p-1 rounded-[6px] border border-[#27272a]">
+                  {['ALL', 'OWNER', 'ADMIN', 'MEMBER', 'VIEWER'].map((role) => (
+                    <button
+                      key={role}
+                      onClick={() => setSelectedRoleFilter(role)}
+                      className={`px-2.5 py-1 text-[10px] font-mono uppercase tracking-wider font-semibold rounded-[6px] transition-colors cursor-pointer ${
+                        selectedRoleFilter === role
+                          ? 'bg-orange-600 text-white shadow-xs'
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                      }`}
+                    >
+                      {role}
+                    </button>
+                  ))}
+                </div>
 
             {/* Department Filter Dropdown */}
             <select
@@ -559,6 +715,17 @@ export const TeamAccessPage: React.FC = () => {
                               <span className="text-[11px] text-zinc-400 font-mono truncate">
                                 {member.email || `${member.name.toLowerCase().replace(/\s+/g, '.')}@backnode.io`}
                               </span>
+                              {memberMatchDetails[member.id] && memberMatchDetails[member.id].length > 0 && (
+                                <div className="mt-1 flex items-center gap-1">
+                                  <span
+                                    className="text-[9.5px] font-mono text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1.5 py-0.5 rounded-[4px] truncate max-w-[220px]"
+                                    title={memberMatchDetails[member.id].join(', ')}
+                                  >
+                                    Matched Perm: {memberMatchDetails[member.id][0]}
+                                    {memberMatchDetails[member.id].length > 1 ? ` (+${memberMatchDetails[member.id].length - 1})` : ''}
+                                  </span>
+                                </div>
+                              )}
                             </div>
                           </div>
                         </td>
@@ -875,6 +1042,8 @@ export const TeamAccessPage: React.FC = () => {
           </div>
         </div>
       </div>
+    </div>
+  )}
 
       {/* 5. Comprehensive Add / Invite User Modal */}
       {isInviteModalOpen && (

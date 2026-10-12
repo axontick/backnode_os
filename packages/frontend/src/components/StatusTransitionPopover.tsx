@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { TaskStatus } from '../types';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface StatusTransitionPopoverProps {
   currentStatus: TaskStatus;
@@ -15,6 +16,7 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
   onClose,
 }) => {
   const popoverRef = useRef<HTMLDivElement>(null);
+  const { statuses } = useWorkspace();
   const [selectedTarget, setSelectedTarget] = useState<TaskStatus>(currentStatus);
   const [gate1, setGate1] = useState(true); // acceptance criteria validated
   const [gate2, setGate2] = useState(false); // peer code review approved
@@ -61,55 +63,56 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
     };
   }, [onClose]);
 
-  const stages: {
-    name: TaskStatus;
-    label: string;
-    subtitle: string;
-    badge: string;
-    dotColor: string;
-    ringColor: string;
-  }[] = [
-    {
-      name: 'Backlog',
-      label: 'Backlog',
-      subtitle: 'Tasks waiting for sprint triage',
-      badge: 'Stage 1',
-      dotColor: 'bg-zinc-500',
-      ringColor: 'ring-zinc-700',
-    },
-    {
-      name: 'In Progress',
-      label: 'In Progress',
-      subtitle: 'Active implementation in branch',
-      badge: 'Active Now',
-      dotColor: 'bg-orange-500',
-      ringColor: 'ring-orange-500/30',
-    },
-    {
-      name: 'In Review',
-      label: 'In Review',
-      subtitle: 'Requires 1 technical review sign-off',
-      badge: 'Target',
-      dotColor: 'bg-amber-500',
-      ringColor: 'ring-amber-500/30',
-    },
-    {
-      name: 'Blocked',
-      label: 'Blocked',
-      subtitle: 'Dependencies or external blocker',
-      badge: 'Gate',
-      dotColor: 'bg-rose-500',
-      ringColor: 'ring-rose-500/30',
-    },
-    {
-      name: 'Done',
-      label: 'Done / Deployed',
-      subtitle: 'Closed and delivered',
-      badge: 'Terminal',
-      dotColor: 'bg-emerald-500',
-      ringColor: 'ring-emerald-500/30',
-    },
-  ];
+  const stages = useMemo(() => {
+    if (statuses && statuses.length > 0) {
+      return [...statuses]
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((st, idx) => ({
+          name: st.name as TaskStatus,
+          label: st.name,
+          subtitle: st.description || `Stage ${idx + 1} workflow state`,
+          badge: st.isClosed ? 'Terminal' : st.isDefault ? 'Default' : `Stage ${idx + 1}`,
+          color: st.color || '#ea580c',
+        }));
+    }
+    return [
+      {
+        name: 'Backlog' as TaskStatus,
+        label: 'Backlog',
+        subtitle: 'Tasks waiting for sprint triage',
+        badge: 'Stage 1',
+        color: '#71717a',
+      },
+      {
+        name: 'In Progress' as TaskStatus,
+        label: 'In Progress',
+        subtitle: 'Active implementation in branch',
+        badge: 'Active Now',
+        color: '#ea580c',
+      },
+      {
+        name: 'In Review' as TaskStatus,
+        label: 'In Review',
+        subtitle: 'Requires 1 technical review sign-off',
+        badge: 'Target',
+        color: '#f59e0b',
+      },
+      {
+        name: 'Blocked' as TaskStatus,
+        label: 'Blocked',
+        subtitle: 'Dependencies or external blocker',
+        badge: 'Gate',
+        color: '#ef4444',
+      },
+      {
+        name: 'Done' as TaskStatus,
+        label: 'Done / Deployed',
+        subtitle: 'Closed and delivered',
+        badge: 'Terminal',
+        color: '#10b981',
+      },
+    ];
+  }, [statuses]);
 
   const readyGatesCount = (gate1 ? 1 : 0) + (gate2 ? 1 : 0) + (gate3 ? 1 : 0);
 
@@ -173,7 +176,8 @@ export const StatusTransitionPopover: React.FC<StatusTransitionPopoverProps> = (
             >
               <div className="mt-1">
                 <span
-                  className={`w-3 h-3 rounded-full block ring-2 ${stage.dotColor} ${stage.ringColor}`}
+                  className="w-3 h-3 rounded-full block ring-2 ring-white/10"
+                  style={{ backgroundColor: stage.color }}
                 ></span>
               </div>
 

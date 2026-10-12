@@ -1,13 +1,14 @@
 import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
-import cookieParser = require('cookie-parser');
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  app.use(cookieParser());
+  const cookieMiddleware = (cookieParser as any)?.default || cookieParser;
+  app.use(cookieMiddleware());
   app.setGlobalPrefix('api');
 
   const allowedOrigins = [

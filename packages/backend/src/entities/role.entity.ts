@@ -35,7 +35,7 @@ export class Role {
   isDefault: boolean;
 
   @Column('jsonb', { name: 'permissions' })
-  permissions: RolePermissions;
+  permissions: any;
 
   @Index()
   @Column('varchar', { name: 'account_id', nullable: true })

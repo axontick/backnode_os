@@ -72,6 +72,9 @@ export class DirectoryContact {
   @Column('varchar', { name: 'replication_hash' })
   replicationHash: string;
 
+  @Column('jsonb', { name: 'custom_links', default: {} })
+  customLinks: any;
+
   @Index()
   @Column('varchar', { name: 'account_id', nullable: true })
   accountId?: string;

@@ -417,7 +417,7 @@ export class AuthService {
         .toUpperCase()
         .slice(0, 2) || 'OW';
 
-    const member = await this.memberRepo.save({
+    await this.memberRepo.save({
       id: `tm-${accountId.slice(0, 8)}`,
       name: ownerName,
       initials,
@@ -426,14 +426,14 @@ export class AuthService {
       status: 'Active',
       email: userEmail,
       department: 'Executive',
-      activeTasks: 2,
+      activeTasks: 0,
       capacityStatus: 'Available',
       avatarBg: '#ea580c',
       avatarColor: '#ffffff',
       accountId,
     });
 
-    // 2. Default Status Definitions
+    // 2. Default Status Definitions (clean setup for Kanban/List views)
     for (const s of initialStatuses) {
       await this.statusRepo.save({
         id: `${s.id}-${accountId.slice(0, 8)}`,
@@ -442,7 +442,7 @@ export class AuthService {
         description: s.description || '',
         color: s.color,
         stageMapping: s.stageMapping || '',
-        activeVolume: s.name === 'In Progress' ? 1 : s.name === 'Todo' ? 1 : 0,
+        activeVolume: 0,
         isDefault: s.isDefault ?? false,
         isClosed: s.isClosed ?? false,
         wipLimit: s.wipLimit,
@@ -480,7 +480,7 @@ export class AuthService {
         {
           id: `sprint-${accountId.slice(0, 8)}`,
           name: 'Sprint 01',
-          taskCount: 2,
+          taskCount: 0,
           status: 'Active',
           active: true,
         },
@@ -496,8 +496,8 @@ export class AuthService {
       description: 'Primary customer deals and revenue flow',
       icon: 'leaderboard',
       color: '#ea580c',
-      dealCount: 1,
-      totalValue: 95000,
+      dealCount: 0,
+      totalValue: 0,
       accountId,
     });
 
@@ -511,8 +511,8 @@ export class AuthService {
         color: st.color,
         winProbability: st.winProbability,
         daysLimit: st.daysLimit,
-        activeDealsCount: st.name === 'Proposal Submitted' ? 1 : 0,
-        pipelineArr: st.name === 'Proposal Submitted' ? 95000 : 0,
+        activeDealsCount: 0,
+        pipelineArr: 0,
         isTerminal: st.isTerminal ?? false,
         isHighlighted: st.isHighlighted ?? false,
         requiredGates: st.requiredGates,
@@ -534,128 +534,11 @@ export class AuthService {
       formatNotation: initialCrmPipelineSettings.formatNotation,
       defaultCloseCycleDays: initialCrmPipelineSettings.defaultCloseCycleDays,
       winProbabilityAlgorithm: initialCrmPipelineSettings.winProbabilityAlgorithm,
-      targetQuarterlyRevenue: 150000,
+      targetQuarterlyRevenue: 0,
       minDealValueGate: initialCrmPipelineSettings.minDealValueGate,
       defaultView: initialCrmPipelineSettings.defaultView,
       cardProps: initialCrmPipelineSettings.cardProps,
       governance: initialCrmPipelineSettings.governance,
-      accountId,
-    });
-
-    // 8. Starter Task Items
-    await this.taskRepo.save([
-      {
-        id: `BK-${accountId.slice(0, 4).toUpperCase()}-101`,
-        title: `Configure ${accountName} engineering workspace`,
-        description: `Set up initial sprint goals, team member access, and deployment milestones for ${accountName}.`,
-        specMarkdown: `### Setup Deliverables\n\n- [x] Create workspace account\n- [ ] Add first deliverable\n- [ ] Verify database sync latency (<0.2ms)`,
-        status: 'In Progress',
-        priority: 'High',
-        assigneeId: member.id,
-        assignee: member,
-        tags: ['Infra', 'Workspace'],
-        subtasks: [
-          { id: 'st-1', title: 'Verify team permissions', done: true },
-          { id: 'st-2', title: 'Connect pipeline deals', done: false },
-        ],
-        estimation: '5 pts',
-        targetCycle: 'Sprint 01',
-        dueDate: 'Due Oct 28',
-        gitBranch: `feat/${accountId.slice(0, 4)}-init`,
-        replicationHash: '0x' + Math.random().toString(16).substring(2, 8),
-        accountId,
-      },
-      {
-        id: `BK-${accountId.slice(0, 4).toUpperCase()}-102`,
-        title: `Review ${accountName} pipeline stages & revenue targets`,
-        description: `Verify conversion probabilities, stage limits, and deal gates for enterprise growth.`,
-        specMarkdown: `### CRM Pipeline Review\n\nEnsure discovery, proposal, and contract stages match client acquisition motion.`,
-        status: 'Backlog',
-        priority: 'Medium',
-        assigneeId: member.id,
-        assignee: member,
-        tags: ['CRM', 'Pipeline'],
-        subtasks: [
-          { id: 'st-3', title: 'Confirm target close dates', done: false },
-        ],
-        estimation: '3 pts',
-        targetCycle: 'Sprint 01',
-        dueDate: 'Due Nov 02',
-        gitBranch: `feat/${accountId.slice(0, 4)}-crm`,
-        replicationHash: '0x' + Math.random().toString(16).substring(2, 8),
-        accountId,
-      },
-    ]);
-
-    // 9. Starter CRM Deal
-    await this.dealRepo.save({
-      id: `deal-${accountId.slice(0, 8)}-1`,
-      title: `${accountName} - Growth Deployment`,
-      company: `${accountName} Enterprise`,
-      value: 95000,
-      formattedValue: '$95,000',
-      stage: 'Proposal Submitted',
-      probability: 65,
-      targetCloseDate: 'Nov 15, 2026',
-      contact: {
-        name: ownerName,
-        title: 'Workspace Owner',
-        email: userEmail,
-        phone: '+1 (555) 019-2834',
-        location: 'Remote',
-        role: 'Decision Maker',
-        initials,
-      },
-      owner: ownerName,
-      ownerInitials: initials,
-      tags: ['Enterprise', 'Q4'],
-      pipelineId,
-      linkedTasks: [
-        {
-          id: `BK-${accountId.slice(0, 4).toUpperCase()}-101`,
-          title: `Configure ${accountName} engineering workspace`,
-          done: false,
-          priority: 'High',
-          dueDate: 'Oct 28, 2026',
-          tag: 'Infra',
-          assignee: ownerName,
-        },
-      ],
-      history: [
-        {
-          id: `hist-${Date.now()}`,
-          type: 'note',
-          title: 'Account workspace launched with starter deal pipeline',
-          date: 'Just now',
-          detail: `Initialized during registration of ${accountName}.`,
-        },
-      ],
-      accountId,
-    });
-
-    // 10. Starter Directory Contact
-    await this.contactRepo.save({
-      id: `cnt-${accountId.slice(0, 8)}-1`,
-      name: ownerName,
-      initials,
-      role: 'Workspace Owner',
-      tag: 'Champion',
-      tagColor: 'border-emerald-300 text-emerald-800 bg-emerald-50',
-      company: accountName,
-      companyColor: 'border-purple-300 text-purple-800 bg-purple-50',
-      arr: '$95,000 ARR',
-      email: userEmail,
-      phone: '+1 (555) 019-2834',
-      dealName: `${accountName} - Growth Deployment`,
-      deliverablesCount: 2,
-      lastActivity: 'Workspace initialized',
-      lastActivityTime: 'Just now',
-      healthScore: 98,
-      healthCategory: 'Excellent',
-      accountDescription: 'Primary workspace administrator and billing lead.',
-      renewalDate: 'Nov 01, 2027',
-      storageKey: `crm:contacts:${accountId}`,
-      replicationHash: '0x' + Math.random().toString(16).substring(2, 8),
       accountId,
     });
   }

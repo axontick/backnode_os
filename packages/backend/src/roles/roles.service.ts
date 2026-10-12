@@ -8,6 +8,8 @@ import {
   RolePermissions,
   resolveEffectivePermissions,
   WorkspaceRole,
+  PERMISSIONS_CATALOG,
+  SYSTEM_ROLE_EXPLICIT_PERMISSIONS,
 } from '@backnode/shared';
 
 @Injectable()
@@ -211,5 +213,59 @@ export class RolesService {
       userContext.permissionOverrides,
       false,
     );
+  }
+
+  getPermissionsCatalog() {
+    return PERMISSIONS_CATALOG;
+  }
+
+  async getExplicitPermissionsList(
+    accountId: string,
+    userContext: {
+      id?: string;
+      email?: string;
+      role?: string;
+      roleId?: string;
+      permissionOverrides?: any;
+    },
+  ): Promise<string[]> {
+    const isOwner =
+      userContext.role === 'OWNER' ||
+      userContext.role === 'Workspace Owner';
+
+    if (isOwner) {
+      return ['*'];
+    }
+
+    const roles = await this.findAll(accountId);
+
+    let assignedRole: Role | undefined;
+    if (userContext.roleId) {
+      assignedRole = roles.find((r) => r.id === userContext.roleId);
+    }
+
+    if (!assignedRole && userContext.role) {
+      const normalized = userContext.role.toLowerCase().trim();
+      assignedRole = roles.find(
+        (r) =>
+          r.name.toLowerCase() === normalized ||
+          (r.key && r.key.toLowerCase() === normalized),
+      );
+    }
+
+    if (!assignedRole) {
+      assignedRole = roles.find((r) => r.isDefault) || roles.find((r) => r.key === 'member') || roles[0];
+    }
+
+    if (assignedRole) {
+      if (Array.isArray(assignedRole.permissions)) {
+        return assignedRole.permissions;
+      }
+      if (assignedRole.key && SYSTEM_ROLE_EXPLICIT_PERMISSIONS[assignedRole.key]) {
+        return SYSTEM_ROLE_EXPLICIT_PERMISSIONS[assignedRole.key];
+      }
+    }
+
+    return SYSTEM_ROLE_EXPLICIT_PERMISSIONS.member;
   }
 }

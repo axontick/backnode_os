@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { TaskItem, TaskStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 export interface DeliverablesTableViewProps {
   tasks: TaskItem[];
@@ -35,6 +36,8 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
+  const { listSettings, statuses } = useWorkspace();
+  const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [selectedIds, setSelectedIds] = useState<string[]>(['ENG-101', 'ENG-103']);
   const [density, setDensity] = useState<'compact' | 'comfortable'>('compact');
@@ -44,24 +47,38 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [dragOverTabSlug, setDragOverTabSlug] = useState<string | null>(null);
 
-  // Map route slug to TaskStatus
-  const statusSlugToStatus: Record<string, string> = {
-    'all': 'All',
-    'in-progress': 'In Progress',
-    'in-review': 'In Review',
-    'done': 'Done',
-    'blocked': 'Blocked',
-    'backlog': 'Backlog',
-  };
+  const sortedStatuses = useMemo(() => {
+    const raw = (statuses && statuses.length > 0)
+      ? statuses
+      : [
+          { id: 'in_progress', name: 'In Progress', order: 0 },
+          { id: 'in_review', name: 'In Review', order: 1 },
+          { id: 'done', name: 'Done', order: 2 },
+          { id: 'blocked', name: 'Blocked', order: 3 },
+          { id: 'backlog', name: 'Backlog', order: 4 },
+        ];
+    const seen = new Set<string>();
+    return [...raw]
+      .filter((st) => {
+        const key = (st.name || '').trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }, [statuses]);
 
-  const statusToSlug: Record<string, string> = {
-    'All': 'all',
-    'In Progress': 'in-progress',
-    'In Review': 'in-review',
-    'Done': 'done',
-    'Blocked': 'blocked',
-    'Backlog': 'backlog',
-  };
+  // Map route slug to TaskStatus dynamically
+  const { statusSlugToStatus, statusToSlug } = useMemo(() => {
+    const s2s: Record<string, string> = { all: 'All' };
+    const st2s: Record<string, string> = { All: 'all' };
+    sortedStatuses.forEach((st) => {
+      const slug = st.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      s2s[slug] = st.name;
+      st2s[st.name] = slug;
+    });
+    return { statusSlugToStatus: s2s, statusToSlug: st2s };
+  }, [sortedStatuses]);
 
   const effectiveStatus = activeStatusRoute
     ? statusSlugToStatus[activeStatusRoute.toLowerCase()] || 'All'
@@ -278,20 +295,17 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
             Table View:
           </span>
           {[
-            { label: 'All Records', slug: 'all', count: tasks.length },
-            { label: 'In Progress', slug: 'in-progress', count: inProgressCount, status: 'In Progress' as TaskStatus },
-            { label: 'In Review', slug: 'in-review', count: inReviewCount, status: 'In Review' as TaskStatus },
-            { label: 'Done', slug: 'done', count: doneCount, status: 'Done' as TaskStatus },
-            { label: 'Blocked', slug: 'blocked', count: tasks.filter((t) => t.status === 'Blocked').length, status: 'Blocked' as TaskStatus },
-            { label: 'Backlog', slug: 'backlog', count: backlogCount, status: 'Backlog' as TaskStatus },
+            { label: 'All Records', slug: 'all', count: tasks.length, status: undefined },
+            ...sortedStatuses.map((st) => ({
+              label: st.name,
+              slug: st.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+              count: tasks.filter((t) => t.status === st.name).length,
+              status: st.name as TaskStatus,
+            })),
           ].map((tab) => {
             const isActive =
               (effectiveStatus === 'All' && tab.slug === 'all') ||
-              (effectiveStatus === 'In Progress' && tab.slug === 'in-progress') ||
-              (effectiveStatus === 'In Review' && tab.slug === 'in-review') ||
-              (effectiveStatus === 'Done' && tab.slug === 'done') ||
-              (effectiveStatus === 'Blocked' && tab.slug === 'blocked') ||
-              (effectiveStatus === 'Backlog' && tab.slug === 'backlog');
+              effectiveStatus === tab.label;
             const isDragOverThisTab = dragOverTabSlug === tab.slug;
 
             return (
@@ -387,7 +401,9 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                   <th className="w-28 px-3 py-2.5 font-medium">Due Date</th>
                   <th className="w-36 px-3 py-2.5 font-medium">Assignee</th>
                   <th className="w-48 px-3 py-2.5 font-medium">Linked CRM Deal</th>
-                  <th className="w-24 px-3 py-2.5 text-right font-medium pr-4">Est. Hours</th>
+                  <th className="w-24 px-3 py-2.5 text-right font-medium pr-4">
+                    {isPoints ? 'Est. Points' : 'Est. Hours'}
+                  </th>
                   <th className="w-16 px-3 py-2.5 text-center font-medium">Action</th>
                 </tr>
               </thead>
@@ -539,9 +555,11 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                         )}
                       </td>
 
-                      {/* Est. Hours */}
+                      {/* Est. Effort */}
                       <td className="px-3 py-2 text-right font-mono text-zinc-400 pr-4">
-                        {t.estimation?.hours || 6}h
+                        {isPoints
+                          ? `${t.estimation?.points ?? 0} pts`
+                          : `${t.estimation?.hours ?? 0}h`}
                       </td>
 
                       {/* Action */}
@@ -589,7 +607,16 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
             <div className="flex items-center gap-3">
               <span>Selected: <strong className="text-orange-400">{selectedIds.length}</strong></span>
               <span>•</span>
-              <span>Total Hours: <strong className="text-zinc-200">{filteredTasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0)}h</strong></span>
+              <span>
+                {isPoints ? 'Total Points: ' : 'Total Hours: '}
+                <strong className="text-zinc-200">
+                  {filteredTasks.reduce(
+                    (acc, t) => acc + (isPoints ? (t.estimation?.points || 0) : (t.estimation?.hours || 0)),
+                    0
+                  )}
+                  {isPoints ? ' pts' : 'h'}
+                </strong>
+              </span>
             </div>
 
             <div className="flex items-center gap-2">

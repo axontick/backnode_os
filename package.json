@@ -13,6 +13,7 @@
     "build:frontend": "yarn workspace @backnode/frontend build",
     "build:backend": "yarn workspace @backnode/backend build",
     "lint": "yarn workspace @backnode/frontend lint",
+    "test": "yarn workspace @backnode/backend test",
     "db:push": "yarn workspace @backnode/backend prisma:push",
     "db:seed": "yarn workspace @backnode/backend prisma:seed",
     "db:generate": "yarn workspace @backnode/backend prisma:generate"

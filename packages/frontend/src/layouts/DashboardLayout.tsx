@@ -17,10 +17,12 @@ import { NewWorkspaceModal } from '../components/NewWorkspaceModal';
 import { DeleteConfirmationModal } from '../components/DeleteConfirmationModal';
 import { CommandPalette } from '../components/CommandPalette';
 import { findFolderByListId } from '../utils/treeUtils';
+import { mapDefaultViewToSlug } from '../utils/taskSpaceSettingsUtils';
 
 export const DashboardLayout: React.FC = () => {
   const { spaceId } = useParams<{ spaceId: string }>();
   const {
+    listSettings,
     activeUserSpaceId,
     setActiveUserSpaceId,
     userSpaces,
@@ -170,10 +172,8 @@ export const DashboardLayout: React.FC = () => {
     effectiveHub = 'crm';
   } else if (normalizedPath.startsWith('/contacts')) {
     effectiveHub = 'contacts';
-  } else if (normalizedPath.startsWith('/team') || normalizedPath.startsWith('/users')) {
+  } else if (normalizedPath.startsWith('/team') || normalizedPath.startsWith('/users') || normalizedPath.startsWith('/roles')) {
     effectiveHub = 'team';
-  } else if (normalizedPath.startsWith('/roles')) {
-    effectiveHub = 'roles';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
   }
@@ -245,7 +245,7 @@ export const DashboardLayout: React.FC = () => {
   }, [isCommandPaletteOpen, setIsCommandPaletteOpen, setIsNewItemModalOpen]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 font-sans antialiased select-none">
+    <div className="flex h-screen w-screen overflow-hidden bg-[#09090b] text-zinc-100 font-sans antialiased">
       {/* 1. Primary Sidebar (220px expanded, 60px collapsed icon rail) */}
       <PrimarySidebar
         currentHub={effectiveHub}
@@ -282,7 +282,8 @@ export const DashboardLayout: React.FC = () => {
             handleSelectSpace(spaceId);
             const parentFolder = findFolderByListId(folders, spaceId);
             const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
-            navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceId}/board`);
+            const defaultSlug = mapDefaultViewToSlug(listSettings?.defaultView);
+            navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceId}/${defaultSlug}`);
           }}
           onSelectDashboard={() => {
             navigate(`${spacePrefix}/spaces`);

@@ -1,0 +1,330 @@
+{
+  "tasks.view.all": {
+    "key": "tasks.view.all",
+    "module": "tasks",
+    "label": "View All Tasks",
+    "description": "View all tasks across spaces, folders, and lists in the workspace",
+    "category": "Tasks & Execution"
+  },
+  "tasks.view.me": {
+    "key": "tasks.view.me",
+    "module": "tasks",
+    "label": "View Assigned Tasks Only",
+    "description": "View only tasks directly assigned to or created by the operator",
+    "category": "Tasks & Execution"
+  },
+  "tasks.create": {
+    "key": "tasks.create",
+    "module": "tasks",
+    "label": "Create Tasks",
+    "description": "Draft new tasks, deliverables, and sprint backlog items",
+    "category": "Tasks & Execution"
+  },
+  "tasks.update.all": {
+    "key": "tasks.update.all",
+    "module": "tasks",
+    "label": "Edit All Tasks",
+    "description": "Modify specification, due date, tags, and estimation on any task",
+    "category": "Tasks & Execution"
+  },
+  "tasks.update.me": {
+    "key": "tasks.update.me",
+    "module": "tasks",
+    "label": "Edit Assigned Tasks Only",
+    "description": "Modify only tasks directly assigned to or authored by the operator",
+    "category": "Tasks & Execution"
+  },
+  "tasks.delete.all": {
+    "key": "tasks.delete.all",
+    "module": "tasks",
+    "label": "Delete All Tasks",
+    "description": "Permanently delete any task in the workspace",
+    "category": "Tasks & Execution"
+  },
+  "tasks.delete.me": {
+    "key": "tasks.delete.me",
+    "module": "tasks",
+    "label": "Delete Assigned Tasks Only",
+    "description": "Delete only tasks assigned to or authored by the operator",
+    "category": "Tasks & Execution"
+  },
+  "tasks.status.all": {
+    "key": "tasks.status.all",
+    "module": "tasks",
+    "label": "Transition Status of All Tasks",
+    "description": "Advance any task across workflow stages (Backlog, In Progress, Review, Done)",
+    "category": "Tasks & Execution"
+  },
+  "tasks.status.me": {
+    "key": "tasks.status.me",
+    "module": "tasks",
+    "label": "Transition Status of Assigned Tasks Only",
+    "description": "Advance status only on tasks assigned to the operator",
+    "category": "Tasks & Execution"
+  },
+  "tasks.assign": {
+    "key": "tasks.assign",
+    "module": "tasks",
+    "label": "Assign Tasks",
+    "description": "Assign tasks to other team members and operators",
+    "category": "Tasks & Execution"
+  },
+
+  "deals.view.all": {
+    "key": "deals.view.all",
+    "module": "crm",
+    "label": "View All Deals",
+    "description": "View all deals across all CRM pipelines",
+    "category": "CRM Pipelines"
+  },
+  "deals.view.me": {
+    "key": "deals.view.me",
+    "module": "crm",
+    "label": "View Owned Deals Only",
+    "description": "View only deals owned by the operator",
+    "category": "CRM Pipelines"
+  },
+  "deals.create": {
+    "key": "deals.create",
+    "module": "crm",
+    "label": "Create Deals",
+    "description": "Create new deals in CRM pipelines",
+    "category": "CRM Pipelines"
+  },
+  "deals.update.all": {
+    "key": "deals.update.all",
+    "module": "crm",
+    "label": "Edit All Deals",
+    "description": "Update value, close date, stakeholder, and notes on any deal",
+    "category": "CRM Pipelines"
+  },
+  "deals.update.me": {
+    "key": "deals.update.me",
+    "module": "crm",
+    "label": "Edit Owned Deals Only",
+    "description": "Update value and properties only on deals owned by the operator",
+    "category": "CRM Pipelines"
+  },
+  "deals.delete.all": {
+    "key": "deals.delete.all",
+    "module": "crm",
+    "label": "Delete All Deals",
+    "description": "Delete any deal from the pipeline",
+    "category": "CRM Pipelines"
+  },
+  "deals.delete.me": {
+    "key": "deals.delete.me",
+    "module": "crm",
+    "label": "Delete Owned Deals Only",
+    "description": "Delete only deals owned by the operator",
+    "category": "CRM Pipelines"
+  },
+  "deals.stage.all": {
+    "key": "deals.stage.all",
+    "module": "crm",
+    "label": "Advance All Deal Stages",
+    "description": "Move any deal through pipeline stages to Won or Lost",
+    "category": "CRM Pipelines"
+  },
+  "deals.stage.me": {
+    "key": "deals.stage.me",
+    "module": "crm",
+    "label": "Advance Owned Deal Stages",
+    "description": "Move only owned deals through pipeline stages",
+    "category": "CRM Pipelines"
+  },
+  "deals.assign": {
+    "key": "deals.assign",
+    "module": "crm",
+    "label": "Reassign Deal Owners",
+    "description": "Reassign deal ownership to other operators",
+    "category": "CRM Pipelines"
+  },
+
+  "contacts.view.all": {
+    "key": "contacts.view.all",
+    "module": "contacts",
+    "label": "View All Contacts",
+    "description": "Access the complete directory of external contacts and stakeholders",
+    "category": "Contacts Directory"
+  },
+  "contacts.view.me": {
+    "key": "contacts.view.me",
+    "module": "contacts",
+    "label": "View Assigned Contacts Only",
+    "description": "View contacts linked to deals or tasks owned by the operator",
+    "category": "Contacts Directory"
+  },
+  "contacts.create": {
+    "key": "contacts.create",
+    "module": "contacts",
+    "label": "Create Contacts",
+    "description": "Add new client, stakeholder, or partner contacts",
+    "category": "Contacts Directory"
+  },
+  "contacts.update.all": {
+    "key": "contacts.update.all",
+    "module": "contacts",
+    "label": "Edit All Contacts",
+    "description": "Modify details, health score, and accounts for any contact",
+    "category": "Contacts Directory"
+  },
+  "contacts.update.me": {
+    "key": "contacts.update.me",
+    "module": "contacts",
+    "label": "Edit Assigned Contacts Only",
+    "description": "Modify only contacts linked to the operator's owned items",
+    "category": "Contacts Directory"
+  },
+  "contacts.delete.all": {
+    "key": "contacts.delete.all",
+    "module": "contacts",
+    "label": "Delete Contacts",
+    "description": "Remove contact profiles from the directory",
+    "category": "Contacts Directory"
+  },
+
+  "docs.view.all": {
+    "key": "docs.view.all",
+    "module": "docs",
+    "label": "View All Internal Docs",
+    "description": "Access all documentation across standalone folders and list spaces",
+    "category": "Docs & Specifications"
+  },
+  "docs.view.me": {
+    "key": "docs.view.me",
+    "module": "docs",
+    "label": "View Authored Docs Only",
+    "description": "View only documents authored by the operator",
+    "category": "Docs & Specifications"
+  },
+  "docs.create": {
+    "key": "docs.create",
+    "module": "docs",
+    "label": "Create Documents",
+    "description": "Draft new internal specifications, guides, and list documentation",
+    "category": "Docs & Specifications"
+  },
+  "docs.update.all": {
+    "key": "docs.update.all",
+    "module": "docs",
+    "label": "Edit All Documents",
+    "description": "Modify markdown content, titles, and folder placement for any doc",
+    "category": "Docs & Specifications"
+  },
+  "docs.update.me": {
+    "key": "docs.update.me",
+    "module": "docs",
+    "label": "Edit Authored Documents Only",
+    "description": "Edit only documents authored by the operator",
+    "category": "Docs & Specifications"
+  },
+  "docs.delete.all": {
+    "key": "docs.delete.all",
+    "module": "docs",
+    "label": "Delete Documents",
+    "description": "Delete documentation items and folders",
+    "category": "Docs & Specifications"
+  },
+
+  "plugins.view": {
+    "key": "plugins.view",
+    "module": "plugins",
+    "label": "View Plugins Catalog",
+    "description": "View installed plugins, active modules, and connection statuses",
+    "category": "System & Plugins"
+  },
+  "plugins.manage": {
+    "key": "plugins.manage",
+    "module": "plugins",
+    "label": "Manage & Toggle Plugins",
+    "description": "Enable and disable workspace modules and plugins",
+    "category": "System & Plugins"
+  },
+
+  "team.members.manage": {
+    "key": "team.members.manage",
+    "module": "team",
+    "label": "Manage Team Members",
+    "description": "Invite, edit, update roles, and deactivate team operators",
+    "category": "Team & Governance"
+  },
+  "team.roles.manage": {
+    "key": "team.roles.manage",
+    "module": "team",
+    "label": "Manage Roles & Matrix",
+    "description": "Create, customize, and configure RBAC/ABAC role templates",
+    "category": "Team & Governance"
+  },
+  "team.settings.manage": {
+    "key": "team.settings.manage",
+    "module": "team",
+    "label": "Manage Workspace Settings",
+    "description": "Update workspace identity, policies, and system defaults",
+    "category": "Team & Governance"
+  },
+
+  "pages.overview.view": {
+    "key": "pages.overview.view",
+    "module": "core",
+    "label": "Access Overview Hub",
+    "description": "Access executive cockpit and overview dashboard",
+    "category": "Navigation Access"
+  },
+  "pages.tasks.view": {
+    "key": "pages.tasks.view",
+    "module": "tasks",
+    "label": "Access Task Spaces Hub",
+    "description": "Access task spaces, kanban boards, and sprint lists",
+    "category": "Navigation Access"
+  },
+  "pages.crm.view": {
+    "key": "pages.crm.view",
+    "module": "crm",
+    "label": "Access CRM Hub",
+    "description": "Access CRM pipelines and deals",
+    "category": "Navigation Access"
+  },
+  "pages.contacts.view": {
+    "key": "pages.contacts.view",
+    "module": "contacts",
+    "label": "Access Contacts Directory",
+    "description": "Access directory of contacts and partners",
+    "category": "Navigation Access"
+  },
+  "pages.docs.view": {
+    "key": "pages.docs.view",
+    "module": "docs",
+    "label": "Access Docs Hub",
+    "description": "Access internal documentation workspace",
+    "category": "Navigation Access"
+  },
+  "pages.plugins.view": {
+    "key": "pages.plugins.view",
+    "module": "plugins",
+    "label": "Access Plugins Page",
+    "description": "Access plugins catalog and settings",
+    "category": "Navigation Access"
+  },
+  "pages.team.view": {
+    "key": "pages.team.view",
+    "module": "team",
+    "label": "Access Team Page",
+    "description": "Access team operator roster",
+    "category": "Navigation Access"
+  },
+  "pages.roles.view": {
+    "key": "pages.roles.view",
+    "module": "team",
+    "label": "Access Roles & Matrix",
+    "description": "Access roles management view",
+    "category": "Navigation Access"
+  },
+  "pages.settings.view": {
+    "key": "pages.settings.view",
+    "module": "team",
+    "label": "Access Workspace Settings",
+    "description": "Access workspace administration and preferences",
+    "category": "Navigation Access"
+  }
+}

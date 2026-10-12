@@ -1,9 +1,7 @@
 import 'dotenv/config';
-import * as bcrypt from 'bcrypt';
 import { AppDataSource } from './data-source';
 import {
   Account,
-  User,
   TeamMember,
   StatusDefinition,
   ListSettings,
@@ -28,21 +26,21 @@ import {
   initialTasks,
   initialDirectoryContacts,
   INITIAL_SYSTEM_ROLES,
+  SYSTEM_ROLE_EXPLICIT_PERMISSIONS,
 } from '@backnode/shared';
 
 const DEFAULT_ACCOUNT_ID = 'acc-default';
 
 async function seed() {
-  console.log('🌱 Starting TypeORM database seeding for Backnode OS...');
+  console.log('🌱 Starting TypeORM database wipe and fresh seeding for Backnode OS...');
   await AppDataSource.initialize();
   console.log('📦 Connected to PostgreSQL database.');
-  console.log('🔄 Recreating public schema and synchronizing TypeORM entities...');
+  console.log('🔄 Dropping public schema and synchronizing fresh TypeORM entities...');
   await AppDataSource.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
   await AppDataSource.synchronize();
-  console.log('✨ Fresh schema created successfully.');
+  console.log('✨ Fresh public schema created successfully.');
 
   const accountRepo = AppDataSource.getRepository(Account);
-  const userRepo = AppDataSource.getRepository(User);
   const memberRepo = AppDataSource.getRepository(TeamMember);
   const roleRepo = AppDataSource.getRepository(Role);
   const statusRepo = AppDataSource.getRepository(StatusDefinition);
@@ -55,21 +53,20 @@ async function seed() {
   const taskRepo = AppDataSource.getRepository(TaskItem);
   const contactRepo = AppDataSource.getRepository(DirectoryContact);
 
-  // 1. Seed Default Account
-  console.log('🏢 Seeding default account...');
-  let defaultAccount = await accountRepo.findOne({ where: { id: DEFAULT_ACCOUNT_ID } });
-  if (!defaultAccount) {
-    defaultAccount = accountRepo.create({
-      id: DEFAULT_ACCOUNT_ID,
-      name: 'Backnode Core',
-      slug: 'backnode-core',
-    });
-    await accountRepo.save(defaultAccount);
-  }
+  // 1. Seed Default Account Template
+  console.log('🏢 Seeding default account template...');
+  const defaultAccount = accountRepo.create({
+    id: DEFAULT_ACCOUNT_ID,
+    name: 'Backnode Core',
+    slug: 'backnode-core',
+    enabledPlugins: ['tasks', 'crm', 'contacts', 'docs'],
+  });
+  await accountRepo.save(defaultAccount);
 
-  // 1b. Seed Default Roles
-  console.log('🛡️ Seeding default workspace roles...');
+  // 1b. Seed System Roles with Explicit Permissions
+  console.log('🛡️ Seeding default workspace roles with explicit permission keys...');
   for (const r of INITIAL_SYSTEM_ROLES) {
+    const explicitPerms = SYSTEM_ROLE_EXPLICIT_PERMISSIONS[r.key || 'member'] || r.permissions;
     await roleRepo.save({
       id: `${r.id}-default`,
       name: r.name,
@@ -79,32 +76,15 @@ async function seed() {
       icon: r.icon,
       isSystem: r.isSystem,
       isDefault: r.isDefault,
-      permissions: r.permissions,
+      permissions: explicitPerms,
       accountId: DEFAULT_ACCOUNT_ID,
     });
   }
 
-  // 2. Seed Default Demo User (Alex Wong)
-  console.log('👤 Seeding default demo user (alex@backnode.io)...');
-  let demoUser = await userRepo.findOne({ where: { email: 'alex@backnode.io' } });
-  const passwordHash = await bcrypt.hash('Password123!', 10);
-  if (!demoUser) {
-    demoUser = userRepo.create({
-      id: 'user-alex',
-      email: 'alex@backnode.io',
-      name: 'Alex Wong',
-      role: 'OWNER',
-      passwordHash,
-      accountId: DEFAULT_ACCOUNT_ID,
-    });
-    await userRepo.save(demoUser);
-  } else {
-    demoUser.passwordHash = passwordHash;
-    demoUser.accountId = DEFAULT_ACCOUNT_ID;
-    await userRepo.save(demoUser);
-  }
+  // NOTE: Demo user creation is deliberately omitted per specification.
+  console.log('ℹ️ Skipping demo user creation (clean state ready for operator signup).');
 
-  // 3. Team Members
+  // 2. Team Members
   console.log(`Seeding ${initialTeamMembers.length} team members...`);
   for (const m of initialTeamMembers) {
     await memberRepo.save({
@@ -121,7 +101,7 @@ async function seed() {
     });
   }
 
-  // 4. Status Definitions
+  // 3. Status Definitions
   console.log(`Seeding ${initialStatuses.length} status definitions...`);
   for (const s of initialStatuses) {
     await statusRepo.save({
@@ -140,7 +120,7 @@ async function seed() {
     });
   }
 
-  // 5. List Settings
+  // 4. List Settings
   console.log('Seeding list settings...');
   await listSettingsRepo.save({
     id: 'default-list-settings',
@@ -159,7 +139,7 @@ async function seed() {
     accountId: DEFAULT_ACCOUNT_ID,
   });
 
-  // 6. Space Folders
+  // 5. Space Folders
   console.log(`Seeding ${initialFolders.length} space folders...`);
   for (const f of initialFolders) {
     await folderRepo.save({
@@ -173,7 +153,7 @@ async function seed() {
     });
   }
 
-  // 7. CRM Pipelines
+  // 6. CRM Pipelines
   console.log(`Seeding ${initialCrmPipelines.length} CRM pipelines...`);
   for (const p of initialCrmPipelines) {
     await pipelineRepo.save({
@@ -188,7 +168,7 @@ async function seed() {
     });
   }
 
-  // 8. CRM Stages
+  // 7. CRM Stages
   console.log(`Seeding ${initialCrmStages.length} CRM stage definitions...`);
   for (const st of initialCrmStages) {
     await stageRepo.save({
@@ -210,7 +190,7 @@ async function seed() {
     });
   }
 
-  // 9. CRM Pipeline Settings
+  // 8. CRM Pipeline Settings
   console.log('Seeding CRM pipeline settings...');
   await pipelineSettingsRepo.save({
     id: 'default-crm-settings',
@@ -231,7 +211,7 @@ async function seed() {
     accountId: DEFAULT_ACCOUNT_ID,
   });
 
-  // 10. CRM Deals
+  // 9. CRM Deals
   console.log(`Seeding ${initialCrmDeals.length} CRM deals...`);
   for (const d of initialCrmDeals) {
     await dealRepo.save({
@@ -254,13 +234,20 @@ async function seed() {
       cycleDays: d.cycleDays || 0,
       closedAt: d.closedAt || null,
       linkedTasks: d.linkedTasks,
+      customLinks: {
+        linkedContact: {
+          id: 'dir-cont-01',
+          name: d.contact?.name || 'Primary Contact',
+          email: d.contact?.email || '',
+        },
+      },
       history: d.history,
       pipelineId: 'pipe-enterprise',
       accountId: DEFAULT_ACCOUNT_ID,
     });
   }
 
-  // 11. Tasks
+  // 10. Tasks
   console.log(`Seeding ${initialTasks.length} tasks...`);
   for (const t of initialTasks) {
     await taskRepo.save({
@@ -276,16 +263,25 @@ async function seed() {
       estimation: t.estimation,
       targetCycle: t.targetCycle || null,
       dueDate: t.dueDate || null,
+      isRecurring: false,
+      recurrenceRule: null,
       gitBranch: t.gitBranch || null,
       replicationHash: t.replicationHash || null,
       timeInStage: t.timeInStage || null,
       linkedCrmDeal: t.linkedCrmDeal || null,
+      customLinks: {
+        linkedContact: {
+          id: 'dir-cont-01',
+          name: 'Elena Rostova',
+          company: 'Acme Corp',
+        },
+      },
       activity: t.activity,
       accountId: DEFAULT_ACCOUNT_ID,
     });
   }
 
-  // 12. Directory Contacts
+  // 11. Directory Contacts
   console.log(`Seeding ${initialDirectoryContacts.length} directory contacts...`);
   for (const c of initialDirectoryContacts) {
     await contactRepo.save({
@@ -310,11 +306,12 @@ async function seed() {
       renewalDate: c.renewalDate,
       storageKey: c.storageKey,
       replicationHash: c.replicationHash,
+      customLinks: {},
       accountId: DEFAULT_ACCOUNT_ID,
     });
   }
 
-  console.log('✅ TypeORM database seeding completed successfully!');
+  console.log('✅ TypeORM database wipe and fresh seeding completed successfully (no demo user created)!');
   await AppDataSource.destroy();
 }
 

@@ -29,10 +29,23 @@ export class TasksService {
     query?: { status?: string; priority?: string; assigneeId?: string },
     currentUser?: CurrentUserPayload,
   ) {
+    let canViewAll = true;
+    let canViewMe = false;
+
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.tasks.view === 'none') {
-        return [];
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      canViewAll = isWildcard || explicitPerms.includes('tasks.view.all');
+      canViewMe = explicitPerms.includes('tasks.view.me');
+
+      if (!canViewAll && !canViewMe) {
+        const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+        if (perms?.tasks?.view === 'none') {
+          return [];
+        }
+        if (perms?.tasks?.view === 'assigned') {
+          canViewMe = true;
+        }
       }
     }
 
@@ -49,11 +62,8 @@ export class TasksService {
       },
     });
 
-    if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.tasks.view === 'assigned') {
-        return tasks.filter((t) => this.isAssignedToUser(t, currentUser));
-      }
+    if (currentUser && !canViewAll && canViewMe) {
+      return tasks.filter((t) => this.isAssignedToUser(t, currentUser));
     }
 
     return tasks;
@@ -69,12 +79,15 @@ export class TasksService {
     }
 
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.tasks.view === 'none') {
-        throw new ForbiddenException('You do not have permission to view tasks.');
-      }
-      if (perms.tasks.view === 'assigned' && !this.isAssignedToUser(task, currentUser)) {
-        throw new ForbiddenException('Access restricted: You can only view tasks assigned to you.');
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canViewAll = isWildcard || explicitPerms.includes('tasks.view.all');
+      const canViewMe = explicitPerms.includes('tasks.view.me');
+
+      if (!canViewAll) {
+        if (!canViewMe || !this.isAssignedToUser(task, currentUser)) {
+          throw new ForbiddenException('Access restricted: You can only view tasks assigned to you.');
+        }
       }
     }
 
@@ -83,11 +96,14 @@ export class TasksService {
 
   async create(accountId: string, data: any, currentUser?: CurrentUserPayload) {
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (!perms.tasks.create) {
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canCreate = isWildcard || explicitPerms.includes('tasks.create');
+      if (!canCreate) {
         throw new ForbiddenException('You do not have permission to create tasks.');
       }
-      if (!perms.tasks.assign && data.assigneeId && data.assigneeId !== currentUser.id) {
+      const canAssign = isWildcard || explicitPerms.includes('tasks.assign');
+      if (!canAssign && data.assigneeId && data.assigneeId !== currentUser.id) {
         throw new ForbiddenException('You do not have permission to assign tasks to other members.');
       }
     }
@@ -116,6 +132,9 @@ export class TasksService {
       timeInStage = 'Just now',
       linkedCrmDeal,
       activity = [],
+      isRecurring = false,
+      recurrenceRule,
+      customLinks = {},
     } = data;
 
     const resolvedAssigneeId = assigneeId || (assignee ? assignee.id : null);
@@ -138,6 +157,9 @@ export class TasksService {
       timeInStage,
       linkedCrmDeal,
       activity,
+      isRecurring: Boolean(isRecurring),
+      recurrenceRule: recurrenceRule || undefined,
+      customLinks: customLinks || {},
       accountId,
     });
 
@@ -149,21 +171,24 @@ export class TasksService {
     const task = await this.findOne(accountId, id, currentUser);
 
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canEditAll = isWildcard || explicitPerms.includes('tasks.edit.all') || explicitPerms.includes('tasks.edit');
+      const canEditMe = explicitPerms.includes('tasks.edit.me');
 
-      if (perms.tasks.update === 'none') {
-        throw new ForbiddenException('You do not have permission to update tasks.');
-      }
-      if (perms.tasks.update === 'assigned' && !this.isAssignedToUser(task, currentUser)) {
-        throw new ForbiddenException('Access restricted: You can only edit tasks assigned to you.');
+      if (!canEditAll) {
+        if (!canEditMe || !this.isAssignedToUser(task, currentUser)) {
+          throw new ForbiddenException('Access restricted: You can only edit tasks assigned to you.');
+        }
       }
 
       if (data.status !== undefined && data.status !== task.status) {
-        if (perms.tasks.change_status === 'none') {
-          throw new ForbiddenException('You do not have permission to change task statuses.');
-        }
-        if (perms.tasks.change_status === 'assigned' && !this.isAssignedToUser(task, currentUser)) {
-          throw new ForbiddenException('Access restricted: You can only change status for tasks assigned to you.');
+        const canStatusAll = isWildcard || explicitPerms.includes('tasks.status.all') || canEditAll;
+        const canStatusMe = explicitPerms.includes('tasks.status.me') || canEditMe;
+        if (!canStatusAll) {
+          if (!canStatusMe || !this.isAssignedToUser(task, currentUser)) {
+            throw new ForbiddenException('Access restricted: You can only change status for tasks assigned to you.');
+          }
         }
       }
 
@@ -171,7 +196,8 @@ export class TasksService {
         (data.assigneeId !== undefined && data.assigneeId !== task.assigneeId) ||
         (data.assignee !== undefined && data.assignee?.id !== task.assigneeId)
       ) {
-        if (!perms.tasks.assign) {
+        const canAssign = isWildcard || explicitPerms.includes('tasks.assign');
+        if (!canAssign) {
           throw new ForbiddenException('You do not have permission to reassign tasks.');
         }
       }
@@ -194,6 +220,9 @@ export class TasksService {
     if (data.timeInStage !== undefined) task.timeInStage = data.timeInStage;
     if (data.linkedCrmDeal !== undefined) task.linkedCrmDeal = data.linkedCrmDeal;
     if (data.activity !== undefined) task.activity = data.activity;
+    if (data.isRecurring !== undefined) task.isRecurring = Boolean(data.isRecurring);
+    if (data.recurrenceRule !== undefined) task.recurrenceRule = data.recurrenceRule;
+    if (data.customLinks !== undefined) task.customLinks = data.customLinks;
 
     await this.taskRepo.save(task);
     return this.findOne(accountId, id, currentUser);
@@ -203,12 +232,15 @@ export class TasksService {
     const task = await this.findOne(accountId, id, currentUser);
 
     if (currentUser) {
-      const perms = await this.rolesService.getEffectivePermissions(accountId, currentUser);
-      if (perms.tasks.delete === 'none') {
-        throw new ForbiddenException('You do not have permission to delete tasks.');
-      }
-      if (perms.tasks.delete === 'assigned' && !this.isAssignedToUser(task, currentUser)) {
-        throw new ForbiddenException('Access restricted: You can only delete tasks assigned to you.');
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canDeleteAll = isWildcard || explicitPerms.includes('tasks.delete.all') || explicitPerms.includes('tasks.delete');
+      const canDeleteMe = explicitPerms.includes('tasks.delete.me');
+
+      if (!canDeleteAll) {
+        if (!canDeleteMe || !this.isAssignedToUser(task, currentUser)) {
+          throw new ForbiddenException('Access restricted: You can only delete tasks assigned to you.');
+        }
       }
     }
 

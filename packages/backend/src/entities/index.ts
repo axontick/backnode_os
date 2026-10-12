@@ -14,3 +14,5 @@ export * from './crm-pipeline-settings.entity';
 export * from './directory-contact.entity';
 export * from './department.entity';
 export * from './role.entity';
+export * from './doc-folder.entity';
+export * from './doc-item.entity';

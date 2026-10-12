@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TaskItem, TaskStatus, PriorityLevel, TeamMember, CrmDeal } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
+import { mapPriorityStringToLevel } from '../utils/taskSpaceSettingsUtils';
 
 interface NewItemModalProps {
   isOpen: boolean;
@@ -24,6 +26,12 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
   defaultDealStage = 'Proposal Submitted',
 }) => {
   const { user } = useAuth();
+  const { listSettings } = useWorkspace();
+
+  const defaultPriorityLevel = useMemo(() => {
+    return mapPriorityStringToLevel(listSettings?.defaultPriority);
+  }, [listSettings?.defaultPriority]);
+
   const currentUserName = user?.name || 'Operator';
   const currentUserInitials = user?.name
     ? user.name
@@ -39,11 +47,20 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
   // Task form state
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [priority, setPriority] = useState<PriorityLevel>('Medium');
+  const [priority, setPriority] = useState<PriorityLevel>(defaultPriorityLevel);
   const [status, setStatus] = useState<TaskStatus>(defaultStatus);
   const [assigneeId, setAssigneeId] = useState(members[0]?.id || 'mem-1');
   const [tag, setTag] = useState('Core Infra');
-  const [estimateHours, setEstimateHours] = useState(6);
+  const [estimateValue, setEstimateValue] = useState(
+    listSettings?.estimationUnit === 'Story Points' ? 3 : 6
+  );
+
+  useEffect(() => {
+    if (isOpen) {
+      setPriority(defaultPriorityLevel);
+      setEstimateValue(listSettings?.estimationUnit === 'Story Points' ? 3 : 6);
+    }
+  }, [isOpen, defaultPriorityLevel, listSettings?.estimationUnit]);
 
   // Deal form state
   const [dealTitle, setDealTitle] = useState('');
@@ -75,8 +92,8 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
         { id: `st-${Date.now()}-1`, text: 'Initial scoping and technical spec review', done: false, author: selectedAssignee.initials, time: 'New' }
       ],
       estimation: {
-        hours: estimateHours,
-        points: Math.max(1, Math.round(estimateHours / 2))
+        hours: listSettings?.estimationUnit === 'Story Points' ? estimateValue * 2 : estimateValue,
+        points: listSettings?.estimationUnit === 'Story Points' ? estimateValue : Math.max(1, Math.round(estimateValue / 2)),
       },
       targetCycle: 'Sprint 14 - Q4 Infra',
       dueDate: 'Nov 04, 2024',
@@ -300,16 +317,21 @@ export const NewItemModal: React.FC<NewItemModalProps> = ({
 
               <div>
                 <label className="block text-[11px] font-semibold text-zinc-300 mb-1">
-                  Est. Hours
+                  {listSettings?.estimationUnit === 'Story Points' ? 'Story Points' : 'Est. Hours'}
                 </label>
-                <input
-                  type="number"
-                  min={1}
-                  max={80}
-                  value={estimateHours}
-                  onChange={(e) => setEstimateHours(Number(e.target.value))}
-                  className="w-full h-8 px-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-xs text-zinc-100 focus:outline-none focus:border-orange-500 font-mono"
-                />
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={1}
+                    max={listSettings?.estimationUnit === 'Story Points' ? 40 : 160}
+                    value={estimateValue}
+                    onChange={(e) => setEstimateValue(Number(e.target.value))}
+                    className="w-full h-8 px-2 pr-8 rounded-[6px] border border-[#27272a] bg-[#18181b] text-xs text-zinc-100 focus:outline-none focus:border-orange-500 font-mono"
+                  />
+                  <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-mono text-zinc-400">
+                    {listSettings?.estimationUnit === 'Story Points' ? 'pts' : 'hrs'}
+                  </span>
+                </div>
               </div>
             </div>
 

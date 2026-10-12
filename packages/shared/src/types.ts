@@ -111,7 +111,7 @@ export interface WorkspaceRole {
   icon?: string;
   isSystem?: boolean;
   isDefault?: boolean;
-  permissions: RolePermissions;
+  permissions: RolePermissions | any;
   accountId?: string;
   createdAt?: string | Date;
   updatedAt?: string | Date;
@@ -125,6 +125,7 @@ export interface Account {
   icon?: string;
   ownerEmail?: string;
   ownerId?: string;
+  enabledPlugins?: string[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -255,14 +256,24 @@ export interface TaskItem {
   };
   targetCycle: string;
   dueDate: string;
-  gitBranch: string;
-  replicationHash: string;
-  timeInStage: string;
+  isRecurring?: boolean;
+  recurrenceRule?: string;
+  gitBranch?: string;
+  replicationHash?: string;
+  timeInStage?: string;
   linkedCrmDeal?: {
     id: string;
     name: string;
     value: string;
   };
+  linkedContactId?: string;
+  linkedContact?: {
+    id: string;
+    name: string;
+    email?: string;
+    company?: string;
+  };
+  customLinks?: Record<string, any>;
   activity: ActivityEvent[];
   accountId?: string;
 }
@@ -407,6 +418,8 @@ export interface CrmDeal {
   linkedTasks: CrmLinkedTask[];
   history: CrmHistoryEvent[];
   isArchived?: boolean;
+  contactId?: string;
+  customLinks?: Record<string, any>;
   accountId?: string;
 }
 
@@ -476,22 +489,40 @@ export interface DirectoryContact {
   renewalDate: string;
   storageKey: string;
   replicationHash: string;
+  customLinks?: Record<string, any>;
   accountId?: string;
 }
 
 export type DocClassification = 'Public' | 'Internal' | 'Confidential' | 'Restricted';
+
+export interface DocFolder {
+  id: string;
+  name: string;
+  icon?: string;
+  color?: string;
+  parentId?: string;
+  parentFolderId?: string;
+  description?: string;
+  subFolders?: DocFolder[];
+  accountId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
 export interface DocItem {
   id: string;
   title: string;
   content: string;
   folderId?: string;
+  subFolderId?: string;
+  listId?: string;
   spaceId?: string;
   tags: string[];
   classification: DocClassification;
   authorName: string;
   authorInitials: string;
   authorDepartment?: string;
+  customLinks?: Record<string, any>;
   createdAt: string;
   updatedAt: string;
   accountId?: string;
@@ -898,5 +929,122 @@ export function resolveEffectivePermissions(
   }
 
   return base;
+}
+
+export const PERMISSIONS = {
+  // Tasks
+  TASKS_VIEW_ALL: 'tasks.view.all',
+  TASKS_VIEW_ME: 'tasks.view.me',
+  TASKS_CREATE: 'tasks.create',
+  TASKS_UPDATE_ALL: 'tasks.update.all',
+  TASKS_UPDATE_ME: 'tasks.update.me',
+  TASKS_DELETE_ALL: 'tasks.delete.all',
+  TASKS_DELETE_ME: 'tasks.delete.me',
+  TASKS_STATUS_ALL: 'tasks.status.all',
+  TASKS_STATUS_ME: 'tasks.status.me',
+  TASKS_ASSIGN: 'tasks.assign',
+
+  // Deals
+  DEALS_VIEW_ALL: 'deals.view.all',
+  DEALS_VIEW_ME: 'deals.view.me',
+  DEALS_CREATE: 'deals.create',
+  DEALS_UPDATE_ALL: 'deals.update.all',
+  DEALS_UPDATE_ME: 'deals.update.me',
+  DEALS_DELETE_ALL: 'deals.delete.all',
+  DEALS_DELETE_ME: 'deals.delete.me',
+  DEALS_STAGE_ALL: 'deals.stage.all',
+  DEALS_STAGE_ME: 'deals.stage.me',
+  DEALS_ASSIGN: 'deals.assign',
+
+  // Contacts
+  CONTACTS_VIEW_ALL: 'contacts.view.all',
+  CONTACTS_VIEW_ME: 'contacts.view.me',
+  CONTACTS_CREATE: 'contacts.create',
+  CONTACTS_UPDATE_ALL: 'contacts.update.all',
+  CONTACTS_UPDATE_ME: 'contacts.update.me',
+  CONTACTS_DELETE_ALL: 'contacts.delete.all',
+
+  // Docs
+  DOCS_VIEW_ALL: 'docs.view.all',
+  DOCS_VIEW_ME: 'docs.view.me',
+  DOCS_CREATE: 'docs.create',
+  DOCS_UPDATE_ALL: 'docs.update.all',
+  DOCS_UPDATE_ME: 'docs.update.me',
+  DOCS_DELETE_ALL: 'docs.delete.all',
+
+  // Plugins
+  PLUGINS_VIEW: 'plugins.view',
+  PLUGINS_MANAGE: 'plugins.manage',
+
+  // Team
+  TEAM_MEMBERS_MANAGE: 'team.members.manage',
+  TEAM_ROLES_MANAGE: 'team.roles.manage',
+  TEAM_SETTINGS_MANAGE: 'team.settings.manage',
+
+  // Pages
+  PAGES_OVERVIEW_VIEW: 'pages.overview.view',
+  PAGES_TASKS_VIEW: 'pages.tasks.view',
+  PAGES_CRM_VIEW: 'pages.crm.view',
+  PAGES_CONTACTS_VIEW: 'pages.contacts.view',
+  PAGES_DOCS_VIEW: 'pages.docs.view',
+  PAGES_PLUGINS_VIEW: 'pages.plugins.view',
+  PAGES_TEAM_VIEW: 'pages.team.view',
+  PAGES_ROLES_VIEW: 'pages.roles.view',
+  PAGES_SETTINGS_VIEW: 'pages.settings.view',
+} as const;
+
+export type PermissionKey = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
+
+export const SYSTEM_ROLE_EXPLICIT_PERMISSIONS: Record<string, string[]> = {
+  owner: ['*'],
+  admin: [
+    'tasks.view.all', 'tasks.create', 'tasks.update.all', 'tasks.delete.all', 'tasks.status.all', 'tasks.assign',
+    'deals.view.all', 'deals.create', 'deals.update.all', 'deals.delete.all', 'deals.stage.all', 'deals.assign',
+    'contacts.view.all', 'contacts.create', 'contacts.update.all', 'contacts.delete.all',
+    'docs.view.all', 'docs.create', 'docs.update.all', 'docs.delete.all',
+    'plugins.view', 'plugins.manage',
+    'team.members.manage', 'team.roles.manage', 'team.settings.manage',
+    'pages.overview.view', 'pages.tasks.view', 'pages.crm.view', 'pages.contacts.view', 'pages.docs.view', 'pages.plugins.view', 'pages.team.view', 'pages.roles.view', 'pages.settings.view'
+  ],
+  member: [
+    'tasks.view.all', 'tasks.create', 'tasks.update.all', 'tasks.delete.me', 'tasks.status.all', 'tasks.assign',
+    'deals.view.all', 'deals.create', 'deals.update.all', 'deals.delete.me', 'deals.stage.all', 'deals.assign',
+    'contacts.view.all', 'contacts.create', 'contacts.update.all',
+    'docs.view.all', 'docs.create', 'docs.update.all',
+    'plugins.view',
+    'pages.overview.view', 'pages.tasks.view', 'pages.crm.view', 'pages.contacts.view', 'pages.docs.view'
+  ],
+  restricted: [
+    'tasks.view.me', 'tasks.create', 'tasks.update.me', 'tasks.status.me',
+    'deals.view.me', 'deals.create', 'deals.update.me', 'deals.stage.me',
+    'contacts.view.me',
+    'docs.view.me', 'docs.create', 'docs.update.me',
+    'plugins.view',
+    'pages.overview.view', 'pages.tasks.view', 'pages.crm.view', 'pages.docs.view'
+  ],
+  viewer: [
+    'tasks.view.all',
+    'deals.view.all',
+    'contacts.view.all',
+    'docs.view.all',
+    'plugins.view',
+    'pages.overview.view', 'pages.tasks.view', 'pages.crm.view', 'pages.contacts.view', 'pages.docs.view'
+  ]
+};
+
+export interface ExplicitPermissionDefinition {
+  id: string;
+  key?: string;
+  name: string;
+  label?: string;
+  description: string;
+  module: string;
+  category: string;
+}
+
+export interface ExplicitPermissionCategory {
+  category: string;
+  module: string;
+  permissions: ExplicitPermissionDefinition[];
 }
 

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SpaceFolder, TaskItem } from '../types';
 import { ActionContextMenu } from './ActionContextMenu';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface TaskSpaceDashboardViewProps {
   folders: SpaceFolder[];
@@ -25,6 +26,9 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
   onEditFolder,
   onDeleteFolder,
 }) => {
+  const { listSettings } = useWorkspace();
+  const isPoints = listSettings?.estimationUnit === 'Story Points';
+
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
   const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
@@ -44,6 +48,7 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
   const totalTasks = tasks.length;
   const completionRate = totalTasks > 0 ? Math.round((doneTasks.length / totalTasks) * 100) : 0;
   const totalHours = tasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0);
+  const totalPoints = tasks.reduce((acc, t) => acc + (t.estimation?.points || 0), 0);
 
   return (
     <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-[#09090b] text-zinc-100 select-none">
@@ -174,15 +179,19 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
           <div className="bg-[#121214] border border-[#27272a] rounded-[6px] p-4 flex flex-col justify-between shadow-sm hover:border-orange-500/40 transition-all">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider font-semibold">
-                Workload &amp; Hours
+                {isPoints ? 'Workload & Points' : 'Workload & Hours'}
               </span>
               <span className="font-mono text-[10px] text-amber-400 bg-amber-950/40 border border-amber-500/30 px-1.5 py-0.5 rounded-[6px] font-bold">
                 Sprint 14
               </span>
             </div>
             <div className="my-3 flex items-baseline gap-2">
-              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">{totalHours}h</span>
-              <span className="text-xs text-zinc-400">estimated effort</span>
+              <span className="text-3xl font-bold text-zinc-100 font-mono tracking-tight">
+                {isPoints ? `${totalPoints} pts` : `${totalHours}h`}
+              </span>
+              <span className="text-xs text-zinc-400">
+                {isPoints ? 'estimated points' : 'estimated effort'}
+              </span>
             </div>
             <div>
               <span className="text-xs text-zinc-400 block truncate">

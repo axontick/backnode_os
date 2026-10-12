@@ -12,6 +12,7 @@ import { DocsCanvasView } from '../components/DocsCanvasView';
 import { TaskSpaceSettings } from '../components/TaskSpaceSettings';
 import { TaskInspector } from '../components/TaskInspector';
 import { findFolderByListId, findListItemById } from '../utils/treeUtils';
+import { mapDefaultViewToSlug } from '../utils/taskSpaceSettingsUtils';
 
 export const ListPage: React.FC = () => {
   const { spaceId, folderId, listId, view, statusView, subFolderId } = useParams<{
@@ -53,6 +54,8 @@ export const ListPage: React.FC = () => {
     statuses,
     handleUpdateListSettings,
     handleUpdateStatuses,
+    handleDeleteTaskSpace,
+    handleRenameStatus,
     handleOpenAddTaskToColumn,
     handleOpenCreateTask,
     handleOpenEditTask,
@@ -70,29 +73,43 @@ export const ListPage: React.FC = () => {
   const parentFolder = listId ? findFolderByListId(folders, listId) : undefined;
   const effectiveFolderId = folderId || (spaceId && folders.some((f) => f.id === spaceId) ? spaceId : parentFolder?.id || folders[0]?.id || 'fld-engineering');
 
+  const currentListItem = listId ? findListItemById(folders, listId) : undefined;
+
+  const effectiveListSettings: ListSettings = useMemo(() => {
+    if (!currentListItem) return listSettings;
+    return {
+      ...listSettings,
+      listId: currentListItem.id,
+      name: currentListItem.name || listSettings.name,
+      icon: currentListItem.icon || listSettings.icon || 'format_list_bulleted',
+      color: currentListItem.color || listSettings.color || '#ea580c',
+    };
+  }, [listSettings, currentListItem]);
+
   // Strict space prefix enforcement:
-  // 1. If view is not specified in the URL, redirect to default '/board' view
+  // 1. If view is not specified in the URL, redirect to default view (configured in list settings)
   useEffect(() => {
     if (listId && !view) {
+      const defaultSlug = mapDefaultViewToSlug(effectiveListSettings?.defaultView);
       if (subFolderId) {
-        navigate(`${spacePrefix}/spaces/${effectiveFolderId}/folders/${subFolderId}/lists/${listId}/board`, { replace: true });
+        navigate(`${spacePrefix}/spaces/${effectiveFolderId}/folders/${subFolderId}/lists/${listId}/${defaultSlug}`, { replace: true });
       } else {
-        navigate(`${spacePrefix}/spaces/${effectiveFolderId}/lists/${listId}/board`, { replace: true });
+        navigate(`${spacePrefix}/spaces/${effectiveFolderId}/lists/${listId}/${defaultSlug}`, { replace: true });
       }
     }
-  }, [view, listId, effectiveFolderId, subFolderId, spacePrefix, navigate]);
+  }, [view, listId, effectiveFolderId, subFolderId, spacePrefix, effectiveListSettings?.defaultView, navigate]);
 
   // 2. If folderId in URL does not match actual parent folder of this list, normalize immediately
   useEffect(() => {
     if (parentFolder && folderId && parentFolder.id !== folderId && listId) {
-      const targetView = view || 'board';
+      const targetView = view || mapDefaultViewToSlug(effectiveListSettings?.defaultView);
       if (statusView) {
         navigate(`${spacePrefix}/spaces/${parentFolder.id}/lists/${listId}/table/${statusView}`, { replace: true });
       } else {
         navigate(`${spacePrefix}/spaces/${parentFolder.id}/lists/${listId}/${targetView}`, { replace: true });
       }
     }
-  }, [parentFolder, folderId, listId, view, statusView, spacePrefix, navigate]);
+  }, [parentFolder, folderId, listId, view, statusView, spacePrefix, effectiveListSettings?.defaultView, navigate]);
 
   // Sync activeSpace with listId
   useEffect(() => {
@@ -108,19 +125,6 @@ export const ListPage: React.FC = () => {
       setCurrentView(effectiveView);
     }
   }, [effectiveView, currentView, setCurrentView]);
-
-  const currentListItem = listId ? findListItemById(folders, listId) : undefined;
-
-  const effectiveListSettings: ListSettings = useMemo(() => {
-    if (!currentListItem) return listSettings;
-    return {
-      ...listSettings,
-      listId: currentListItem.id,
-      name: currentListItem.name || listSettings.name,
-      icon: currentListItem.icon || listSettings.icon || 'format_list_bulleted',
-      color: currentListItem.color || listSettings.color || '#ea580c',
-    };
-  }, [listSettings, currentListItem]);
 
   // Filter tasks specific to this list
   const listTasks = filteredTasks.filter((t) => {
@@ -249,7 +253,14 @@ export const ListPage: React.FC = () => {
             statuses={statuses}
             onUpdateSettings={handleUpdateListSettings}
             onUpdateStatuses={handleUpdateStatuses}
-            onBackToBoard={() => handleSelectView('board')}
+            onBackToBoard={() =>
+              handleSelectView(mapDefaultViewToSlug(effectiveListSettings?.defaultView))
+            }
+            onDeleteTaskSpace={(deletedListId) => {
+              handleDeleteTaskSpace(deletedListId);
+              navigate(`${spacePrefix}/spaces/${effectiveFolderId}`);
+            }}
+            onRenameStatus={handleRenameStatus}
           />
         )}
 

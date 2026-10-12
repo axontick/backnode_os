@@ -9,7 +9,9 @@
     "start": "node dist/main",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "seed": "tsx src/database/seed.ts"
+    "seed": "tsx src/database/seed.ts",
+    "test": "tsx test/clean-account.test.ts",
+    "test:account": "tsx test/clean-account.test.ts"
   },
   "dependencies": {
     "@backnode/shared": "1.0.0",

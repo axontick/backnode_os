@@ -69,6 +69,9 @@ export class CrmDeal {
   @Column('jsonb', { name: 'linked_tasks', default: [] })
   linkedTasks: any;
 
+  @Column('jsonb', { name: 'custom_links', default: {} })
+  customLinks: any;
+
   @Column('jsonb', { default: [] })
   history: any;
 

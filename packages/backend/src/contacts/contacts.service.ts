@@ -56,6 +56,7 @@ export class ContactsService {
       renewalDate: data.renewalDate || '',
       storageKey: data.storageKey || 'dir_contact_' + Math.random().toString(16).substring(2, 6),
       replicationHash: data.replicationHash || '0x' + Math.random().toString(16).substring(2, 8),
+      customLinks: data.customLinks || {},
       accountId,
     });
 

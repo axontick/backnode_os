@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { TaskSpaceDashboardView } from '../components/TaskSpaceDashboardView';
 import { findFolderByListId } from '../utils/treeUtils';
+import { mapDefaultViewToSlug } from '../utils/taskSpaceSettingsUtils';
 
 export const TaskSpacesPage: React.FC = () => {
   const { spaceId } = useParams<{ spaceId?: string }>();
@@ -12,6 +13,7 @@ export const TaskSpacesPage: React.FC = () => {
     userSpaces,
     filteredTasks,
     folders,
+    listSettings,
     setIsNewFolderModalOpen,
     setFolderToEdit,
     setItemToDelete,
@@ -33,7 +35,8 @@ export const TaskSpacesPage: React.FC = () => {
     // It's a list: find the parent folder
     const parentFolder = findFolderByListId(folders, spaceOrListId);
     const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
-    navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceOrListId}/board`);
+    const defaultSlug = mapDefaultViewToSlug(listSettings?.defaultView);
+    navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceOrListId}/${defaultSlug}`);
   };
 
   return (

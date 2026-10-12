@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { TaskItem, TaskStatus } from '../types';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
+import { formatEstimationValue } from '../utils/taskSpaceSettingsUtils';
 
 interface KanbanBoardProps {
   tasks: TaskItem[];
@@ -27,6 +29,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
+  const { statuses, listSettings } = useWorkspace();
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null);
@@ -36,42 +39,48 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     status: TaskStatus;
   } | null>(null);
 
-  const columns: {
-    status: TaskStatus;
-    title: string;
-    dotColor: string;
-    countBadgeColor?: string;
-  }[] = [
-    {
-      status: 'Backlog',
-      title: 'Backlog',
-      dotColor: 'bg-zinc-500',
-    },
-    {
-      status: 'In Progress',
-      title: 'In Progress',
-      dotColor: 'bg-orange-500 animate-pulse',
-      countBadgeColor: 'bg-orange-950/60 text-orange-400 border border-orange-500/30',
-    },
-    {
-      status: 'In Review',
-      title: 'In Review',
-      dotColor: 'bg-amber-500',
-      countBadgeColor: 'bg-amber-950/60 text-amber-400 border border-amber-500/30',
-    },
-    {
-      status: 'Blocked',
-      title: 'Blocked',
-      dotColor: 'bg-red-500',
-      countBadgeColor: 'bg-red-950/60 text-red-400 border border-red-500/30',
-    },
-    {
-      status: 'Done',
-      title: 'Done',
-      dotColor: 'bg-emerald-500',
-      countBadgeColor: 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30',
-    },
-  ];
+  const columns = useMemo(() => {
+    if (statuses && statuses.length > 0) {
+      const seen = new Set<string>();
+      return [...statuses]
+        .filter((st) => {
+          const key = (st.name || '').trim().toLowerCase();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((st) => ({
+          status: st.name as TaskStatus,
+          id: st.id,
+          title: st.name,
+          color: st.color || '#ea580c',
+          countBadgeColor:
+            st.name === 'In Progress'
+              ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
+              : st.name === 'Done'
+              ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'
+              : undefined,
+        }));
+    }
+    return [
+      { status: 'Backlog' as TaskStatus, title: 'Backlog', color: '#71717a' },
+      {
+        status: 'In Progress' as TaskStatus,
+        title: 'In Progress',
+        color: '#ea580c',
+        countBadgeColor: 'bg-orange-950/60 text-orange-400 border border-orange-500/30',
+      },
+      { status: 'In Review' as TaskStatus, title: 'In Review', color: '#f59e0b' },
+      { status: 'Blocked' as TaskStatus, title: 'Blocked', color: '#ef4444' },
+      {
+        status: 'Done' as TaskStatus,
+        title: 'Done',
+        color: '#10b981',
+        countBadgeColor: 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30',
+      },
+    ];
+  }, [statuses]);
 
   const getPriorityBadge = (priority: TaskItem['priority']) => {
     switch (priority) {
@@ -112,7 +121,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 
         return (
           <div
-            key={col.status}
+            key={col.id || col.status}
             onDragOver={(e) => {
               if (isReadOnly) return;
               e.preventDefault();
@@ -147,7 +156,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             {/* Column Header */}
             <div className="flex items-center justify-between mb-3 shrink-0">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${col.dotColor}`}></span>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }}></span>
                 <h2 className="font-semibold text-xs font-mono uppercase tracking-wider text-zinc-100">{col.title}</h2>
                 <span
                   className={`font-mono text-[11px] px-2 py-0.5 rounded-[6px] font-medium ${
@@ -355,6 +364,17 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                         </div>
 
                         <div className="flex items-center gap-2">
+                          {t.estimation && (
+                            <span
+                              className="font-mono text-[10px] px-1.5 py-0.5 rounded-[6px] bg-[#121214] border border-[#27272a] text-zinc-400 flex items-center gap-1"
+                              title={listSettings?.estimationUnit === 'Story Points' ? 'Story Points' : 'Estimated Hours'}
+                            >
+                              <span className="material-symbols-outlined text-[11px] text-zinc-500">
+                                {listSettings?.estimationUnit === 'Story Points' ? 'tag' : 'schedule'}
+                              </span>
+                              <span>{formatEstimationValue(t.estimation, listSettings?.estimationUnit)}</span>
+                            </span>
+                          )}
                           <span className="font-mono text-[11px] text-zinc-400">
                             {t.dueDate}
                           </span>
@@ -376,44 +396,40 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           className="absolute top-2 right-2 hidden group-hover:flex items-center gap-1 bg-[#121214]/90 backdrop-blur rounded-[6px] px-1 py-0.5 shadow-sm border border-[#27272a]"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          {col.status !== 'Backlog' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const prevMap: Record<TaskStatus, TaskStatus> = {
-                                  'In Progress': 'Backlog',
-                                  'In Review': 'In Progress',
-                                  'Blocked': 'In Review',
-                                  'Done': 'Blocked',
-                                  'Backlog': 'Backlog',
-                                };
-                                onMoveTaskStatus(t.id, prevMap[t.status]);
-                              }}
-                              className="text-zinc-400 hover:text-orange-400 p-0.5 cursor-pointer"
-                              title="Move left"
-                            >
-                              <span className="material-symbols-outlined text-[13px]">arrow_back</span>
-                            </button>
-                          )}
-                          {col.status !== 'Done' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const nextMap: Record<TaskStatus, TaskStatus> = {
-                                  'Backlog': 'In Progress',
-                                  'In Progress': 'In Review',
-                                  'In Review': 'Blocked',
-                                  'Blocked': 'Done',
-                                  'Done': 'Done',
-                                };
-                                onMoveTaskStatus(t.id, nextMap[t.status]);
-                              }}
-                              className="text-zinc-400 hover:text-orange-400 p-0.5 cursor-pointer"
-                              title="Move right"
-                            >
-                              <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
-                            </button>
-                          )}
+                          {(() => {
+                            const currentColIdx = columns.findIndex((c) => c.status === col.status);
+                            const canMoveLeft = currentColIdx > 0;
+                            const canMoveRight = currentColIdx >= 0 && currentColIdx < columns.length - 1;
+
+                            return (
+                              <>
+                                {canMoveLeft && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onMoveTaskStatus(t.id, columns[currentColIdx - 1].status);
+                                    }}
+                                    className="text-zinc-400 hover:text-orange-400 p-0.5 cursor-pointer"
+                                    title={`Move to ${columns[currentColIdx - 1].title}`}
+                                  >
+                                    <span className="material-symbols-outlined text-[13px]">arrow_back</span>
+                                  </button>
+                                )}
+                                {canMoveRight && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      onMoveTaskStatus(t.id, columns[currentColIdx + 1].status);
+                                    }}
+                                    className="text-zinc-400 hover:text-orange-400 p-0.5 cursor-pointer"
+                                    title={`Move to ${columns[currentColIdx + 1].title}`}
+                                  >
+                                    <span className="material-symbols-outlined text-[13px]">arrow_forward</span>
+                                  </button>
+                                )}
+                              </>
+                            );
+                          })()}
                         </div>
                       )}
                     </div>

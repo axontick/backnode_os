@@ -16,8 +16,11 @@ import {
   User,
   Department,
   Role,
+  DocItem,
+  DocFolder,
 } from '../entities';
 import { CurrentUserPayload } from '../auth/current-user.decorator';
+import { initialStatuses, initialListSettings } from '@backnode/shared';
 
 @Injectable()
 export class WorkspaceService {
@@ -124,6 +127,59 @@ export class WorkspaceService {
     });
     await this.memberRepo.save(member);
 
+    // Provision clean default structure (statuses, list settings, starter folder) - NO dummy data
+    for (const s of initialStatuses) {
+      await this.statusRepo.save({
+        id: `${s.id}-${saved.id.slice(0, 8)}`,
+        order: s.order,
+        name: s.name,
+        description: s.description || '',
+        color: s.color,
+        stageMapping: s.stageMapping || '',
+        activeVolume: 0,
+        isDefault: s.isDefault ?? false,
+        isClosed: s.isClosed ?? false,
+        wipLimit: s.wipLimit,
+        requirePrReview: s.requirePrReview ?? false,
+        accountId: saved.id,
+      });
+    }
+
+    await this.listSettingsRepo.save({
+      id: `list-settings-${saved.id.slice(0, 8)}`,
+      listId: `sprint-${saved.id.slice(0, 8)}`,
+      name: `${saved.name} Sprint Cycle`,
+      description: `Active engineering deliverables and sprint backlog for ${saved.name}`,
+      color: initialListSettings.color,
+      icon: initialListSettings.icon,
+      defaultView: initialListSettings.defaultView,
+      defaultPriority: initialListSettings.defaultPriority,
+      estimationUnit: initialListSettings.estimationUnit,
+      distributedWriteLogging: initialListSettings.distributedWriteLogging,
+      autoArchiveDays: initialListSettings.autoArchiveDays,
+      strictForwardProgress: initialListSettings.strictForwardProgress,
+      autoArchiveDone: initialListSettings.autoArchiveDone,
+      accountId: saved.id,
+    });
+
+    await this.folderRepo.save({
+      id: `fld-sprint-${saved.id.slice(0, 8)}`,
+      name: `${saved.name} Core`,
+      icon: 'folder',
+      color: '#ea580c',
+      description: 'Active sprint tasks and deliverables',
+      items: [
+        {
+          id: `sprint-${saved.id.slice(0, 8)}`,
+          name: 'Sprint 01',
+          taskCount: 0,
+          status: 'Active',
+          active: true,
+        },
+      ],
+      accountId: saved.id,
+    });
+
     return {
       id: saved.id,
       name: saved.name,
@@ -177,6 +233,9 @@ export class WorkspaceService {
       await manager.delete(CrmStageDefinition, { accountId: id });
       await manager.delete(CrmPipelineSettings, { accountId: id });
       await manager.delete(DirectoryContact, { accountId: id });
+      await manager.delete(DocItem, { accountId: id });
+      await manager.delete(DocFolder, { accountId: id });
+      await manager.delete(Department, { accountId: id });
       await manager.delete(SpaceFolder, { accountId: id });
       await manager.delete(StatusDefinition, { accountId: id });
       await manager.delete(ListSettings, { accountId: id });
@@ -283,9 +342,16 @@ export class WorkspaceService {
 
   // Status Definitions
   async getStatuses(accountId: string) {
-    return this.statusRepo.find({
+    const list = await this.statusRepo.find({
       where: { accountId },
       order: { order: 'ASC' },
+    });
+    const seen = new Set<string>();
+    return list.filter((s) => {
+      const key = (s.name || '').trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
     });
   }
 

@@ -19,6 +19,8 @@ import { NotFoundPage } from './pages/NotFoundPage';
 import { AuthModal } from './components/AuthModal';
 import { ListRedirect } from './components/ListRedirect';
 import { RootSpaceRedirect } from './components/RootSpaceRedirect';
+import { DocsPage } from './modules/docs';
+import { PluginsPage } from './modules/plugins';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, isLoading } = useAuth();
@@ -115,11 +117,18 @@ export default function App() {
             {/* Contacts Hub */}
             <Route path="contacts" element={<ContactsPage />} />
 
-            {/* Team & Access Controls */}
-            <Route path="team" element={<TeamAccessPage />} />
+            {/* Standalone Documentation Hub */}
+            <Route path="docs" element={<DocsPage />} />
+            <Route path="docs/:docId" element={<DocsPage />} />
+
+            {/* Plugins Registry & Integrations Hub */}
+            <Route path="plugins" element={<PluginsPage />} />
+
+            {/* Team & Access Controls (Unified Team & Roles) */}
+            <Route path="team" element={<TeamAccessPage defaultTab="users" />} />
             <Route path="team/members/:memberId/edit" element={<TeamAccessPage />} />
-            <Route path="roles" element={<RolesPage />} />
-            <Route path="roles/:roleId" element={<RolesPage />} />
+            <Route path="roles" element={<TeamAccessPage defaultTab="roles" />} />
+            <Route path="roles/:roleId" element={<TeamAccessPage defaultTab="roles" />} />
             <Route path="users" element={<Navigate to="../team" replace />} />
             <Route path="users/*" element={<Navigate to="../team" replace />} />
 

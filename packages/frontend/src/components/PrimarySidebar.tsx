@@ -35,6 +35,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     roles,
     effectivePermissions,
     setIsNewWorkspaceModalOpen,
+    enabledPlugins = { tasks: true, crm: true, contacts: true, docs: true },
   } = useWorkspace();
 
   const [isSpaceDropdownOpen, setIsSpaceDropdownOpen] = useState(false);
@@ -102,21 +103,32 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
     effectiveHub = 'crm';
   } else if (normalizedPath.startsWith('/contacts')) {
     effectiveHub = 'contacts';
-  } else if (normalizedPath.startsWith('/team')) {
+  } else if (normalizedPath.startsWith('/docs')) {
+    effectiveHub = 'docs';
+  } else if (normalizedPath.startsWith('/team') || normalizedPath.startsWith('/roles')) {
     effectiveHub = 'team';
-  } else if (normalizedPath.startsWith('/roles')) {
-    effectiveHub = 'roles';
+  } else if (normalizedPath.startsWith('/plugins')) {
+    effectiveHub = 'plugins';
   } else if (normalizedPath.startsWith('/settings')) {
     effectiveHub = 'settings';
   }
 
   const hubs = [
     { id: 'overview', path: `${spacePrefix}/dashboard`, label: 'Overview', icon: 'dashboard', description: 'System Overview & KPIs' },
-    { id: 'task-spaces', path: `${spacePrefix}/spaces`, label: 'Task Spaces', icon: 'folder_open', description: 'Execution Workspaces' },
-    { id: 'crm', path: `${spacePrefix}/crm`, label: 'CRM Pipelines', icon: 'leaderboard', description: 'Deals & Revenue Pipeline' },
-    { id: 'contacts', path: `${spacePrefix}/contacts`, label: 'Contacts', icon: 'group', description: 'Client & Partner Directory' },
-    { id: 'team', path: `${spacePrefix}/team`, label: 'Team & Access', icon: 'shield_person', description: 'Operator Roster & Access', count: members.length },
-    { id: 'roles', path: `${spacePrefix}/roles`, label: 'Roles & Matrix', icon: 'verified_user', description: 'RBAC Roles & Matrix', count: roles?.length },
+    ...(enabledPlugins.tasks !== false
+      ? [{ id: 'task-spaces', path: `${spacePrefix}/spaces`, label: 'Task Spaces', icon: 'folder_open', description: 'Execution Workspaces' }]
+      : []),
+    ...(enabledPlugins.crm !== false
+      ? [{ id: 'crm', path: `${spacePrefix}/crm`, label: 'CRM Pipelines', icon: 'leaderboard', description: 'Deals & Revenue Pipeline' }]
+      : []),
+    ...(enabledPlugins.contacts !== false
+      ? [{ id: 'contacts', path: `${spacePrefix}/contacts`, label: 'Contacts', icon: 'group', description: 'Client & Partner Directory' }]
+      : []),
+    ...(enabledPlugins.docs !== false
+      ? [{ id: 'docs', path: `${spacePrefix}/docs`, label: 'Documentation', icon: 'menu_book', description: 'Internal Technical Specs & RFCs' }]
+      : []),
+    { id: 'team', path: `${spacePrefix}/team`, label: 'Team & Roles', icon: 'shield_person', description: 'Operators & RBAC Governance', count: members.length },
+    { id: 'plugins', path: `${spacePrefix}/plugins`, label: 'Plugins', icon: 'extension', description: 'Modular Plugin Architecture' },
   ];
 
   return (

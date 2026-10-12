@@ -3,7 +3,9 @@ import { TaskItem, TeamMember, TaskStatus } from '../types';
 import { AssigneePopover } from './AssigneePopover';
 import { StatusTransitionPopover } from './StatusTransitionPopover';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 import { formatDateDisplay, formatDateIso, parseTaskDueDate } from '../utils/dateUtils';
+import { CalendarPopover, RecurringCadenceSelector, DynamicEntityLinker } from '../modules/shared';
 
 interface TaskInspectorProps {
   task: TaskItem;
@@ -24,6 +26,8 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 }) => {
   const { user, effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
+  const { listSettings } = useWorkspace();
+  const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const authorName = user?.name || 'Operator';
   const authorInitials = user?.name
@@ -187,16 +191,6 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
       {/* Slide-Over Header */}
       <div className="border-b border-[#27272a] px-6 py-3 flex items-center justify-between bg-[#0c0a09] shrink-0">
         <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-          <span className="hover:text-orange-400 cursor-pointer">Task Spaces</span>
-          <span>/</span>
-          <span className="hover:text-orange-400 cursor-pointer">Engineering</span>
-          <span>/</span>
-          {task.targetCycle ? (
-            <>
-              <span className="hover:text-orange-400 cursor-pointer">{task.targetCycle.split(' - ')[0]}</span>
-              <span>/</span>
-            </>
-          ) : null}
           <span className="bg-orange-950/40 text-orange-400 font-bold px-2 py-0.5 rounded-[6px] border border-orange-500/20">
             {task.id}
           </span>
@@ -280,32 +274,31 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               <span>{task.priority} Priority</span>
             </span>
 
-            {/* Due Date Editable */}
-            <div className="relative flex items-center">
-              <label
-                className={`bg-[#18181b] text-zinc-300 border border-[#27272a] hover:border-orange-500/50 font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1.5 transition-colors ${
-                  isReadOnly ? 'cursor-default' : 'cursor-pointer'
-                }`}
-                title={isReadOnly ? 'Due date' : 'Click to change due date'}
-              >
-                <span className="material-symbols-outlined text-[13px] text-amber-400">calendar_today</span>
-                <span>Due {task.dueDate || 'Unscheduled'}</span>
-                {!isReadOnly && (
-                  <input
-                    type="date"
-                    value={task.dueDate ? formatDateIso(parseTaskDueDate(task.dueDate)) : ''}
-                    onChange={(e) => handleDueDateChange(e.target.value)}
-                    className="opacity-0 absolute inset-0 w-full h-full cursor-pointer"
-                  />
-                )}
-              </label>
-            </div>
+            {/* Due Date with Calendar Popover */}
+            <CalendarPopover
+              value={task.dueDate || ''}
+              onChange={(newDateStr) => handleDueDateChange(newDateStr)}
+              trigger={
+                <button
+                  type="button"
+                  className={`bg-[#18181b] text-zinc-300 border border-[#27272a] hover:border-orange-500/50 font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1.5 transition-colors ${
+                    isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                  }`}
+                  title={isReadOnly ? 'Due date' : 'Click to pick due date from calendar'}
+                >
+                  <span className="material-symbols-outlined text-[13px] text-amber-400">calendar_today</span>
+                  <span>Due {task.dueDate || 'Unscheduled'}</span>
+                </button>
+              }
+            />
 
-            {/* Git Branch */}
-            <span className="bg-[#18181b] text-zinc-400 border border-[#27272a] font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1">
-              <span className="material-symbols-outlined text-[12px]">commit</span>
-              <span>{task.gitBranch}</span>
-            </span>
+            {/* Recurring Status Indicator */}
+            {task.isRecurring && (
+              <span className="bg-orange-950/40 text-orange-400 border border-orange-500/30 font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1">
+                <span className="material-symbols-outlined text-[12px]">repeat</span>
+                <span className="capitalize">{task.recurrenceRule || 'Weekly'}</span>
+              </span>
+            )}
           </div>
 
           {/* Editable Title Field */}
@@ -392,11 +385,65 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </div>
           </div>
 
+          {/* Story Points Field (When Primary) */}
+          {isPoints && (
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[10px] text-zinc-400 font-medium">STORY POINTS</span>
+                <span className="font-mono text-[9px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1 py-0.2 rounded-[6px]">
+                  Default
+                </span>
+              </div>
+              <div
+                className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-orange-500/40 shadow-sm transition-all ${
+                  isReadOnly ? 'cursor-default' : 'hover:border-orange-500 focus-within:border-orange-500'
+                }`}
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0 mr-1.5">
+                  <span className="material-symbols-outlined text-orange-400 text-[16px] shrink-0">
+                    tag
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    disabled={isReadOnly}
+                    value={task.estimation?.points ?? 0}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const val = raw === '' ? 0 : Math.max(0, parseInt(raw, 10) || 0);
+                      onUpdateTask({
+                        ...task,
+                        estimation: {
+                          hours: task.estimation?.hours ?? 0,
+                          points: val,
+                        },
+                      });
+                    }}
+                    className="w-full bg-transparent font-mono text-xs font-semibold text-zinc-100 focus:outline-none text-left"
+                  />
+                </div>
+                <span className="font-mono text-[11px] text-zinc-400 font-medium shrink-0">
+                  pts
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Estimated Hours Field */}
           <div className="flex flex-col gap-1">
-            <span className="font-mono text-[10px] text-zinc-400 font-medium">ESTIMATED HOURS</span>
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[10px] text-zinc-400 font-medium">ESTIMATED HOURS</span>
+              {!isPoints && (
+                <span className="font-mono text-[9px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1 py-0.2 rounded-[6px]">
+                  Default
+                </span>
+              )}
+            </div>
             <div
-              className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
+              className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border shadow-sm transition-all ${
+                !isPoints ? 'border-orange-500/40' : 'border-[#27272a]'
+              } ${
                 isReadOnly ? 'cursor-default' : 'hover:border-zinc-700 focus-within:border-orange-500'
               }`}
             >
@@ -430,43 +477,45 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             </div>
           </div>
 
-          {/* Story Points Field */}
-          <div className="flex flex-col gap-1">
-            <span className="font-mono text-[10px] text-zinc-400 font-medium">STORY POINTS</span>
-            <div
-              className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
-                isReadOnly ? 'cursor-default' : 'hover:border-zinc-700 focus-within:border-orange-500'
-              }`}
-            >
-              <div className="flex items-center gap-2 flex-1 min-w-0 mr-1.5">
-                <span className="material-symbols-outlined text-orange-400 text-[16px] shrink-0">
-                  tag
+          {/* Story Points Field (When Not Primary) */}
+          {!isPoints && (
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[10px] text-zinc-400 font-medium">STORY POINTS</span>
+              <div
+                className={`flex items-center justify-between p-2 rounded-[6px] bg-[#121214] border border-[#27272a] shadow-sm transition-all ${
+                  isReadOnly ? 'cursor-default' : 'hover:border-zinc-700 focus-within:border-orange-500'
+                }`}
+              >
+                <div className="flex items-center gap-2 flex-1 min-w-0 mr-1.5">
+                  <span className="material-symbols-outlined text-orange-400 text-[16px] shrink-0">
+                    tag
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    max="99"
+                    disabled={isReadOnly}
+                    value={task.estimation?.points ?? 0}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      const val = raw === '' ? 0 : Math.max(0, parseInt(raw, 10) || 0);
+                      onUpdateTask({
+                        ...task,
+                        estimation: {
+                          hours: task.estimation?.hours ?? 0,
+                          points: val,
+                        },
+                      });
+                    }}
+                    className="w-full bg-transparent font-mono text-xs font-semibold text-zinc-100 focus:outline-none text-left"
+                  />
+                </div>
+                <span className="font-mono text-[11px] text-zinc-400 font-medium shrink-0">
+                  pts
                 </span>
-                <input
-                  type="number"
-                  min="0"
-                  max="99"
-                  disabled={isReadOnly}
-                  value={task.estimation?.points ?? 0}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    const val = raw === '' ? 0 : Math.max(0, parseInt(raw, 10) || 0);
-                    onUpdateTask({
-                      ...task,
-                      estimation: {
-                        hours: task.estimation?.hours ?? 0,
-                        points: val,
-                      },
-                    });
-                  }}
-                  className="w-full bg-transparent font-mono text-xs font-semibold text-zinc-100 focus:outline-none text-left"
-                />
               </div>
-              <span className="font-mono text-[11px] text-zinc-400 font-medium shrink-0">
-                pts
-              </span>
             </div>
-          </div>
+          )}
 
           {/* Linked CRM Deal */}
           {task.linkedCrmDeal && (
@@ -491,6 +540,35 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               </span>
             </div>
           )}
+
+          {/* Recurring Task Selector */}
+          <div className="col-span-2 pt-2 border-t border-[#27272a]">
+            <RecurringCadenceSelector
+              isRecurring={!!task.isRecurring}
+              cadence={task.recurrenceRule || 'weekly'}
+              onToggle={(isRecurring) => {
+                if (isReadOnly) return;
+                onUpdateTask({ ...task, isRecurring });
+              }}
+              onCadenceChange={(cadence) => {
+                if (isReadOnly) return;
+                onUpdateTask({ ...task, isRecurring: true, recurrenceRule: cadence });
+              }}
+            />
+          </div>
+
+          {/* Dynamic Cross-Module Linkages (Contacts, Deals, Docs) */}
+          <div className="col-span-2 pt-2 border-t border-[#27272a]">
+            <DynamicEntityLinker
+              sourceModule="tasks"
+              customLinks={task.customLinks || {}}
+              readOnly={isReadOnly}
+              onChange={(updatedLinks) => {
+                if (isReadOnly) return;
+                onUpdateTask({ ...task, customLinks: updatedLinks });
+              }}
+            />
+          </div>
         </div>
 
         {/* Popover Placements */}

@@ -10,7 +10,6 @@ import {
   initialDirectoryContacts,
   initialFolders,
   initialCrmPipelines,
-  initialDocs,
   initialDepartments,
 } from '../mockData';
 import {
@@ -36,6 +35,7 @@ import {
   RolePermissions,
   INITIAL_SYSTEM_ROLES,
   resolveEffectivePermissions,
+  DocFolder,
 } from '../types';
 import { DeletionTarget } from '../components/DeleteConfirmationModal';
 import {
@@ -46,6 +46,8 @@ import {
   contactsApi,
   workspaceApi,
   rolesApi,
+  pluginsApi,
+  docsApi,
 } from '../services/api';
 import { useAuth } from './AuthContext';
 import {
@@ -61,6 +63,7 @@ import {
   flattenSubFolders,
   flattenPipelineSubFolders,
   updateListItemInSubFoldersRecursively,
+  deleteListItemFromSubFoldersRecursively,
 } from '../utils/treeUtils';
 
 interface WorkspaceContextType {
@@ -233,6 +236,8 @@ interface WorkspaceContextType {
   handleCreateFolder: (folder: SpaceFolder) => void;
   handleUpdateFolder: (folder: SpaceFolder) => void;
   handleDeleteFolder: (folderId: string) => void;
+  handleDeleteTaskSpace: (listId: string) => Promise<void>;
+  handleRenameStatus: (oldName: string, newName: string) => void;
   handleCreateSubFolder: (folderId: string, newSubFolder: SpaceSubFolder) => void;
   handleUpdateSubFolder: (folderId: string, updatedSubFolder: SpaceSubFolder) => void;
   handleDeleteSubFolder: (folderId: string, subFolderId: string) => void;
@@ -250,6 +255,16 @@ interface WorkspaceContextType {
   handleUpdateDoc: (id: string, updates: Partial<DocItem>) => void;
   handleDeleteDoc: (id: string) => void;
   handleDuplicateDoc: (id: string) => void;
+  docFolders: DocFolder[];
+  setDocFolders: React.Dispatch<React.SetStateAction<DocFolder[]>>;
+  handleCreateDocFolder: (data: Partial<DocFolder>) => Promise<DocFolder>;
+  handleUpdateDocFolder: (id: string, data: Partial<DocFolder>) => Promise<DocFolder>;
+  handleDeleteDocFolder: (id: string) => Promise<void>;
+
+  // Plugins System
+  enabledPlugins: Record<string, boolean>;
+  isPluginEnabled: (pluginId: string) => boolean;
+  handleTogglePlugin: (pluginId: string, enabled: boolean) => Promise<void>;
 
   // Top-left User Space Dropdown & Creation
   userSpaces: UserSpace[];
@@ -302,11 +317,24 @@ interface WorkspaceContextType {
 
 const WorkspaceContext = createContext<WorkspaceContextType | undefined>(undefined);
 
+export const deduplicateStatuses = (list: StatusDefinition[]): StatusDefinition[] => {
+  if (!Array.isArray(list)) return [];
+  const seen = new Set<string>();
+  const result: StatusDefinition[] = [];
+  for (const s of list) {
+    const key = (s.name || '').trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    result.push(s);
+  }
+  return result;
+};
+
 export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { token, user } = useAuth();
 
   const [tasks, setTasks] = useState<TaskItem[]>([]);
-  const [statuses, setStatuses] = useState(initialStatuses);
+  const [statuses, setStatuses] = useState<StatusDefinition[]>(() => deduplicateStatuses(initialStatuses));
   const [listSettings, setListSettings] = useState(initialListSettings);
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [directoryContacts, setDirectoryContacts] = useState<DirectoryContact[]>([]);
@@ -386,16 +414,16 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       const stored = localStorage.getItem('backnode_docs_collection');
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) return parsed;
       }
     } catch (e) {
       console.warn('Failed to parse cached docs:', e);
     }
-    return initialDocs;
+    return [];
   });
 
   const [activeDocId, setActiveDocId] = useState<string>(() => {
-    return localStorage.getItem('backnode_active_doc_id') || initialDocs[0]?.id || 'doc-arch-v2';
+    return localStorage.getItem('backnode_active_doc_id') || '';
   });
 
   useEffect(() => {
@@ -411,6 +439,21 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       localStorage.setItem('backnode_active_doc_id', activeDocId);
     }
   }, [activeDocId]);
+
+  const [docFolders, setDocFolders] = useState<DocFolder[]>([]);
+  const [enabledPlugins, setEnabledPlugins] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem('backnode_enabled_plugins');
+      if (stored) {
+        return JSON.parse(stored);
+      }
+    } catch {}
+    return { tasks: true, crm: true, contacts: true, docs: true };
+  });
+
+  const isPluginEnabled = (pluginId: string): boolean => {
+    return enabledPlugins[pluginId] !== false;
+  };
 
   // Navigation state
   const [currentHub, setCurrentHub] = useState<string>('overview');
@@ -1111,6 +1154,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         fetchedWorkspaces,
         fetchedDepartments,
         fetchedRoles,
+        fetchedPluginsRes,
+        fetchedDocFolders,
+        fetchedDocs,
       ] = await Promise.all([
         tasksApi.getAll(),
         dealsApi.getAll(),
@@ -1125,7 +1171,23 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         workspaceApi.getWorkspaces().catch(() => null),
         workspaceApi.getDepartments().catch(() => null),
         rolesApi.getAll().catch(() => null),
+        pluginsApi.getPlugins().catch(() => null),
+        docsApi.getFolders().catch(() => null),
+        docsApi.getAll().catch(() => null),
       ]);
+
+      if (fetchedPluginsRes?.enabledPlugins) {
+        setEnabledPlugins(fetchedPluginsRes.enabledPlugins);
+        localStorage.setItem('backnode_enabled_plugins', JSON.stringify(fetchedPluginsRes.enabledPlugins));
+      }
+
+      if (fetchedDocFolders && Array.isArray(fetchedDocFolders)) {
+        setDocFolders(fetchedDocFolders);
+      }
+
+      if (fetchedDocs && Array.isArray(fetchedDocs)) {
+        setDocs(fetchedDocs);
+      }
 
       if (fetchedRoles && fetchedRoles.length > 0) {
         setRoles(fetchedRoles);
@@ -1205,7 +1267,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           return curr;
         });
       }
-      if (fetchedStatuses && fetchedStatuses.length > 0) setStatuses(fetchedStatuses);
+      if (fetchedStatuses && fetchedStatuses.length > 0) setStatuses(deduplicateStatuses(fetchedStatuses));
       if (fetchedListSettings) setListSettings(fetchedListSettings);
       if (fetchedDepartments && fetchedDepartments.length > 0) {
         setDepartments(fetchedDepartments);
@@ -1821,11 +1883,28 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   };
 
   const handleUpdateStatuses = (newStatuses: StatusDefinition[]) => {
-    setStatuses(newStatuses);
-    workspaceApi.updateStatuses(newStatuses).catch((err) => {
+    const deduped = deduplicateStatuses(newStatuses);
+    setStatuses(deduped);
+    workspaceApi.updateStatuses(deduped).catch((err) => {
       console.error('Failed to update statuses in DB:', err);
     });
     showToast('Pipeline statuses updated');
+  };
+
+  const handleRenameStatus = (oldName: string, newName: string) => {
+    if (!oldName || !newName || oldName === newName) return;
+    setTasks((prev) =>
+      prev.map((t) => (t.status === oldName ? { ...t, status: newName as TaskStatus } : t))
+    );
+    tasksApi
+      .getAll()
+      .then((allTasks) => {
+        const toUpdate = allTasks.filter((t) => t.status === oldName);
+        toUpdate.forEach((t) => {
+          tasksApi.update(t.id, { status: newName as TaskStatus }).catch(console.error);
+        });
+      })
+      .catch(console.error);
   };
 
   const handleUpdateCrmSettings = (newSettings: Partial<CrmPipelineSettingsType>) => {
@@ -1902,6 +1981,69 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.error('Failed to delete folder in DB:', err);
     });
     showToast('Folder deleted');
+  };
+
+  const handleDeleteTaskSpace = async (listId: string): Promise<void> => {
+    let deletedItemName = '';
+    let targetFolderId: string | null = null;
+    let updatedTargetFolder: SpaceFolder | null = null;
+
+    const newFolders = folders.map((f) => {
+      let folderChanged = false;
+      let newItems = f.items;
+      if (newItems && newItems.some((item) => item.id === listId)) {
+        const found = newItems.find((item) => item.id === listId);
+        if (found) deletedItemName = found.name;
+        newItems = newItems.filter((item) => item.id !== listId);
+        folderChanged = true;
+      }
+      let newSubFolders = f.subFolders;
+      if (newSubFolders && newSubFolders.length > 0) {
+        const res = deleteListItemFromSubFoldersRecursively(newSubFolders, listId);
+        if (res.deleted) {
+          deletedItemName = res.deleted.name;
+          newSubFolders = res.updated;
+          folderChanged = true;
+        }
+      }
+      if (folderChanged) {
+        const updated: SpaceFolder = {
+          ...f,
+          items: newItems,
+          subFolders: newSubFolders,
+        };
+        targetFolderId = f.id;
+        updatedTargetFolder = updated;
+        return updated;
+      }
+      return f;
+    });
+
+    setFolders(newFolders);
+    if (targetFolderId && updatedTargetFolder) {
+      workspaceApi.updateFolder(targetFolderId, updatedTargetFolder).catch((err) => {
+        console.error('Failed to delete list from folder in DB:', err);
+      });
+    }
+
+    // Filter out tasks mapped to this list
+    setTasks((prev) =>
+      prev.filter(
+        (t) =>
+          t.targetCycle !== listId &&
+          !t.targetCycle.toLowerCase().includes(listId.toLowerCase()) &&
+          (!deletedItemName || !t.targetCycle.toLowerCase().includes(deletedItemName.toLowerCase()))
+      )
+    );
+
+    // If activeSpace is this list, find next available space
+    if (activeSpace === listId) {
+      const allRemainingItems = newFolders.flatMap((f) => getAllItemsFromFolder(f));
+      const nextSpace = allRemainingItems[0]?.id || 'sprint-14';
+      setActiveSpace(nextSpace);
+    }
+
+    showToast(`Task space "${deletedItemName || listId}" deleted`);
   };
 
   const handleCreateSubFolder = (folderId: string, newSubFolder: SpaceSubFolder) => {
@@ -2187,6 +2329,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     };
     setDocs((prev) => [newDoc, ...prev]);
     setActiveDocId(newDoc.id);
+    docsApi.create(newDoc).catch((err) => {
+      console.warn('Backend doc creation failed, keeping locally:', err);
+    });
     showToast(`Document "${newDoc.title}" created`);
     return newDoc;
   };
@@ -2197,6 +2342,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         doc.id === id ? { ...doc, ...updates, updatedAt: new Date().toISOString() } : doc
       )
     );
+    docsApi.update(id, updates).catch((err) => {
+      console.warn('Backend doc update failed, applied locally:', err);
+    });
   };
 
   const handleDeleteDoc = (id: string) => {
@@ -2206,6 +2354,9 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     if (activeDocId === id) {
       setActiveDocId(remaining[0]?.id || '');
     }
+    docsApi.delete(id).catch((err) => {
+      console.warn('Backend doc deletion failed, removed locally:', err);
+    });
     showToast(`Deleted document ${target?.title ? `"${target.title}"` : ''}`);
   };
 
@@ -2221,7 +2372,84 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     };
     setDocs((prev) => [duplicated, ...prev]);
     setActiveDocId(duplicated.id);
+    docsApi.create(duplicated).catch((err) => {
+      console.warn('Backend duplicate doc failed, saved locally:', err);
+    });
     showToast(`Duplicated "${target.title}"`);
+  };
+
+  const handleCreateDocFolder = async (data: Partial<DocFolder>): Promise<DocFolder> => {
+    try {
+      const created = await docsApi.createFolder(data);
+      setDocFolders((prev) => [...prev, created]);
+      showToast(`Folder "${created.name}" created`);
+      return created;
+    } catch (err) {
+      const created: DocFolder = {
+        id: `folder-${Date.now()}`,
+        name: data.name || 'New Folder',
+        description: data.description || '',
+        icon: data.icon || 'folder',
+        color: data.color || '#ea580c',
+        parentFolderId: data.parentFolderId || null,
+        accountId: activeUserSpaceId,
+      };
+      setDocFolders((prev) => [...prev, created]);
+      showToast(`Folder "${created.name}" created locally`);
+      return created;
+    }
+  };
+
+  const handleUpdateDocFolder = async (id: string, data: Partial<DocFolder>): Promise<DocFolder> => {
+    try {
+      const updated = await docsApi.updateFolder(id, data);
+      setDocFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...updated } : f)));
+      showToast(`Folder "${updated.name}" updated`);
+      return updated;
+    } catch (err) {
+      let updatedFolder: any;
+      setDocFolders((prev) =>
+        prev.map((f) => {
+          if (f.id === id) {
+            updatedFolder = { ...f, ...data };
+            return updatedFolder;
+          }
+          return f;
+        })
+      );
+      return updatedFolder;
+    }
+  };
+
+  const handleDeleteDocFolder = async (id: string): Promise<void> => {
+    try {
+      await docsApi.deleteFolder(id);
+    } catch (err) {
+      console.warn('Backend delete folder failed, deleting locally:', err);
+    }
+    setDocFolders((prev) => prev.filter((f) => f.id !== id && f.parentFolderId !== id));
+    showToast('Folder deleted');
+  };
+
+  const handleTogglePlugin = async (pluginId: string, enabled: boolean) => {
+    try {
+      const res = await pluginsApi.togglePlugin(pluginId, enabled);
+      if (res?.enabledPlugins) {
+        setEnabledPlugins(res.enabledPlugins);
+        localStorage.setItem('backnode_enabled_plugins', JSON.stringify(res.enabledPlugins));
+      } else {
+        const next = { ...enabledPlugins, [pluginId]: enabled };
+        setEnabledPlugins(next);
+        localStorage.setItem('backnode_enabled_plugins', JSON.stringify(next));
+      }
+      showToast(`Plugin ${pluginId.toUpperCase()} ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (err) {
+      console.warn('Backend plugin toggle failed, updating locally:', err);
+      const next = { ...enabledPlugins, [pluginId]: enabled };
+      setEnabledPlugins(next);
+      localStorage.setItem('backnode_enabled_plugins', JSON.stringify(next));
+      showToast(`Plugin ${pluginId.toUpperCase()} ${enabled ? 'enabled' : 'disabled'} locally`);
+    }
   };
 
   return (
@@ -2371,6 +2599,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleCreateFolder,
         handleUpdateFolder,
         handleDeleteFolder,
+        handleDeleteTaskSpace,
+        handleRenameStatus,
         handleCreateSubFolder,
         handleUpdateSubFolder,
         handleDeleteSubFolder,
@@ -2392,6 +2622,14 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         handleUpdateDoc,
         handleDeleteDoc,
         handleDuplicateDoc,
+        docFolders,
+        setDocFolders,
+        handleCreateDocFolder,
+        handleUpdateDocFolder,
+        handleDeleteDocFolder,
+        enabledPlugins,
+        isPluginEnabled,
+        handleTogglePlugin,
         userSpaces,
         activeUserSpaceId,
         setActiveUserSpaceId,
