@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useWorkspace } from '../context/WorkspaceContext';
 
 interface TaskSpaceViewsBarProps {
   currentView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs';
@@ -36,7 +35,6 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   onOpenCreateTask,
 }) => {
   const { user, effectiveRole } = useAuth();
-  const { handleOpenSpaceImport, handleOpenSpaceExport, folders, activeSpace } = useWorkspace();
   const isReadOnly = effectiveRole === 'VIEWER';
   const userInitials = user?.name
     ? user.name
@@ -218,7 +216,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
             </button>
 
             {isPriorityOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-mono">
+              <div className="absolute right-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-mono">
                 <div className="px-3 py-1 text-[10px] uppercase text-zinc-500 font-semibold">
                   Filter Priority
                 </div>
@@ -263,7 +261,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
             </button>
 
             {isGroupOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold">
                   Group Tasks By
                 </div>
@@ -306,7 +304,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
             </button>
 
             {isColumnsOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-48 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute right-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-2 py-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold">
                   Visible Columns
                 </div>
@@ -352,33 +350,6 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
               <span className="leading-none">Reset</span>
             </button>
           )}
-
-          {/* Import & Export Space / List */}
-          <button
-            type="button"
-            onClick={() => {
-              const parentFolder = folders.find((f) => f.items.some((i) => i.id === activeSpace)) || folders[0];
-              handleOpenSpaceImport(parentFolder);
-            }}
-            className="h-7 flex items-center gap-1 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 text-zinc-300 hover:text-zinc-100 text-[11px] transition-colors cursor-pointer"
-            title="Import tasks into this space"
-          >
-            <span className="material-symbols-outlined text-[14px] text-orange-400 leading-none shrink-0">upload_file</span>
-            <span className="leading-none">Import</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              const parentFolder = folders.find((f) => f.items.some((i) => i.id === activeSpace)) || folders[0];
-              handleOpenSpaceExport(parentFolder, activeSpace);
-            }}
-            className="h-7 flex items-center gap-1 px-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 text-zinc-300 hover:text-zinc-100 text-[11px] transition-colors cursor-pointer"
-            title="Export tasks in this space or list"
-          >
-            <span className="material-symbols-outlined text-[14px] text-zinc-400 leading-none shrink-0">download</span>
-            <span className="leading-none">Export</span>
-          </button>
 
           {!isReadOnly && onOpenCreateTask && (
             <button

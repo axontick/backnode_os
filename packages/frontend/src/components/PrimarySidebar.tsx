@@ -198,7 +198,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
               className={`absolute mt-2 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2.5 flex flex-col gap-2 text-xs animate-in fade-in zoom-in-95 duration-150 ${
                 isCollapsed
                   ? 'left-full top-0 ml-2 w-64'
-                  : 'top-full left-0 right-0 w-full'
+                  : 'top-full left-0 min-w-full w-max max-w-xs ui-dropdown-menu'
               }`}
             >
               <div className="px-1.5 py-1 flex items-center justify-between border-b border-[#27272a]">

@@ -77,3 +77,10 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: rgba(26, 27, 34, 0.28);
 }
+
+/* UI Dropdown expansion utility: allows dropdown to be at least the trigger width, and expand wider as content requires */
+.ui-dropdown-menu {
+  min-width: 100%;
+  width: max-content;
+  max-width: min(90vw, 420px);
+}

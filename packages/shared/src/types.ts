@@ -246,8 +246,10 @@ export interface RecurrenceConfig {
   daysOfWeek?: string[]; // e.g. ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']
   dailyMode?: 'all_days' | 'weekdays_only';
   monthlyMode?: 'day_of_month' | 'specific_date';
-  dayOfMonth?: number; // 1 to 31
+  dayOfMonth?: number; // 1 to 31 (backward compatibility)
+  daysOfMonth?: number[]; // Multi-date selection, e.g. [1, 15, 30]
   specificDate?: string; // YYYY-MM-DD
+  specificDates?: string[];
   action: RecurrenceAction; // 'create_new' | 'reset_existing'
   targetStatus: TaskStatus | string; // e.g. 'Backlog', 'In Progress'
 }

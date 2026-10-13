@@ -549,7 +549,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
 
             {/* Pipeline Picker Dropdown Menu */}
             {isPipelinePickerOpen && pipelines.length > 0 && (
-              <div className="absolute left-0 top-full mt-1.5 w-60 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute left-0 top-full mt-1.5 min-w-full w-max max-w-sm ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1.5 flex flex-col animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold tracking-wider">
                   Select Pipeline ({pipelines.length})
                 </div>
@@ -690,7 +690,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             </button>
 
             {isGroupDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-44 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
+              <div className="absolute right-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
                 <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Group Deals By
                 </div>
@@ -744,7 +744,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             </button>
 
             {isSortDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-52 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
+              <div className="absolute right-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100 font-sans">
                 <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Sort Order
                 </div>
@@ -940,7 +940,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             </button>
 
             {isStageFilterOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-52 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute left-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Filter by Stage
                 </div>
@@ -988,7 +988,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
             </button>
 
             {isOwnerFilterOpen && (
-              <div className="absolute left-0 top-full mt-1.5 w-48 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
+              <div className="absolute left-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-xl z-50 py-1 flex flex-col text-xs animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-3 py-1 text-[10px] font-mono uppercase text-zinc-400 font-semibold">
                   Filter by Owner
                 </div>

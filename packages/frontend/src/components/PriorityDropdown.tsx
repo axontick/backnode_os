@@ -136,7 +136,7 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({
         </div>
 
         {isOpen && (
-          <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl p-1 animate-in fade-in zoom-in-95 duration-100">
+          <div className="absolute left-0 top-full mt-1.5 z-50 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl p-1 animate-in fade-in zoom-in-95 duration-100">
             <div className="px-2 py-1 text-[9.5px] font-mono text-zinc-500 uppercase tracking-wider">
               Select Priority
             </div>
@@ -200,7 +200,7 @@ export const PriorityDropdown: React.FC<PriorityDropdownProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1 z-50 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl p-1 min-w-[130px] animate-in fade-in zoom-in-95 duration-100">
+        <div className="absolute left-0 top-full mt-1 z-50 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl p-1 min-w-[130px] w-max max-w-xs ui-dropdown-menu animate-in fade-in zoom-in-95 duration-100">
           <div className="px-2 py-0.5 text-[9px] font-mono text-zinc-500 uppercase tracking-wider">
             Set Priority
           </div>

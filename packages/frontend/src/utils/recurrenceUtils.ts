@@ -6,8 +6,16 @@ export const DEFAULT_RECURRENCE_CONFIG: RecurrenceConfig = {
   dailyMode: 'all_days',
   monthlyMode: 'day_of_month',
   dayOfMonth: 1,
+  daysOfMonth: [1],
   action: 'create_new',
   targetStatus: 'Backlog',
+};
+
+const getDaySuffix = (day: number): string => {
+  if (day === 1 || day === 21 || day === 31) return `${day}st`;
+  if (day === 2 || day === 22) return `${day}nd`;
+  if (day === 3 || day === 23) return `${day}rd`;
+  return `${day}th`;
 };
 
 /**
@@ -21,6 +29,10 @@ export const parseRecurrenceConfig = (rule?: string): RecurrenceConfig => {
   try {
     if (rule.trim().startsWith('{')) {
       const parsed = JSON.parse(rule);
+      const parsedDaysOfMonth = Array.isArray(parsed.daysOfMonth) && parsed.daysOfMonth.length > 0
+        ? parsed.daysOfMonth.map((d: any) => Number(d)).filter((d: number) => d >= 1 && d <= 31).sort((a: number, b: number) => a - b)
+        : (typeof parsed.dayOfMonth === 'number' && parsed.dayOfMonth >= 1 && parsed.dayOfMonth <= 31 ? [parsed.dayOfMonth] : [1]);
+
       return {
         cadence: (['daily', 'weekly', 'biweekly', 'monthly'].includes(parsed.cadence)
           ? parsed.cadence
@@ -30,9 +42,8 @@ export const parseRecurrenceConfig = (rule?: string): RecurrenceConfig => {
           : ['Mon'],
         dailyMode: parsed.dailyMode === 'weekdays_only' ? 'weekdays_only' : 'all_days',
         monthlyMode: parsed.monthlyMode === 'specific_date' ? 'specific_date' : 'day_of_month',
-        dayOfMonth: typeof parsed.dayOfMonth === 'number' && parsed.dayOfMonth >= 1 && parsed.dayOfMonth <= 31
-          ? parsed.dayOfMonth
-          : 1,
+        dayOfMonth: parsedDaysOfMonth[0] || 1,
+        daysOfMonth: parsedDaysOfMonth,
         specificDate: parsed.specificDate || undefined,
         action: (parsed.action === 'reset_existing' ? 'reset_existing' : 'create_new') as RecurrenceAction,
         targetStatus: parsed.targetStatus || 'Backlog',
@@ -90,15 +101,9 @@ export const formatRecurrenceLabel = (rule?: string): string => {
     if (cfg.monthlyMode === 'specific_date' && cfg.specificDate) {
       return `Monthly (${cfg.specificDate}) • ${actionSummary}`;
     }
-    const daySuffix =
-      cfg.dayOfMonth === 1
-        ? '1st'
-        : cfg.dayOfMonth === 2
-        ? '2nd'
-        : cfg.dayOfMonth === 3
-        ? '3rd'
-        : `${cfg.dayOfMonth || 1}th`;
-    return `Monthly (${daySuffix}) • ${actionSummary}`;
+    const daysList = cfg.daysOfMonth && cfg.daysOfMonth.length > 0 ? cfg.daysOfMonth : [cfg.dayOfMonth || 1];
+    const formattedDays = daysList.map(getDaySuffix).join(', ');
+    return `Monthly (${formattedDays}) • ${actionSummary}`;
   }
 
   return `Recurring • ${actionSummary}`;
@@ -140,11 +145,20 @@ export const calculateNextDueDate = (
         next.setMonth(next.getMonth() + 1);
       }
     } else {
-      const targetDay = cfg.dayOfMonth || 1;
-      next.setMonth(next.getMonth() + 1);
-      // Clamp to max days in next month
-      const maxDays = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
-      next.setDate(Math.min(targetDay, maxDays));
+      const days = (cfg.daysOfMonth && cfg.daysOfMonth.length > 0 ? cfg.daysOfMonth : [cfg.dayOfMonth || 1]).sort((a, b) => a - b);
+      const currentDay = safeDate.getDate();
+      const upcomingDayThisMonth = days.find((d) => d > currentDay);
+
+      if (upcomingDayThisMonth) {
+        const maxDaysThisMonth = new Date(safeDate.getFullYear(), safeDate.getMonth() + 1, 0).getDate();
+        next.setDate(Math.min(upcomingDayThisMonth, maxDaysThisMonth));
+      } else {
+        // Move to next month and use earliest day
+        next.setMonth(next.getMonth() + 1);
+        const earliestDay = days[0] || 1;
+        const maxDaysNextMonth = new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate();
+        next.setDate(Math.min(earliestDay, maxDaysNextMonth));
+      }
     }
   }
 

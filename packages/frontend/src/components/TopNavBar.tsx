@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { BacknodeLogo } from './BacknodeLogo';
 import { findSpaceBreadcrumbs, findPipelineSubFolderPath, findListItemById } from '../utils/treeUtils';
+import { TopBarImportExportModal } from './TopBarImportExportModal';
 
 interface TopNavBarProps {
   currentHub?: string;
@@ -83,6 +84,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
     docs,
     setActiveDocId,
     directoryContacts,
+    handleOpenSpaceImport,
   } = useWorkspace();
   const navigate = useNavigate();
   const location = useLocation();
@@ -92,12 +94,12 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const spacePrefix = `/space/${effectiveSpaceId}`;
   const normalizedPath = pathname.replace(/^\/space\/[^/]+/, '');
 
-  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
+  const [isImportExportOpen, setIsImportExportOpen] = useState(false);
+  const [importExportMode, setImportExportMode] = useState<'import' | 'export'>('import');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const filterRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
@@ -123,9 +125,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as Node;
-      if (filterRef.current && !filterRef.current.contains(target)) {
-        setIsFilterDropdownOpen(false);
-      }
       if (searchRef.current && !searchRef.current.contains(target)) {
         setIsSearchFocused(false);
       }
@@ -142,7 +141,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        setIsFilterDropdownOpen(false);
         setIsSearchFocused(false);
         setIsNotificationsOpen(false);
         setIsHelpOpen(false);
@@ -152,9 +150,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
     const handleFocusOut = (e: FocusEvent) => {
       const target = e.relatedTarget as Node | null;
-      if (filterRef.current && target && !filterRef.current.contains(target)) {
-        setIsFilterDropdownOpen(false);
-      }
       if (searchRef.current && target && !searchRef.current.contains(target)) {
         setIsSearchFocused(false);
       }
@@ -701,7 +696,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 right-0 z-20 h-14 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between px-6 w-full shrink-0 text-zinc-100">
+    <>
+      <header className="sticky top-0 right-0 z-20 h-14 bg-[#0c0a09] border-b border-[#27272a] flex items-center justify-between px-6 w-full shrink-0 text-zinc-100">
       {/* Left: BacknodeLogo, Breadcrumbs & Search Bar */}
       <div className="flex items-center gap-5 flex-1 min-w-0">
         <div className="flex items-center gap-3 shrink-0">
@@ -897,222 +893,33 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
 
       {/* Trailing Action Cluster */}
       <div className="flex items-center gap-2.5">
-        {/* Interactive Filter Button & Popover */}
-        <div ref={filterRef} className="relative">
-          <button
-            onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-            className={`px-3 py-1.5 rounded-[6px] border text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer ${
-              activeFilterCount > 0
-                ? 'border-orange-500/50 bg-orange-950/40 text-orange-400 font-semibold'
-                : 'border-[#27272a] bg-[#18181b] text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
-            }`}
-          >
-            <span className="material-symbols-outlined text-[16px]">filter_list</span>
-            <span>
-              {activeFilterCount > 0
-                ? filterPriority
-                  ? `Priority: ${filterPriority}`
-                  : filterStatus
-                  ? `Status: ${filterStatus}`
-                  : `${activeFilterCount} Filters`
-                : 'Filter'}
-            </span>
-            <span className="material-symbols-outlined text-[13px] opacity-70">
-              {isFilterDropdownOpen ? 'expand_less' : 'expand_more'}
-            </span>
-          </button>
+        {/* Import & Export Space / List */}
+        <button
+          type="button"
+          disabled={effectiveRole === 'VIEWER'}
+          onClick={() => {
+            setImportExportMode('import');
+            setIsImportExportOpen(true);
+          }}
+          className="px-2.5 py-1.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 text-zinc-300 hover:text-zinc-100 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+          title="Import tasks (CSV / JSON)"
+        >
+          <span className="material-symbols-outlined text-[15px] text-orange-400">upload_file</span>
+          <span>Import</span>
+        </button>
 
-          {/* Filter Popover Dropdown Panel */}
-          {isFilterDropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-72 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-3.5 flex flex-col gap-3 text-xs animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
-                <span className="font-semibold text-xs text-zinc-100">Filter Options</span>
-                {activeFilterCount > 0 && onClearFilters && (
-                  <button
-                    onClick={() => {
-                      onClearFilters();
-                      setIsFilterDropdownOpen(false);
-                    }}
-                    className="text-[11px] text-orange-400 hover:underline font-mono cursor-pointer"
-                  >
-                    Clear all
-                  </button>
-                )}
-              </div>
-
-              {/* CRM Mode Filters */}
-              {currentHub === 'crm' ? (
-                <>
-                  {/* CRM Stage Filter Section */}
-                  {onSelectFilterCrmStage && (
-                    <div className="flex flex-col gap-1.5">
-                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                        By Stage
-                      </span>
-                      <div className="flex flex-col gap-1 text-[11px]">
-                        {[
-                          'Qualified Lead',
-                          'Discovery & Demo',
-                          'Proposal Submitted',
-                          'Contract & Legal',
-                          'Closed Won',
-                        ].map((stage) => {
-                          const isSelected = filterCrmStage === stage;
-                          return (
-                            <button
-                              key={stage}
-                              onClick={() => {
-                                onSelectFilterCrmStage(isSelected ? null : stage);
-                              }}
-                              className={`px-2.5 py-1.5 rounded-[6px] border text-left flex items-center justify-between transition-colors cursor-pointer ${
-                                isSelected
-                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
-                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-                              }`}
-                            >
-                              <span>{stage}</span>
-                              {isSelected && (
-                                <span className="material-symbols-outlined text-[13px]">check</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* CRM Owner Filter Section */}
-                  {onSelectFilterCrmOwner && (
-                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#27272a]">
-                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                        By Owner
-                      </span>
-                      <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
-                        {ownersList.map((owner) => {
-                          const isSelected = filterCrmOwner === owner;
-                          return (
-                            <button
-                              key={owner}
-                              onClick={() => {
-                                onSelectFilterCrmOwner(isSelected ? null : owner);
-                              }}
-                              className={`px-2 py-1.5 rounded-[6px] border text-left flex items-center justify-between truncate transition-colors cursor-pointer ${
-                                isSelected
-                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
-                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-                              }`}
-                            >
-                              <span className="truncate">{owner}</span>
-                              {isSelected && (
-                                <span className="material-symbols-outlined text-[13px] shrink-0">check</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <>
-                  {/* Priority Filter Section */}
-                  <div className="flex flex-col gap-1.5">
-                    <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                      By Priority
-                    </span>
-                    <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
-                      {['Urgent', 'High', 'Medium', 'Low'].map((p) => {
-                        const isSelected = filterPriority === p;
-                        return (
-                          <button
-                            key={p}
-                            onClick={() => {
-                              onSelectFilterPriority?.(isSelected ? null : p);
-                            }}
-                            className={`px-2.5 py-1.5 rounded-[6px] border text-left flex items-center justify-between transition-colors cursor-pointer ${
-                              isSelected
-                                ? 'bg-orange-600 text-white border-orange-500 font-semibold'
-                                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-                            }`}
-                          >
-                            <span>{p}</span>
-                            {isSelected && (
-                              <span className="material-symbols-outlined text-[13px]">check</span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Status Filter Section */}
-                  {onSelectFilterStatus && (
-                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#27272a]">
-                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                        By Lifecycle Status
-                      </span>
-                      <div className="grid grid-cols-2 gap-1 font-mono text-[11px]">
-                        {['Backlog', 'In Progress', 'In Review', 'Done'].map((s) => {
-                          const isSelected = filterStatus === s;
-                          return (
-                            <button
-                              key={s}
-                              onClick={() => {
-                                onSelectFilterStatus(isSelected ? null : s);
-                              }}
-                              className={`px-2 py-1.5 rounded-[6px] border text-left flex items-center justify-between truncate transition-colors cursor-pointer ${
-                                isSelected
-                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
-                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-                              }`}
-                            >
-                              <span className="truncate">{s}</span>
-                              {isSelected && (
-                                <span className="material-symbols-outlined text-[13px] shrink-0">check</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Operator / Assignee Filter Section */}
-                  {onSelectFilterAssignee && (
-                    <div className="flex flex-col gap-1.5 pt-2 border-t border-[#27272a]">
-                      <span className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                        By Assignee
-                      </span>
-                      <div className="flex flex-col gap-1 text-[11px]">
-                        {assigneesList.map((op) => {
-                          const isSelected = filterAssignee === op;
-                          return (
-                            <button
-                              key={op}
-                              onClick={() => {
-                                onSelectFilterAssignee(isSelected ? null : op);
-                              }}
-                              className={`px-2.5 py-1.5 rounded-[6px] border text-left flex items-center justify-between transition-colors cursor-pointer ${
-                                isSelected
-                                  ? 'bg-orange-600 text-white border-orange-500 font-semibold'
-                                  : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-                              }`}
-                            >
-                              <span>{op}</span>
-                              {isSelected && (
-                                <span className="material-symbols-outlined text-[13px]">check</span>
-                              )}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setImportExportMode('export');
+            setIsImportExportOpen(true);
+          }}
+          className="px-2.5 py-1.5 rounded-[6px] bg-[#18181b] border border-[#27272a] hover:border-zinc-700 text-zinc-300 hover:text-zinc-100 text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+          title="Export tasks (CSV / JSON)"
+        >
+          <span className="material-symbols-outlined text-[15px] text-zinc-400">download</span>
+          <span>Export</span>
+        </button>
 
         {/* Primary CTA Button */}
         <button
@@ -1122,13 +929,11 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
           title={
             effectiveRole === 'VIEWER'
               ? 'Action disabled in Viewer Read-Only Mode'
-              : currentHub === 'crm'
-              ? 'Add Deal'
-              : 'Create Task'
+              : 'Create'
           }
         >
           <span className="material-symbols-outlined text-[16px]">add</span>
-          <span>{currentHub === 'crm' ? 'Add Deal' : 'Create Task'}</span>
+          <span>Create</span>
         </button>
 
         <div className="h-4 w-px bg-[#27272a] mx-1"></div>
@@ -1301,5 +1106,16 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
         </div>
       </div>
     </header>
+
+    {/* Confirmation Modal for Import and Export */}
+    <TopBarImportExportModal
+      isOpen={isImportExportOpen}
+      onClose={() => setIsImportExportOpen(false)}
+      initialMode={importExportMode}
+      onProceedToImport={(space) => {
+        handleOpenSpaceImport(space);
+      }}
+    />
+  </>
   );
 };

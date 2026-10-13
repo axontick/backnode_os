@@ -212,7 +212,7 @@ export const RecurringCadenceSelector: React.FC<RecurringCadenceSelectorProps> =
 
           {/* Cadence Details: Monthly */}
           {config.cadence === 'monthly' && (
-            <div className="space-y-2 pt-1">
+            <div className="space-y-2.5 pt-1">
               <div className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">
                 Monthly Schedule
               </div>
@@ -227,8 +227,8 @@ export const RecurringCadenceSelector: React.FC<RecurringCadenceSelectorProps> =
                       : 'bg-[#18181b] border-[#27272a] text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
                   }`}
                 >
-                  <div className="font-semibold">Day of Month</div>
-                  <div className="text-[10px] text-zinc-400">Every 1st, 15th, etc.</div>
+                  <div className="font-semibold">Day(s) of Month</div>
+                  <div className="text-[10px] text-zinc-400">Select one or multiple days</div>
                 </button>
                 <button
                   type="button"
@@ -246,40 +246,75 @@ export const RecurringCadenceSelector: React.FC<RecurringCadenceSelectorProps> =
               </div>
 
               {config.monthlyMode !== 'specific_date' ? (
-                <div className="flex items-center gap-2">
-                  <div className="flex-1">
-                    <div className="text-[11px] text-zinc-400 mb-1">Pick day (1–31):</div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-zinc-400">
+                      Select recurrence dates ({((config.daysOfMonth && config.daysOfMonth.length > 0) ? config.daysOfMonth : [config.dayOfMonth || 1]).length} selected):
+                    </span>
                     <div className="flex items-center gap-1.5">
-                      {[1, 15, 28, 30].map((d) => (
+                      <button
+                        type="button"
+                        disabled={readOnly}
+                        onClick={() => updateConfig({ daysOfMonth: [1], dayOfMonth: 1 })}
+                        className="text-[10px] font-mono text-zinc-400 hover:text-orange-400 underline cursor-pointer"
+                      >
+                        1st
+                      </button>
+                      <span className="text-zinc-600">·</span>
+                      <button
+                        type="button"
+                        disabled={readOnly}
+                        onClick={() => updateConfig({ daysOfMonth: [1, 15], dayOfMonth: 1 })}
+                        className="text-[10px] font-mono text-zinc-400 hover:text-orange-400 underline cursor-pointer"
+                      >
+                        1st &amp; 15th
+                      </button>
+                      <span className="text-zinc-600">·</span>
+                      <button
+                        type="button"
+                        disabled={readOnly}
+                        onClick={() => updateConfig({ daysOfMonth: [1, 15, 30], dayOfMonth: 1 })}
+                        className="text-[10px] font-mono text-zinc-400 hover:text-orange-400 underline cursor-pointer"
+                      >
+                        1st, 15th, 30th
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 31-day multi-select calendar grid */}
+                  <div className="grid grid-cols-7 gap-1 p-2 rounded-[6px] bg-[#18181b] border border-[#27272a]">
+                    {Array.from({ length: 31 }, (_, i) => i + 1).map((d) => {
+                      const selectedDays = config.daysOfMonth && config.daysOfMonth.length > 0 ? config.daysOfMonth : [config.dayOfMonth || 1];
+                      const isSelected = selectedDays.includes(d);
+                      return (
                         <button
                           key={d}
                           type="button"
                           disabled={readOnly}
-                          onClick={() => updateConfig({ dayOfMonth: d })}
-                          className={`px-2 py-1 text-xs font-mono rounded-[6px] border transition-all cursor-pointer ${
-                            (config.dayOfMonth || 1) === d
-                              ? 'bg-orange-950/50 border-orange-500 text-orange-300 font-bold'
-                              : 'bg-[#18181b] border-[#27272a] text-zinc-400 hover:text-zinc-200'
+                          onClick={() => {
+                            if (readOnly) return;
+                            let next: number[];
+                            if (isSelected) {
+                              if (selectedDays.length === 1) return; // Keep at least one day
+                              next = selectedDays.filter((day) => day !== d);
+                            } else {
+                              next = [...selectedDays, d].sort((a, b) => a - b);
+                            }
+                            updateConfig({
+                              daysOfMonth: next,
+                              dayOfMonth: next[0] || 1,
+                            });
+                          }}
+                          className={`h-7 rounded-[6px] text-[11px] font-mono font-medium border transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-orange-600 text-white font-bold border-orange-500 shadow-xs'
+                              : 'bg-[#121214] border-[#27272a] text-zinc-400 hover:text-zinc-200 hover:border-zinc-700'
                           }`}
                         >
-                          {d}th
+                          {d}
                         </button>
-                      ))}
-                      <input
-                        type="number"
-                        min="1"
-                        max="31"
-                        disabled={readOnly}
-                        value={config.dayOfMonth || 1}
-                        onChange={(e) => {
-                          const val = parseInt(e.target.value, 10);
-                          if (!isNaN(val) && val >= 1 && val <= 31) {
-                            updateConfig({ dayOfMonth: val });
-                          }
-                        }}
-                        className="w-16 px-2 py-1 bg-[#18181b] border border-[#27272a] rounded-[6px] text-xs font-mono text-zinc-100 text-center focus:outline-none focus:border-orange-500"
-                      />
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               ) : (

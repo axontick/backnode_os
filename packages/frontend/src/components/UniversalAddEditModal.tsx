@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { TaskItem, TaskStatus, PriorityLevel, TeamMember, CrmDeal, SpaceFolder } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { RecurringCadenceSelector, DynamicEntityLinker } from '../modules/shared';
 import { PriorityDropdown } from './PriorityDropdown';
+import { getAllItemsFromFolder } from '../utils/treeUtils';
 
 interface UniversalAddEditModalProps {
   isOpen: boolean;
@@ -39,10 +40,26 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
   activeSpace = '',
 }) => {
   const { user } = useAuth();
-  const { statuses } = useWorkspace();
+  const { statuses, pipelines = [], activePipelineId } = useWorkspace();
 
   const isEditing = Boolean(taskToEdit || dealToEdit);
   const [modalType, setModalType] = useState<'task' | 'deal'>(initialType);
+
+  // Available lists across all folders for destination list selector
+  const availableLists = useMemo(() => {
+    const listOptions: { id: string; name: string; folderName: string }[] = [];
+    for (const folder of folders) {
+      const items = getAllItemsFromFolder(folder);
+      for (const item of items) {
+        listOptions.push({
+          id: item.id,
+          name: item.name,
+          folderName: folder.name,
+        });
+      }
+    }
+    return listOptions;
+  }, [folders]);
 
   // Task form state
   const [title, setTitle] = useState('');
@@ -62,6 +79,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
 
   // Deal form state
   const [dealTitle, setDealTitle] = useState('');
+  const [destinationPipelineId, setDestinationPipelineId] = useState('');
   const [dealCompany, setDealCompany] = useState('');
   const [dealValue, setDealValue] = useState('');
   const [dealStage, setDealStage] = useState<CrmDeal['stage']>(defaultDealStage);
@@ -78,7 +96,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
     if (taskToEdit) {
       setModalType('task');
       setTitle(taskToEdit.title || '');
-      setSpace(taskToEdit.targetCycle || activeSpace || '');
+      const matched = availableLists.find(
+        (l) => l.id === taskToEdit.targetCycle || l.name.toLowerCase() === (taskToEdit.targetCycle || '').toLowerCase()
+      );
+      setSpace(matched?.id || taskToEdit.targetCycle || availableLists[0]?.id || '');
       setTaskStatus(taskToEdit.status || defaultStatus);
       setPriority((taskToEdit.priority as PriorityLevel) || 'Medium');
       setAssigneeId(taskToEdit.assignee?.id || members[0]?.id || '');
@@ -92,6 +113,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
     } else if (dealToEdit) {
       setModalType('deal');
       setDealTitle(dealToEdit.title || '');
+      setDestinationPipelineId(dealToEdit.pipelineId || activePipelineId || pipelines[0]?.id || '');
       setDealCompany(dealToEdit.company || '');
       setDealValue(dealToEdit.formattedValue || (dealToEdit.value ? `$${dealToEdit.value.toLocaleString()}` : ''));
       setDealStage(dealToEdit.stage || defaultDealStage);
@@ -106,7 +128,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       // Creation mode: initialize everything clean and empty
       setModalType(initialType);
       setTitle('');
-      setSpace(activeSpace || (folders[0]?.items?.[0]?.name ?? 'Sprint 01'));
+      const matchedActive = availableLists.find(
+        (l) => l.id === activeSpace || l.name.toLowerCase() === (activeSpace || '').toLowerCase()
+      );
+      setSpace(matchedActive?.id || availableLists[0]?.id || (folders[0]?.items?.[0]?.id ?? 'sprint-14'));
       setTaskStatus(defaultStatus);
       setPriority('Medium');
       setAssigneeId(members[0]?.id || '');
@@ -121,6 +146,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setIsAddingSubtask(false);
 
       setDealTitle('');
+      setDestinationPipelineId(activePipelineId || pipelines[0]?.id || '');
       setDealCompany('');
       setDealValue('');
       setDealStage(defaultDealStage);
@@ -130,7 +156,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setDealWonReason('');
       setDealCycleDays('');
     }
-  }, [isOpen, taskToEdit, dealToEdit, initialType, defaultStatus, defaultDealStage, activeSpace, members, folders, user]);
+  }, [isOpen, taskToEdit, dealToEdit, initialType, defaultStatus, defaultDealStage, activeSpace, members, folders, user, availableLists, activePipelineId, pipelines]);
 
   if (!isOpen) return null;
 
@@ -232,6 +258,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
         const updatedDeal: CrmDeal = {
           ...dealToEdit,
           title: dealTitle.trim(),
+          pipelineId: destinationPipelineId || dealToEdit.pipelineId || pipelines[0]?.id,
           company: dealCompany.trim() || 'Enterprise Client',
           value: numVal,
           formattedValue: `$${numVal.toLocaleString()}`,
@@ -250,6 +277,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
         // Create Mode
         const newDeal: Partial<CrmDeal> = {
           title: dealTitle.trim(),
+          pipelineId: destinationPipelineId || pipelines[0]?.id,
           company: dealCompany.trim() || 'Enterprise Client',
           value: numVal,
           formattedValue: `$${numVal.toLocaleString()}`,
@@ -335,30 +363,17 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
             </button>
           </div>
 
-          {/* Headline & Engine Commit Context Subtitle */}
+          {/* Headline */}
           <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-[18px] font-bold text-zinc-100 tracking-tight leading-tight font-headline">
-                {taskToEdit
-                  ? 'Edit Task Deliverable'
-                  : dealToEdit
-                  ? 'Edit CRM Commercial Deal'
-                  : modalType === 'task'
-                  ? 'Create Task Deliverable'
-                  : 'Create Enterprise CRM Deal'}
-              </h2>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-[6px] text-[10px] font-mono bg-orange-950/40 text-orange-400 border border-orange-500/20 font-medium">
-                {isEditing ? 'Live Edit' : 'Local Draft'}
-              </span>
-            </div>
-            <p className="text-xs text-zinc-400 mt-0.5 flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[14px] text-orange-500">bolt</span>
-              <span>
-                {modalType === 'task'
-                  ? 'Commits directly to persistent workspace storage'
-                  : 'Saves deal record into workspace store and synchronizes with pipeline ARR'}
-              </span>
-            </p>
+            <h2 className="text-[18px] font-bold text-zinc-100 tracking-tight leading-tight font-headline">
+              {taskToEdit
+                ? 'Edit Task Deliverable'
+                : dealToEdit
+                ? 'Edit CRM Commercial Deal'
+                : modalType === 'task'
+                ? 'Create Task Deliverable'
+                : 'Create Enterprise CRM Deal'}
+            </h2>
           </div>
         </div>
 
@@ -387,19 +402,45 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                   />
                 </div>
 
-                {/* Grid: Space / Folder, Status, Priority */}
+                {/* Grid: Destination List, Status, Priority */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                   <div className="space-y-1">
-                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                      Target Cycle / Space
+                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold flex items-center gap-1">
+                      <span>Destination List</span>
+                      <span className="text-orange-500">*</span>
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={space}
                       onChange={(e) => setSpace(e.target.value)}
-                      placeholder="e.g. Sprint 14, Core Engine"
-                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-orange-500"
-                    />
+                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      {folders.map((folder) => {
+                        const folderLists = getAllItemsFromFolder(folder);
+                        if (folderLists.length === 0) return null;
+                        return (
+                          <optgroup
+                            key={folder.id}
+                            label={folder.name}
+                            className="bg-[#121214] text-zinc-400 font-semibold font-mono text-[11px]"
+                          >
+                            {folderLists.map((item) => (
+                              <option
+                                key={item.id}
+                                value={item.id}
+                                className="bg-[#18181b] text-zinc-100 font-sans text-xs"
+                              >
+                                {item.name}
+                              </option>
+                            ))}
+                          </optgroup>
+                        );
+                      })}
+                      {availableLists.length === 0 && (
+                        <option value={space || 'sprint-14'}>
+                          {space || 'Default List (Sprint 14)'}
+                        </option>
+                      )}
+                    </select>
                   </div>
 
                   <div className="space-y-1">
@@ -430,8 +471,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                   </div>
                 </div>
 
-                {/* Grid: Assignee, Due Date, Linked Deal */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                {/* Grid: Assignee, Due Date */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
                     <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                       Assignee
@@ -460,16 +501,17 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                       className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
                     />
                   </div>
+                </div>
 
-                  <div className="space-y-1">
-                    <RecurringCadenceSelector
-                      isRecurring={isRecurring}
-                      rule={recurrenceRule}
-                      availableStatuses={statuses}
-                      onToggle={setIsRecurring}
-                      onRuleChange={setRecurrenceRule}
-                    />
-                  </div>
+                {/* Dedicated Recurring Task Section */}
+                <div className="p-3.5 rounded-[6px] bg-[#18181b]/50 border border-[#27272a]">
+                  <RecurringCadenceSelector
+                    isRecurring={isRecurring}
+                    rule={recurrenceRule}
+                    availableStatuses={statuses}
+                    onToggle={setIsRecurring}
+                    onRuleChange={setRecurrenceRule}
+                  />
                 </div>
 
                 {/* Dynamic Cross-Module Linkages for Tasks */}
@@ -622,8 +664,29 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
-                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                      Client Organization
+                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold flex items-center gap-1">
+                      <span>Destination Pipeline</span>
+                      <span className="text-orange-500">*</span>
+                    </label>
+                    <select
+                      value={destinationPipelineId}
+                      onChange={(e) => setDestinationPipelineId(e.target.value)}
+                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-orange-500 cursor-pointer"
+                    >
+                      {pipelines.map((pipe) => (
+                        <option key={pipe.id} value={pipe.id}>
+                          {pipe.name} ({pipe.dealCount || 0} deals)
+                        </option>
+                      ))}
+                      {pipelines.length === 0 && (
+                        <option value="pipe-enterprise">Enterprise Pipeline</option>
+                      )}
+                    </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold flex items-center gap-1">
+                      <span>Client Organization</span>
+                      <span className="text-orange-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -634,6 +697,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                       className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 text-xs font-medium focus:outline-none focus:border-orange-500"
                     />
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
                     <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                       Deal Contract Value (ARR)
@@ -647,9 +713,6 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                       className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs font-semibold text-emerald-400 focus:outline-none focus:border-orange-500"
                     />
                   </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
                     <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                       Pipeline Stage
@@ -667,6 +730,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                       <option value="Closed Lost">Closed Lost (0%)</option>
                     </select>
                   </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
                   <div className="space-y-1">
                     <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                       Deal Account Owner
@@ -682,6 +748,18 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                         </option>
                       ))}
                     </select>
+                  </div>
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
+                      Target Close Date
+                    </label>
+                    <input
+                      type="text"
+                      value={dueDate}
+                      onChange={(e) => setDueDate(e.target.value)}
+                      placeholder="e.g. Q4 2026, Dec 15, 2026"
+                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
+                    />
                   </div>
                 </div>
 
@@ -743,19 +821,6 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                   </div>
                 )}
 
-                <div className="space-y-1">
-                  <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
-                    Target Close Date
-                  </label>
-                  <input
-                    type="text"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
-                    placeholder="e.g. Q4 2026, Dec 15, 2026"
-                    className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
-                  />
-                </div>
-
                 {/* Dynamic Cross-Module Linkages for CRM Deals */}
                 <div className="p-3 rounded-[6px] bg-[#18181b]/40 border border-[#27272a]">
                   <DynamicEntityLinker
@@ -771,19 +836,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           {/* ========================================== */}
           {/* 3. STICKY MODAL FOOTER                     */}
           {/* ========================================== */}
-          <div className="shrink-0 p-4 border-t border-[#27272a] flex items-center justify-between bg-[#121214]">
-            {/* Left: Engine Commit Status Indicator */}
-            <div className="flex items-center gap-2 text-zinc-400 font-mono text-[11px]">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="font-medium text-zinc-200">Instant local commit (0.2ms)</span>
-              <span className="text-zinc-600 hidden sm:inline">|</span>
-              <span className="hidden sm:flex items-center gap-1 text-zinc-400">
-                <span className="material-symbols-outlined text-[13px]">lock</span>
-                WAL Encrypted
-              </span>
-            </div>
-
-            {/* Right: Action Buttons */}
+          <div className="shrink-0 p-4 border-t border-[#27272a] flex items-center justify-end bg-[#121214]">
+            {/* Action Buttons */}
             <div className="flex items-center gap-2.5">
               <button
                 type="button"
