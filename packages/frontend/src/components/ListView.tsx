@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Repeat } from 'lucide-react';
-import { TaskItem, TaskStatus } from '../types';
+import { TaskItem, TaskStatus, PriorityLevel } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { formatEstimationValue } from '../utils/taskSpaceSettingsUtils';
@@ -20,6 +20,8 @@ interface ListViewProps {
     position?: 'before' | 'after'
   ) => void;
   onOpenCreateTask?: () => void;
+  groupBy?: 'status' | 'priority' | 'assignee';
+  visibleColumns?: Record<string, boolean>;
 }
 
 export const ListView: React.FC<ListViewProps> = ({
@@ -29,25 +31,21 @@ export const ListView: React.FC<ListViewProps> = ({
   onQuickStatusChange,
   onMoveTaskStatus,
   onOpenCreateTask,
+  groupBy = 'status',
+  visibleColumns,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { statuses, listSettings, handleUpdateTask } = useWorkspace();
+  const { statuses, listSettings, members, handleUpdateTask } = useWorkspace();
   const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
-  const [dragOverSection, setDragOverSection] = useState<TaskStatus | null>(null);
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | null>(null);
 
   // Collapsible section states
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    'In Progress': true,
-    'In Review': true,
-    'Blocked': true,
-    'Backlog': true,
-    'Done': false,
-  });
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({});
 
   // Expanded subtask checklists per task ID
   const [expandedChecklists, setExpandedChecklists] = useState<Record<string, boolean>>({});
@@ -55,10 +53,24 @@ export const ListView: React.FC<ListViewProps> = ({
   // Local subtask check state
   const [localSubtasks, setLocalSubtasks] = useState<Record<string, boolean>>({});
 
-  const toggleSection = (status: string) => {
+  const isColVisible = (colKey: string, defaultVal = true) => {
+    if (visibleColumns && visibleColumns[colKey] !== undefined) {
+      return visibleColumns[colKey];
+    }
+    return defaultVal;
+  };
+
+  const activeCustomFields = useMemo(() => {
+    if (!visibleColumns) return [];
+    return Object.keys(visibleColumns)
+      .filter((k) => k.startsWith('custom:') && visibleColumns[k])
+      .map((k) => k.slice(7));
+  }, [visibleColumns]);
+
+  const toggleSection = (sectionKey: string) => {
     setOpenSections((prev) => ({
       ...prev,
-      [status]: prev[status] !== undefined ? !prev[status] : false,
+      [sectionKey]: prev[sectionKey] !== undefined ? !prev[sectionKey] : false,
     }));
   };
 
@@ -83,7 +95,81 @@ export const ListView: React.FC<ListViewProps> = ({
     return localSubtasks[subtaskId] !== undefined ? localSubtasks[subtaskId] : originalDone;
   };
 
-  const statusGroups = useMemo(() => {
+  // Group definitions based on `groupBy` ('status' | 'priority' | 'assignee')
+  const dynamicGroups = useMemo(() => {
+    if (groupBy === 'priority') {
+      const priorityConfigs: { id: PriorityLevel; label: string; color: string; icon: string; badgeClass: string }[] = [
+        {
+          id: 'Urgent',
+          label: 'URGENT',
+          color: '#ef4444',
+          icon: 'bolt',
+          badgeClass: 'bg-red-950/40 text-red-400 border border-red-500/30',
+        },
+        {
+          id: 'High',
+          label: 'HIGH',
+          color: '#f97316',
+          icon: 'flag',
+          badgeClass: 'bg-orange-950/40 text-orange-400 border border-orange-500/30',
+        },
+        {
+          id: 'Medium',
+          label: 'MEDIUM',
+          color: '#3b82f6',
+          icon: 'flag',
+          badgeClass: 'bg-blue-950/40 text-blue-400 border border-blue-500/30',
+        },
+        {
+          id: 'Low',
+          label: 'LOW',
+          color: '#71717a',
+          icon: 'flag',
+          badgeClass: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+        },
+      ];
+
+      return priorityConfigs.map((p) => ({
+        key: p.id,
+        label: p.label,
+        color: p.color,
+        icon: p.icon,
+        badgeClass: p.badgeClass,
+        filter: (t: TaskItem) => t.priority === p.id,
+        onDropTarget: (taskId: string) => handleUpdateTask({ id: taskId, priority: p.id }),
+      }));
+    }
+
+    if (groupBy === 'assignee') {
+      const memberGroups = members.map((m) => ({
+        key: m.id,
+        label: m.name.toUpperCase(),
+        color: m.avatarBg || '#ea580c',
+        initials: m.initials,
+        badgeClass: 'bg-orange-950/40 text-orange-400 border border-orange-500/30',
+        filter: (t: TaskItem) =>
+          t.assigneeId === m.id ||
+          t.assignee?.id === m.id ||
+          (t.assignee?.name && t.assignee.name.toLowerCase() === m.name.toLowerCase()),
+        onDropTarget: (taskId: string) =>
+          handleUpdateTask({ id: taskId, assigneeId: m.id, assignee: m }),
+      }));
+
+      memberGroups.push({
+        key: 'unassigned',
+        label: 'UNASSIGNED',
+        color: '#71717a',
+        initials: 'UA',
+        badgeClass: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+        filter: (t: TaskItem) => !t.assigneeId && !t.assignee?.id,
+        onDropTarget: (taskId: string) =>
+          handleUpdateTask({ id: taskId, assigneeId: undefined, assignee: undefined as any }),
+      });
+
+      return memberGroups;
+    }
+
+    // Default: Group by Status
     if (statuses && statuses.length > 0) {
       const seen = new Set<string>();
       return [...statuses]
@@ -95,7 +181,7 @@ export const ListView: React.FC<ListViewProps> = ({
         })
         .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
         .map((st) => ({
-          id: st.id,
+          key: st.name,
           status: st.name as TaskStatus,
           label: st.name.toUpperCase(),
           color: st.color || '#ea580c',
@@ -105,80 +191,62 @@ export const ListView: React.FC<ListViewProps> = ({
               : st.name === 'Done'
               ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
               : 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+          filter: (t: TaskItem) => t.status === st.name,
+          onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, st.name as TaskStatus),
         }));
     }
+
     return [
       {
-        id: 'in_progress',
+        key: 'In Progress',
         status: 'In Progress' as TaskStatus,
         label: 'IN PROGRESS',
         color: '#ea580c',
         badgeClass: 'bg-orange-950/50 text-orange-400 border border-orange-500/30',
+        filter: (t: TaskItem) => t.status === 'In Progress',
+        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'In Progress'),
       },
       {
-        id: 'in_review',
+        key: 'In Review',
         status: 'In Review' as TaskStatus,
         label: 'IN REVIEW',
         color: '#f59e0b',
         badgeClass: 'bg-amber-950/40 text-amber-400 border border-amber-500/30',
+        filter: (t: TaskItem) => t.status === 'In Review',
+        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'In Review'),
       },
       {
-        id: 'blocked',
+        key: 'Blocked',
         status: 'Blocked' as TaskStatus,
         label: 'BLOCKED',
         color: '#ef4444',
         badgeClass: 'bg-red-950/40 text-red-400 border border-red-500/30',
+        filter: (t: TaskItem) => t.status === 'Blocked',
+        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'Blocked'),
       },
       {
-        id: 'backlog',
+        key: 'Backlog',
         status: 'Backlog' as TaskStatus,
         label: 'BACKLOG',
         color: '#71717a',
         badgeClass: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+        filter: (t: TaskItem) => t.status === 'Backlog',
+        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'Backlog'),
       },
       {
-        id: 'done',
+        key: 'Done',
         status: 'Done' as TaskStatus,
         label: 'DONE',
         color: '#10b981',
         badgeClass: 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30',
+        filter: (t: TaskItem) => t.status === 'Done',
+        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'Done'),
       },
     ];
-  }, [statuses]);
+  }, [groupBy, statuses, members, handleUpdateTask, onMoveTaskStatus]);
 
   const totalHours = tasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0);
   const totalPoints = tasks.reduce((acc, t) => acc + (t.estimation?.points || 0), 0);
-
-  const getPriorityBadge = (priority: TaskItem['priority']) => {
-    switch (priority) {
-      case 'Urgent':
-        return (
-          <span className="font-mono px-2 py-0.5 rounded-[6px] text-[10px] font-semibold w-16 text-center text-red-400 bg-red-950/40 border border-red-500/30">
-            Urgent
-          </span>
-        );
-      case 'High':
-        return (
-          <span className="font-mono px-2 py-0.5 rounded-[6px] text-[10px] font-semibold w-16 text-center text-orange-400 bg-orange-950/40 border border-orange-500/30">
-            High
-          </span>
-        );
-      case 'Medium':
-        return (
-          <span className="font-mono px-2 py-0.5 rounded-[6px] text-[10px] font-semibold w-16 text-center text-amber-400 bg-amber-950/40 border border-amber-500/30">
-            Medium
-          </span>
-        );
-      case 'Low':
-        return (
-          <span className="font-mono px-2 py-0.5 rounded-[6px] text-[10px] font-semibold w-16 text-center text-zinc-400 bg-zinc-800/60 border border-zinc-700/50">
-            Low
-          </span>
-        );
-      default:
-        return null;
-    }
-  };
 
   const renderTaskRow = (t: TaskItem) => {
     const isSelected = t.id === selectedTaskId;
@@ -254,7 +322,7 @@ export const ListView: React.FC<ListViewProps> = ({
             : ''
         }`}
       >
-        {/* Parent Row */}
+        {/* Parent Row Content */}
         <div
           onClick={() => {
             const sel = window.getSelection();
@@ -263,12 +331,12 @@ export const ListView: React.FC<ListViewProps> = ({
           }}
           className="flex items-center justify-between cursor-pointer"
         >
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            {/* Drag Handle Indicator */}
+          {/* Left Column Area: Drag handle, checkbox, ID, Title */}
+          <div className="flex items-center gap-2.5 flex-1 min-w-0 pr-3">
             {!isReadOnly && (
               <span
                 className="material-symbols-outlined text-[15px] text-zinc-600 group-hover:text-zinc-400 cursor-grab active:cursor-grabbing shrink-0 select-none"
-                title="Drag to reorder or move status"
+                title="Drag to reorder or reassign"
               >
                 drag_indicator
               </span>
@@ -299,23 +367,29 @@ export const ListView: React.FC<ListViewProps> = ({
               )}
             </button>
 
-            <span
-              onMouseDown={(e) => e.stopPropagation()}
-              className="font-mono text-zinc-400 text-[11px] shrink-0 font-semibold cursor-text select-text"
-            >
-              {t.id}
-            </span>
+            {/* Task ID */}
+            {isColVisible('id') && (
+              <span
+                onMouseDown={(e) => e.stopPropagation()}
+                className="font-mono text-zinc-400 text-[11px] shrink-0 font-semibold cursor-text select-text"
+              >
+                {t.id}
+              </span>
+            )}
 
-            <span
-              onMouseDown={(e) => e.stopPropagation()}
-              className={`font-medium truncate transition-colors text-xs cursor-text select-text ${
-                t.status === 'Done'
-                  ? 'line-through text-zinc-500'
-                  : 'text-zinc-100 group-hover:text-orange-400'
-              }`}
-            >
-              {t.title}
-            </span>
+            {/* Title & tags */}
+            {isColVisible('title') && (
+              <span
+                onMouseDown={(e) => e.stopPropagation()}
+                className={`font-medium truncate transition-colors text-xs cursor-text select-text ${
+                  t.status === 'Done'
+                    ? 'line-through text-zinc-500'
+                    : 'text-zinc-100 group-hover:text-orange-400'
+                }`}
+              >
+                {t.title}
+              </span>
+            )}
 
             {t.isRecurring && (
               <span
@@ -348,49 +422,116 @@ export const ListView: React.FC<ListViewProps> = ({
             )}
           </div>
 
+          {/* Right Matrix Columns Area */}
           <div className="flex items-center gap-3 shrink-0">
-            {t.estimation && (
+            {/* Status Column (Visible when toggled on, especially useful when grouped by Priority/Assignee) */}
+            {isColVisible('status') && (
               <span
-                className="font-mono text-[10px] text-zinc-400 bg-[#18181b] border border-[#27272a] px-1.5 py-0.5 rounded-[6px]"
-                title={isPoints ? 'Story Points' : 'Estimated Hours'}
+                className={`w-20 text-center font-mono text-[10px] px-1.5 py-0.5 rounded-[6px] shrink-0 ${
+                  t.status === 'Done'
+                    ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+                    : t.status === 'In Progress'
+                    ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
+                    : 'bg-[#18181b] text-zinc-400 border border-[#27272a]'
+                }`}
               >
-                {formatEstimationValue(t.estimation, listSettings?.estimationUnit)}
+                {t.status}
               </span>
             )}
-            <div onClick={(e) => e.stopPropagation()} className="w-16 flex justify-center">
-              <PriorityDropdown
-                priority={t.priority}
-                disabled={isReadOnly}
-                onChange={(newPriority) => {
-                  handleUpdateTask({ ...t, priority: newPriority });
-                }}
-              />
-            </div>
-            <span className="w-16 text-center font-mono text-orange-400 font-semibold text-[11px]">
-              {t.dueDate || 'Today'}
-            </span>
-            <div className="w-14 flex justify-center">
-              <div
-                className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-200 flex items-center justify-center font-mono text-[10px] font-bold"
-                style={{
-                  backgroundColor:
-                    t.assignee?.avatarBg && t.assignee.avatarBg !== '#9900c2'
-                      ? t.assignee.avatarBg
-                      : '#ea580c',
-                }}
-              >
-                {t.assignee?.initials || 'OP'}
+
+            {/* Estimation Column */}
+            {isColVisible('estimation') && (
+              <div className="w-16 flex justify-center">
+                {t.estimation ? (
+                  <span
+                    className="font-mono text-[10px] text-zinc-400 bg-[#18181b] border border-[#27272a] px-1.5 py-0.5 rounded-[6px]"
+                    title={isPoints ? 'Story Points' : 'Estimated Hours'}
+                  >
+                    {formatEstimationValue(t.estimation, listSettings?.estimationUnit)}
+                  </span>
+                ) : (
+                  <span className="font-mono text-zinc-600 text-[10px]">—</span>
+                )}
               </div>
-            </div>
-            <div className="w-24 text-right">
-              {t.linkedCrmDeal ? (
-                <span className="inline-block font-mono text-zinc-300 bg-[#18181b] border border-[#27272a] px-2 py-0.5 rounded-[6px] text-[10px] truncate max-w-[100px] text-right">
-                  {t.linkedCrmDeal.name.split(' ')[0]}
-                </span>
-              ) : (
-                <span className="text-zinc-600 font-mono text-[11px]">—</span>
-              )}
-            </div>
+            )}
+
+            {/* Priority Column */}
+            {isColVisible('priority') && (
+              <div onClick={(e) => e.stopPropagation()} className="w-16 flex justify-center">
+                <PriorityDropdown
+                  priority={t.priority}
+                  disabled={isReadOnly}
+                  onChange={(newPriority) => {
+                    handleUpdateTask({ ...t, priority: newPriority });
+                  }}
+                />
+              </div>
+            )}
+
+            {/* Start Date Column */}
+            {isColVisible('start', false) && (
+              <span className="w-16 text-center font-mono text-zinc-400 text-[11px] truncate">
+                {t.startDate || '—'}
+              </span>
+            )}
+
+            {/* Due Date Column */}
+            {isColVisible('due') && (
+              <span className="w-16 text-center font-mono text-orange-400 font-semibold text-[11px]">
+                {t.dueDate || 'Today'}
+              </span>
+            )}
+
+            {/* Assignee Column */}
+            {isColVisible('assignee') && (
+              <div className="w-14 flex justify-center">
+                {t.assignee ? (
+                  <div
+                    className="w-6 h-6 rounded-full border border-zinc-700 text-zinc-100 flex items-center justify-center font-mono text-[10px] font-bold"
+                    style={{
+                      backgroundColor:
+                        t.assignee.avatarBg && t.assignee.avatarBg !== '#9900c2'
+                          ? t.assignee.avatarBg
+                          : '#ea580c',
+                    }}
+                    title={t.assignee.name}
+                  >
+                    {t.assignee.initials || 'OP'}
+                  </div>
+                ) : (
+                  <span className="text-zinc-600 font-mono text-xs">—</span>
+                )}
+              </div>
+            )}
+
+            {/* Linked Deal Column */}
+            {isColVisible('deal') && (
+              <div className="w-20 text-right">
+                {t.linkedCrmDeal ? (
+                  <span className="inline-block font-mono text-zinc-300 bg-[#18181b] border border-[#27272a] px-1.5 py-0.5 rounded-[6px] text-[10px] truncate max-w-[80px] text-right">
+                    {t.linkedCrmDeal.name.split(' ')[0]}
+                  </span>
+                ) : (
+                  <span className="text-zinc-600 font-mono text-[11px]">—</span>
+                )}
+              </div>
+            )}
+
+            {/* Custom Fields Columns */}
+            {activeCustomFields.map((fieldKey) => {
+              const val = t.customLinks?.[fieldKey];
+              return (
+                <div key={fieldKey} className="w-20 text-center font-mono text-[10px] truncate">
+                  {val ? (
+                    <span className="bg-orange-950/30 border border-orange-500/20 text-orange-300 px-1.5 py-0.5 rounded-[6px] truncate inline-block max-w-[80px]">
+                      {String(val)}
+                    </span>
+                  ) : (
+                    <span className="text-zinc-600">—</span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -434,6 +575,32 @@ export const ListView: React.FC<ListViewProps> = ({
     );
   };
 
+  if (tasks.length === 0) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center h-full bg-[#09090b] p-6 text-center">
+        <div className="w-14 h-14 rounded-[6px] bg-[#121214] border border-[#27272a] flex items-center justify-center text-orange-400 mb-3 shadow-sm">
+          <span className="material-symbols-outlined text-2xl">format_list_bulleted</span>
+        </div>
+        <h3 className="text-sm font-semibold text-zinc-100 font-headline mb-1">
+          No tasks in this list
+        </h3>
+        <p className="text-xs text-zinc-500 max-w-sm mb-4">
+          This task list is currently empty. Get started by creating your first deliverable item.
+        </p>
+        {!isReadOnly && onOpenCreateTask && (
+          <button
+            type="button"
+            onClick={onOpenCreateTask}
+            className="h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+          >
+            <span className="material-symbols-outlined text-[16px]">add</span>
+            <span>Create Task</span>
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar">
       {/* Header Summary Stats Strip */}
@@ -442,14 +609,15 @@ export const ListView: React.FC<ListViewProps> = ({
           <span className="font-bold text-zinc-100 font-headline">
             {tasks.length} Total Deliverables
           </span>
-          {statusGroups.map(({ id, status, color }) => {
-            const count = tasks.filter((t) => t.status === status).length;
+          {dynamicGroups.map(({ key, label, color, filter }) => {
+            const count = tasks.filter(filter).length;
+            if (count === 0 && groupBy !== 'status') return null;
             return (
-              <React.Fragment key={id || status}>
+              <React.Fragment key={key}>
                 <span className="text-zinc-700">•</span>
                 <span className="text-zinc-300 flex items-center gap-1.5 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }}></span>
-                  {count} {status}
+                  {count} {label}
                 </span>
               </React.Fragment>
             );
@@ -462,34 +630,34 @@ export const ListView: React.FC<ListViewProps> = ({
 
         {/* View Badge */}
         <div className="flex items-center gap-2 bg-[#18181b] border border-[#27272a] px-2.5 py-1 rounded-[6px]">
-          <span className="material-symbols-outlined text-[14px] text-zinc-400">view_list</span>
-          <span className="font-mono text-zinc-300 text-[10.5px]">
-            Task List View
+          <span className="material-symbols-outlined text-[14px] text-orange-400">layers</span>
+          <span className="font-mono text-zinc-300 text-[10.5px] capitalize">
+            Grouped by {groupBy}
           </span>
         </div>
       </div>
 
-      {/* PRIMARY HIERARCHICAL CONTENT CARD */}
+      {/* Primary Content Container */}
       <div className="bg-[#121214] rounded-[6px] border border-[#27272a] shadow-sm p-6 flex flex-col gap-6">
-        {statusGroups.map(({ id, status, label, color, badgeClass }) => {
-          const groupTasks = tasks.filter((t) => t.status === status);
-          const isOpen = openSections[status] ?? true;
-          const isSectionOver = dragOverSection === status;
+        {dynamicGroups.map((group) => {
+          const groupTasks = tasks.filter(group.filter);
+          const isOpen = openSections[group.key] ?? true;
+          const isSectionOver = dragOverSection === group.key;
 
           return (
             <div
-              key={id || status}
+              key={group.key}
               onDragOver={(e) => {
                 if (isReadOnly || !draggingTaskId) return;
                 e.preventDefault();
                 e.dataTransfer.dropEffect = 'move';
-                if (dragOverSection !== status) {
-                  setDragOverSection(status);
+                if (dragOverSection !== group.key) {
+                  setDragOverSection(group.key);
                 }
               }}
               onDragLeave={(e) => {
                 if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-                if (dragOverSection === status) {
+                if (dragOverSection === group.key) {
                   setDragOverSection(null);
                 }
               }}
@@ -498,7 +666,7 @@ export const ListView: React.FC<ListViewProps> = ({
                 e.preventDefault();
                 const sourceTaskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
                 if (sourceTaskId) {
-                  onMoveTaskStatus?.(sourceTaskId, status);
+                  group.onDropTarget(sourceTaskId);
                 }
                 setDraggingTaskId(null);
                 setDragOverSection(null);
@@ -515,28 +683,39 @@ export const ListView: React.FC<ListViewProps> = ({
               <div className="flex items-center justify-between pb-1.5 border-b border-[#27272a]">
                 <button
                   type="button"
-                  onClick={() => toggleSection(status)}
+                  onClick={() => toggleSection(group.key)}
                   className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
                 >
                   <span className="material-symbols-outlined text-[16px] text-zinc-400">
                     {isOpen ? 'arrow_drop_down' : 'arrow_right'}
                   </span>
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: color }}></span>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: group.color }}></span>
                   <h3 className="font-mono text-xs font-bold uppercase tracking-wider text-zinc-100">
-                    {label}
+                    {group.label}
                   </h3>
-                  <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] ${badgeClass}`}>
+                  <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded-[6px] ${group.badgeClass}`}>
                     {groupTasks.length} tasks
                   </span>
                 </button>
-                <div className="flex items-center gap-3 text-zinc-500 text-[11px] font-mono">
-                  <span className="w-16 text-center">PRIORITY</span>
-                  <span className="w-16 text-center">DUE</span>
-                  <span className="w-14 text-center">ASSIGNEE</span>
-                  <span className="w-24 text-right">DEAL REF</span>
+
+                {/* Visible Column Headers */}
+                <div className="flex items-center gap-3 text-zinc-500 text-[10px] font-mono">
+                  {isColVisible('status') && <span className="w-20 text-center uppercase">Status</span>}
+                  {isColVisible('estimation') && <span className="w-16 text-center uppercase">Est</span>}
+                  {isColVisible('priority') && <span className="w-16 text-center uppercase">Priority</span>}
+                  {isColVisible('start', false) && <span className="w-16 text-center uppercase">Start</span>}
+                  {isColVisible('due') && <span className="w-16 text-center uppercase">Due</span>}
+                  {isColVisible('assignee') && <span className="w-14 text-center uppercase">Assignee</span>}
+                  {isColVisible('deal') && <span className="w-20 text-right uppercase">Deal</span>}
+                  {activeCustomFields.map((cf) => (
+                    <span key={cf} className="w-20 text-center uppercase truncate">
+                      {cf}
+                    </span>
+                  ))}
                 </div>
               </div>
 
+              {/* Section Tasks */}
               {isOpen && (
                 <div className="space-y-2.5">
                   {groupTasks.length === 0 ? (
@@ -547,7 +726,9 @@ export const ListView: React.FC<ListViewProps> = ({
                           : 'border-[#27272a] bg-[#18181b] text-zinc-500'
                       }`}
                     >
-                      {isSectionOver ? `Drop to move deliverable to ${label}` : `No ${status.toLowerCase()} tasks in current space`}
+                      {isSectionOver
+                        ? `Drop to move deliverable to ${group.label}`
+                        : `No ${group.label.toLowerCase()} tasks in current list`}
                     </div>
                   ) : (
                     groupTasks.map(renderTaskRow)

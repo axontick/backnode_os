@@ -82,6 +82,14 @@ export class WorkspaceController {
     return this.workspaceService.deleteFolder(user.accountId, id);
   }
 
+  @Delete('lists/:id')
+  async deleteList(
+    @CurrentUser() user: CurrentUserPayload,
+    @Param('id') id: string,
+  ) {
+    return this.workspaceService.cascadeDeleteList(user.accountId, id);
+  }
+
   // Space Import & Export
   @Get('spaces/:id/export')
   async exportSpace(

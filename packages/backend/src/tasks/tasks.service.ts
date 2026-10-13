@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { TaskItem } from '../entities';
@@ -26,7 +26,7 @@ export class TasksService {
 
   async findAll(
     accountId: string,
-    query?: { status?: string; priority?: string; assigneeId?: string },
+    query?: { status?: string; priority?: string; assigneeId?: string; listId?: string },
     currentUser?: CurrentUserPayload,
   ) {
     let canViewAll = true;
@@ -62,11 +62,22 @@ export class TasksService {
       },
     });
 
-    if (currentUser && !canViewAll && canViewMe) {
-      return tasks.filter((t) => this.isAssignedToUser(t, currentUser));
+    let result = tasks;
+    if (query?.listId) {
+      const q = query.listId.toLowerCase();
+      result = result.filter(
+        (t) =>
+          (t.listId && t.listId.toLowerCase() === q) ||
+          (t.targetCycle && t.targetCycle.toLowerCase() === q) ||
+          (t.targetCycle && t.targetCycle.toLowerCase().includes(q))
+      );
     }
 
-    return tasks;
+    if (currentUser && !canViewAll && canViewMe) {
+      return result.filter((t) => this.isAssignedToUser(t, currentUser));
+    }
+
+    return result;
   }
 
   async findOne(accountId: string, id: string, currentUser?: CurrentUserPayload) {
@@ -114,6 +125,11 @@ export class TasksService {
       id = `BK-${1100 + count}`;
     }
 
+    const effectiveListId = (data.listId || data.targetCycle || '').trim();
+    if (!effectiveListId) {
+      throw new BadRequestException('A task cannot exist outside of a list. Please select a valid target list.');
+    }
+
     const {
       title,
       description = '',
@@ -125,8 +141,10 @@ export class TasksService {
       tags = [],
       subtasks = [],
       estimation,
-      targetCycle = 'Sprint 14 - Q4 Infra',
+      targetCycle = effectiveListId,
       dueDate = '',
+      startDate,
+      completedAt,
       gitBranch = '',
       replicationHash = '0x' + Math.random().toString(16).substring(2, 8),
       timeInStage = 'Just now',
@@ -138,6 +156,8 @@ export class TasksService {
     } = data;
 
     const resolvedAssigneeId = assigneeId || (assignee ? assignee.id : null);
+    const resolvedStartDate = startDate || null;
+    const resolvedCompletedAt = completedAt || (status === 'Done' ? new Date().toISOString() : null);
 
     const task = this.taskRepo.create({
       id,
@@ -150,8 +170,11 @@ export class TasksService {
       tags,
       subtasks,
       estimation,
-      targetCycle,
+      targetCycle: effectiveListId,
+      listId: data.listId || effectiveListId,
       dueDate,
+      startDate: resolvedStartDate,
+      completedAt: resolvedCompletedAt,
       gitBranch,
       replicationHash,
       timeInStage,
@@ -206,7 +229,6 @@ export class TasksService {
     if (data.title !== undefined) task.title = data.title;
     if (data.description !== undefined) task.description = data.description;
     if (data.specMarkdown !== undefined) task.specMarkdown = data.specMarkdown;
-    if (data.status !== undefined) task.status = data.status;
     if (data.priority !== undefined) task.priority = data.priority;
     if (data.assigneeId !== undefined) task.assigneeId = data.assigneeId;
     if (data.assignee !== undefined) task.assigneeId = data.assignee?.id || null;
@@ -214,7 +236,18 @@ export class TasksService {
     if (data.subtasks !== undefined) task.subtasks = data.subtasks;
     if (data.estimation !== undefined) task.estimation = data.estimation;
     if (data.targetCycle !== undefined) task.targetCycle = data.targetCycle;
+    if (data.listId !== undefined) task.listId = data.listId;
     if (data.dueDate !== undefined) task.dueDate = data.dueDate;
+    if (data.startDate !== undefined) task.startDate = data.startDate;
+    if (data.completedAt !== undefined) task.completedAt = data.completedAt;
+    if (data.status !== undefined) {
+      task.status = data.status;
+      if (data.status === 'Done' && !task.completedAt) {
+        task.completedAt = new Date().toISOString();
+      } else if (data.status !== 'Done' && data.completedAt === undefined) {
+        task.completedAt = null as any;
+      }
+    }
     if (data.gitBranch !== undefined) task.gitBranch = data.gitBranch;
     if (data.replicationHash !== undefined) task.replicationHash = data.replicationHash;
     if (data.timeInStage !== undefined) task.timeInStage = data.timeInStage;

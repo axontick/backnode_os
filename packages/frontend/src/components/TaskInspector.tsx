@@ -52,6 +52,18 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
   const [copiedLink, setCopiedLink] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  const activityList = Array.isArray(task.activity) ? task.activity : [];
+  const subtaskList = Array.isArray(task.subtasks) ? task.subtasks : [];
+  const defaultAssignee: TeamMember = {
+    id: 'unassigned',
+    name: 'Unassigned',
+    role: 'Member',
+    initials: 'UN',
+    avatarBg: '#27272a',
+    avatarColor: '#a1a1aa',
+  };
+  const assignee = task.assignee || defaultAssignee;
+
   // Sync title and description on task prop change
   useEffect(() => {
     setTitleText(task.title);
@@ -59,7 +71,6 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
     setIsAssigneePopoverOpen(false);
     setIsStatusPopoverOpen(false);
   }, [task.id, task.title, task.description, task.specMarkdown]);
-
 
   const handleTitleBlur = () => {
     if (isReadOnly) return;
@@ -82,6 +93,17 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
     }
   };
 
+  const handleStartDateChange = (newDateStr: string) => {
+    if (isReadOnly) return;
+    if (!newDateStr) {
+      onUpdateTask({ ...task, startDate: '' });
+    } else {
+      const [y, m, d] = newDateStr.split('-').map(Number);
+      const dateObj = new Date(y, m - 1, d);
+      onUpdateTask({ ...task, startDate: formatDateDisplay(dateObj) });
+    }
+  };
+
   const handleDueDateChange = (newDateStr: string) => {
     if (isReadOnly) return;
     if (!newDateStr) {
@@ -95,7 +117,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 
   const handleDeleteSubtask = (subId: string) => {
     if (isReadOnly) return;
-    const updatedSubtasks = task.subtasks.filter((st) => st.id !== subId);
+    const updatedSubtasks = subtaskList.filter((st) => st.id !== subId);
     onUpdateTask({ ...task, subtasks: updatedSubtasks });
   };
 
@@ -113,7 +135,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           time: 'Just now',
           text: `reassigned task to ${member.name}`,
         },
-        ...task.activity,
+        ...activityList,
       ],
     };
     onUpdateTask(updated);
@@ -133,7 +155,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
           time: 'Just now',
           text: `transitioned status to ${status}`,
         },
-        ...task.activity,
+        ...activityList,
       ],
     };
     onUpdateTask(updated);
@@ -141,7 +163,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 
   const handleToggleSubtask = (subId: string) => {
     if (isReadOnly) return;
-    const updatedSubtasks = task.subtasks.map((st) =>
+    const updatedSubtasks = subtaskList.map((st) =>
       st.id === subId ? { ...st, done: !st.done } : st
     );
     onUpdateTask({ ...task, subtasks: updatedSubtasks });
@@ -157,7 +179,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
       author: authorInitials,
       time: 'Just now',
     };
-    onUpdateTask({ ...task, subtasks: [...task.subtasks, newSt] });
+    onUpdateTask({ ...task, subtasks: [...subtaskList, newSt] });
     setNewSubtaskText('');
     setIsAddingSubtask(false);
   };
@@ -176,13 +198,13 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
     };
     onUpdateTask({
       ...task,
-      activity: [newComment, ...task.activity],
+      activity: [newComment, ...activityList],
     });
     setCommentText('');
   };
 
-  const doneSubtasksCount = task.subtasks.filter((s) => s.done).length;
-  const totalSubtasks = task.subtasks.length;
+  const doneSubtasksCount = subtaskList.filter((s) => s.done).length;
+  const totalSubtasks = subtaskList.length;
   const progressPercent = totalSubtasks > 0 ? Math.round((doneSubtasksCount / totalSubtasks) * 100) : 0;
 
   return (
@@ -275,6 +297,24 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               <span>{task.priority} Priority</span>
             </span>
 
+            {/* Start Date with Calendar Popover */}
+            <CalendarPopover
+              value={task.startDate || ''}
+              onChange={(newDateStr) => handleStartDateChange(newDateStr)}
+              trigger={
+                <button
+                  type="button"
+                  className={`bg-[#18181b] text-zinc-300 border border-[#27272a] hover:border-orange-500/50 font-mono text-[10px] px-2 py-0.5 rounded-[6px] flex items-center gap-1.5 transition-colors ${
+                    isReadOnly ? 'cursor-default' : 'cursor-pointer'
+                  }`}
+                  title={isReadOnly ? 'Start date' : 'Click to pick start date from calendar'}
+                >
+                  <span className="material-symbols-outlined text-[13px] text-orange-400">play_arrow</span>
+                  <span>Start {task.startDate || 'Unscheduled'}</span>
+                </button>
+              }
+            />
+
             {/* Due Date with Calendar Popover */}
             <CalendarPopover
               value={task.dueDate || ''}
@@ -341,14 +381,14 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
                 <div
                   className="w-6 h-6 rounded-full flex items-center justify-center font-mono text-[10px] font-bold"
                   style={{
-                    backgroundColor: task.assignee.avatarBg || '#ea580c',
-                    color: task.assignee.avatarColor || '#ffffff',
+                    backgroundColor: assignee.avatarBg || '#ea580c',
+                    color: assignee.avatarColor || '#ffffff',
                   }}
                 >
-                  {task.assignee.initials}
+                  {assignee.initials}
                 </div>
                 <span className="text-xs font-semibold text-zinc-100">
-                  {task.assignee.name}
+                  {assignee.name}
                 </span>
               </div>
               {!isReadOnly && (
@@ -585,12 +625,28 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               }}
             />
           </div>
+
+          {/* Standard Date Fields: Date Created & Completed */}
+          <div className="col-span-2 pt-2 border-t border-[#27272a] grid grid-cols-2 gap-3 text-xs">
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[10px] text-zinc-400 font-medium">DATE CREATED</span>
+              <span className="font-mono text-xs text-zinc-300">
+                {task.createdAt ? new Date(task.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : 'N/A'}
+              </span>
+            </div>
+            <div className="flex flex-col gap-1">
+              <span className="font-mono text-[10px] text-zinc-400 font-medium">DATE COMPLETED</span>
+              <span className="font-mono text-xs text-zinc-300">
+                {task.completedAt ? new Date(task.completedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (task.status === 'Done' ? 'Completed' : 'Not completed')}
+              </span>
+            </div>
+          </div>
         </div>
 
         {/* Popover Placements */}
         {isAssigneePopoverOpen && !isReadOnly && (
           <AssigneePopover
-            currentAssigneeId={task.assignee.id}
+            currentAssigneeId={assignee.id}
             members={members}
             onSelectMember={handleAssigneeChange}
             onClose={() => setIsAssigneePopoverOpen(false)}
@@ -747,7 +803,7 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
 
           {/* Checklist Items */}
           <div className="flex flex-col gap-1 pt-1">
-            {task.subtasks.map((st) => (
+            {subtaskList.map((st) => (
               <div
                 key={st.id}
                 className={`flex items-center justify-between gap-2 p-1.5 rounded-[6px] transition-colors group ${
@@ -843,35 +899,41 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
               Activity &amp; Audit Log
             </span>
             <span className="font-mono text-[10px] text-zinc-500">
-              {task.activity.length} events logged
+              {activityList.length} events logged
             </span>
           </div>
 
-          <div className="flex flex-col gap-3 relative before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-px before:bg-zinc-800">
-            {task.activity.map((act) => (
-              <div key={act.id} className="flex items-start gap-3 relative">
-                <div className="w-6 h-6 rounded-full bg-orange-950/40 border border-orange-500/30 flex items-center justify-center z-10 text-orange-400 font-mono text-[10px] font-bold">
-                  {act.initials}
-                </div>
-                <div className="flex flex-col flex-1 text-xs">
-                  <div className="flex items-center justify-between">
-                    <span className="text-zinc-300">
-                      <strong className="font-semibold text-zinc-100">{act.author}</strong>{' '}
-                      {act.text}
-                    </span>
-                    <span className="font-mono text-[10px] text-zinc-500">
-                      {act.time}
-                    </span>
+          {activityList.length === 0 ? (
+            <div className="py-4 text-center text-xs text-zinc-500 font-mono italic">
+              No activity logged yet.
+            </div>
+          ) : (
+            <div className="flex flex-col gap-3 relative before:absolute before:top-2 before:bottom-2 before:left-[11px] before:w-px before:bg-zinc-800">
+              {activityList.map((act) => (
+                <div key={act.id} className="flex items-start gap-3 relative">
+                  <div className="w-6 h-6 rounded-full bg-orange-950/40 border border-orange-500/30 flex items-center justify-center z-10 text-orange-400 font-mono text-[10px] font-bold">
+                    {act.initials}
                   </div>
-                  {act.detail && (
-                    <p className="text-[11px] text-zinc-500 italic mt-0.5">
-                      {act.detail}
-                    </p>
-                  )}
+                  <div className="flex flex-col flex-1 text-xs">
+                    <div className="flex items-center justify-between">
+                      <span className="text-zinc-300">
+                        <strong className="font-semibold text-zinc-100">{act.author}</strong>{' '}
+                        {act.text}
+                      </span>
+                      <span className="font-mono text-[10px] text-zinc-500">
+                        {act.time}
+                      </span>
+                    </div>
+                    {act.detail && (
+                      <p className="text-[11px] text-zinc-500 italic mt-0.5">
+                        {act.detail}
+                      </p>
+                    )}
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

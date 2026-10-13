@@ -49,8 +49,17 @@ export class TaskItem {
   @Column('varchar', { name: 'target_cycle', nullable: true })
   targetCycle?: string;
 
+  @Column('varchar', { name: 'list_id', nullable: true })
+  listId?: string;
+
   @Column('varchar', { name: 'due_date', nullable: true })
   dueDate?: string;
+
+  @Column('varchar', { name: 'start_date', nullable: true })
+  startDate?: string;
+
+  @Column('varchar', { name: 'completed_at', nullable: true })
+  completedAt?: string;
 
   @Column('boolean', { name: 'is_recurring', default: false })
   isRecurring: boolean;

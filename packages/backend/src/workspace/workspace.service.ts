@@ -333,13 +333,141 @@ export class WorkspaceService {
     return this.folderRepo.save(folder);
   }
 
+  async cascadeDeleteList(accountId: string, listId: string, listName?: string) {
+    return this.dataSource.transaction(async (manager) => {
+      // 1. Find all space folders in this account and remove this list item from items or subFolders
+      const folders = await manager.find(SpaceFolder, { where: { accountId } });
+      let deletedName = listName || '';
+
+      const removeItemRecursively = (items: any[]): any[] => {
+        if (!Array.isArray(items)) return [];
+        return items.filter((it) => {
+          if (it.id === listId) {
+            if (!deletedName && it.name) deletedName = it.name;
+            return false;
+          }
+          return true;
+        });
+      };
+
+      const cleanSubFoldersRecursively = (subFolders: any[]): any[] => {
+        if (!Array.isArray(subFolders)) return [];
+        return subFolders.map((sf) => ({
+          ...sf,
+          items: removeItemRecursively(sf.items || []),
+          subFolders: cleanSubFoldersRecursively(sf.subFolders || []),
+        }));
+      };
+
+      for (const folder of folders) {
+        let changed = false;
+        const newItems = removeItemRecursively(folder.items || []);
+        if (newItems.length !== (folder.items || []).length) changed = true;
+        const newSubFolders = cleanSubFoldersRecursively(folder.subFolders || []);
+        if (changed || JSON.stringify(newSubFolders) !== JSON.stringify(folder.subFolders || [])) {
+          folder.items = newItems;
+          folder.subFolders = newSubFolders;
+          await manager.save(SpaceFolder, folder);
+        }
+      }
+
+      // 2. Cascade delete tasks belonging to this list
+      const taskQuery = manager
+        .createQueryBuilder()
+        .delete()
+        .from(TaskItem)
+        .where('account_id = :accountId', { accountId })
+        .andWhere(
+          '(list_id = :listId OR target_cycle = :listId OR LOWER(target_cycle) = :lowerListId' +
+            (deletedName ? ' OR LOWER(target_cycle) = :lowerName' : '') +
+            ')',
+          {
+            listId,
+            lowerListId: listId.toLowerCase(),
+            lowerName: deletedName ? deletedName.toLowerCase() : '',
+          }
+        );
+      await taskQuery.execute();
+
+      // 3. Cascade delete docs belonging to this list
+      await manager.delete(DocItem, { accountId, listId });
+
+      // 4. Cascade delete list settings for this list
+      await manager.delete(ListSettings, { accountId, listId });
+
+      return { id: listId, success: true };
+    });
+  }
+
   async deleteFolder(accountId: string, id: string) {
     const folder = await this.folderRepo.findOne({ where: { id, accountId } });
     if (!folder) {
       throw new NotFoundException(`Folder ${id} not found in this account`);
     }
-    await this.folderRepo.remove(folder);
-    return { id };
+
+    return this.dataSource.transaction(async (manager) => {
+      // 1. Collect all child list IDs and names
+      const listIds: string[] = [];
+      const listNames: string[] = [];
+
+      const collectLists = (items: any[], subFolders: any[]) => {
+        if (Array.isArray(items)) {
+          for (const it of items) {
+            if (it?.id) listIds.push(it.id);
+            if (it?.name) listNames.push(it.name.toLowerCase());
+          }
+        }
+        if (Array.isArray(subFolders)) {
+          for (const sf of subFolders) {
+            collectLists(sf?.items, sf?.subFolders);
+          }
+        }
+      };
+
+      collectLists(folder.items, folder.subFolders);
+
+      // 2. Cascade delete all tasks belonging to child lists
+      if (listIds.length > 0) {
+        const query = manager
+          .createQueryBuilder()
+          .delete()
+          .from(TaskItem)
+          .where('account_id = :accountId', { accountId })
+          .andWhere(
+            '(list_id IN (:...listIds) OR target_cycle IN (:...listIds)' +
+              (listNames.length > 0 ? ' OR LOWER(target_cycle) IN (:...listNames)' : '') +
+              ')',
+            { listIds, listNames: listNames.length > 0 ? listNames : ['__dummy__'] }
+          );
+        await query.execute();
+
+        // 3. Cascade delete docs belonging to these lists
+        await manager
+          .createQueryBuilder()
+          .delete()
+          .from(DocItem)
+          .where('account_id = :accountId', { accountId })
+          .andWhere('list_id IN (:...listIds)', { listIds })
+          .execute();
+
+        // 4. Cascade delete list settings for these lists
+        await manager
+          .createQueryBuilder()
+          .delete()
+          .from(ListSettings)
+          .where('account_id = :accountId', { accountId })
+          .andWhere('list_id IN (:...listIds)', { listIds })
+          .execute();
+      }
+
+      // 5. Cascade delete docs belonging directly to this folder
+      await manager.delete(DocItem, { accountId, folderId: id });
+
+      // 6. Delete folder record
+      await manager.delete(SpaceFolder, { id, accountId });
+
+      return { id, success: true };
+    });
   }
 
   // Space Import & Export

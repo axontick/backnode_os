@@ -85,7 +85,10 @@ model TaskItem {
   subtasks        Json        @default("[]")
   estimation      Json?
   targetCycle     String?
-  dueDate         String?
+  listId          String?     @map("list_id")
+  dueDate         String?     @map("due_date")
+  startDate       String?     @map("start_date")
+  completedAt     String?     @map("completed_at")
   gitBranch       String?
   replicationHash String?
   timeInStage     String?

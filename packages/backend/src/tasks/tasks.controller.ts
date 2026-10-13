@@ -25,8 +25,9 @@ export class TasksController {
     @Query('status') status?: string,
     @Query('priority') priority?: string,
     @Query('assigneeId') assigneeId?: string,
+    @Query('listId') listId?: string,
   ) {
-    return this.tasksService.findAll(user.accountId, { status, priority, assigneeId }, user);
+    return this.tasksService.findAll(user.accountId, { status, priority, assigneeId, listId }, user);
   }
 
   @Get(':id')

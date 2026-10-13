@@ -139,6 +139,8 @@ interface WorkspaceContextType {
   setQuickFilter: (q: string | null) => void;
   taskGroupBy: 'status' | 'priority' | 'assignee';
   setTaskGroupBy: (g: 'status' | 'priority' | 'assignee') => void;
+  visibleColumns: Record<string, boolean>;
+  setVisibleColumns: (cols: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => void;
   crmFilterStage: string | null;
   setCrmFilterStage: (s: string | null) => void;
   crmFilterOwner: string | null;
@@ -531,6 +533,33 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [filterAssignee, setFilterAssignee] = useState<string | null>(null);
   const [quickFilter, setQuickFilter] = useState<string | null>(null);
   const [taskGroupBy, setTaskGroupBy] = useState<'status' | 'priority' | 'assignee'>('status');
+  const [visibleColumns, setVisibleColumnsState] = useState<Record<string, boolean>>(() => {
+    const saved = localStorage.getItem('backnode_visible_task_columns');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {}
+    }
+    return {
+      id: true,
+      title: true,
+      status: true,
+      priority: true,
+      due: true,
+      start: true,
+      assignee: true,
+      deal: true,
+      estimation: true,
+    };
+  });
+
+  const setVisibleColumns = (cols: Record<string, boolean> | ((prev: Record<string, boolean>) => Record<string, boolean>)) => {
+    setVisibleColumnsState((prev) => {
+      const next = typeof cols === 'function' ? cols(prev) : cols;
+      localStorage.setItem('backnode_visible_task_columns', JSON.stringify(next));
+      return next;
+    });
+  };
   const [crmFilterStage, setCrmFilterStage] = useState<string | null>(null);
   const [crmFilterOwner, setCrmFilterOwner] = useState<string | null>(null);
 
@@ -1554,6 +1583,20 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         return;
       }
     }
+
+    const allAvailableLists = folders.flatMap((f) => getAllItemsFromFolder(f));
+    const effectiveListId = newTask.listId || newTask.targetCycle || activeSpace;
+    const matchedList = allAvailableLists.find(
+      (l) => l.id === effectiveListId || l.name.toLowerCase() === (effectiveListId || '').toLowerCase()
+    );
+
+    if (!matchedList && allAvailableLists.length === 0) {
+      showToast('Error: No task lists exist. Please create a task list first.');
+      return;
+    }
+
+    const finalTargetCycle = matchedList ? matchedList.id : (effectiveListId || 'sprint-14');
+
     const defaultAssignee: TeamMember = members[0] || {
       id: `tm-${user?.id || 'owner'}`,
       name: user?.name || 'Operator',
@@ -1575,13 +1618,16 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       tags: ['Deliverable'],
       subtasks: [],
       estimation: '3 pts',
-      targetCycle: 'Sprint 01',
+      targetCycle: finalTargetCycle,
+      listId: finalTargetCycle,
       dueDate: '',
+      startDate: '',
       gitBranch: '',
       replicationHash: '0x' + Math.random().toString(16).substring(2, 8),
       ...newTask,
       id: newTask.id || `BK-${Date.now().toString().slice(-4)}`,
-      createdAt: 'Just now',
+      createdAt: new Date().toISOString(),
+      completedAt: newTask.status === 'Done' ? new Date().toISOString() : undefined,
     } as TaskItem;
     setTasks((prev) => [created, ...prev]);
     tasksApi.create(created).catch((err) => {
@@ -2085,6 +2131,24 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     const remaining = folders.filter((f) => f.id !== folderId);
     setFolders(remaining);
     const deletedItems = deletedFolder ? getAllItemsFromFolder(deletedFolder) : [];
+    const deletedListIds = new Set(deletedItems.map((i) => i.id));
+    const deletedListNames = new Set(deletedItems.map((i) => (i.name || '').toLowerCase()));
+
+    // Cascade delete tasks belonging to deleted folder's child lists from state
+    setTasks((prev) =>
+      prev.filter((t) => {
+        if (t.listId && deletedListIds.has(t.listId)) return false;
+        if (t.targetCycle && deletedListIds.has(t.targetCycle)) return false;
+        if (t.targetCycle && deletedListNames.has(t.targetCycle.toLowerCase())) return false;
+        return true;
+      })
+    );
+
+    // Cascade delete docs belonging to deleted folder or its child lists from state
+    setDocs((prev) =>
+      prev.filter((d) => d.folderId !== folderId && (!d.listId || !deletedListIds.has(d.listId)))
+    );
+
     const isContained = deletedItems.some((i) => i.id === activeSpace);
     if (isContained) {
       const remainingItems = remaining.flatMap((f) => getAllItemsFromFolder(f));
@@ -2094,7 +2158,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     workspaceApi.deleteFolder(folderId).catch((err) => {
       console.error('Failed to delete folder in DB:', err);
     });
-    showToast('Folder deleted');
+    showToast('Folder and all child items deleted');
   };
 
   const handleDeleteTaskSpace = async (listId: string): Promise<void> => {
@@ -2140,15 +2204,26 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       });
     }
 
-    // Filter out tasks mapped to this list
+    // Call backend cascade delete API
+    workspaceApi.deleteList(listId).catch((err) => {
+      console.error('Failed to delete list from DB:', err);
+    });
+
+    // Cascade filter out tasks mapped to this list from state
+    const lowerListId = listId.toLowerCase();
+    const lowerItemName = deletedItemName ? deletedItemName.toLowerCase() : '';
     setTasks((prev) =>
       prev.filter(
         (t) =>
+          t.listId !== listId &&
           t.targetCycle !== listId &&
-          !t.targetCycle.toLowerCase().includes(listId.toLowerCase()) &&
-          (!deletedItemName || !t.targetCycle.toLowerCase().includes(deletedItemName.toLowerCase()))
+          !t.targetCycle.toLowerCase().includes(lowerListId) &&
+          (!lowerItemName || !t.targetCycle.toLowerCase().includes(lowerItemName))
       )
     );
+
+    // Cascade filter out docs mapped to this list from state
+    setDocs((prev) => prev.filter((d) => d.listId !== listId));
 
     // If activeSpace is this list, find next available space
     if (activeSpace === listId) {
@@ -2157,7 +2232,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       setActiveSpace(nextSpace);
     }
 
-    showToast(`Task space "${deletedItemName || listId}" deleted`);
+    showToast(`Task space "${deletedItemName || listId}" and all child items deleted`);
   };
 
   const handleMoveListToFolder = async (
@@ -2696,6 +2771,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setQuickFilter,
         taskGroupBy,
         setTaskGroupBy,
+        visibleColumns,
+        setVisibleColumns,
         crmFilterStage,
         setCrmFilterStage,
         crmFilterOwner,

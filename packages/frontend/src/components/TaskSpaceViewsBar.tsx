@@ -1,5 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useWorkspace } from '../context/WorkspaceContext';
 
 interface TaskSpaceViewsBarProps {
   currentView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs';
@@ -22,7 +23,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   currentView,
   onSelectView,
   taskCount,
-  totalCount = 14,
+  totalCount = 0,
   filterPriority = null,
   onSelectFilterPriority,
   filterStatus = null,
@@ -35,6 +36,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
   onOpenCreateTask,
 }) => {
   const { user, effectiveRole } = useAuth();
+  const { visibleColumns, setVisibleColumns, tasks } = useWorkspace();
   const isReadOnly = effectiveRole === 'VIEWER';
   const userInitials = user?.name
     ? user.name
@@ -44,17 +46,10 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
         .slice(0, 2)
         .toUpperCase()
     : 'ME';
+
   const [isPriorityOpen, setIsPriorityOpen] = useState(false);
   const [isGroupOpen, setIsGroupOpen] = useState(false);
   const [isColumnsOpen, setIsColumnsOpen] = useState(false);
-  const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>({
-    id: true,
-    title: true,
-    priority: true,
-    due: true,
-    assignee: true,
-    deal: true,
-  });
 
   const priorityRef = useRef<HTMLDivElement>(null);
   const groupRef = useRef<HTMLDivElement>(null);
@@ -78,9 +73,55 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
   const hasActiveFilters = Boolean(filterPriority || filterStatus || quickFilter);
 
+  // Discover custom fields dynamically from tasks in the workspace
+  const availableCustomFields = useMemo(() => {
+    const keys = new Set<string>();
+    for (const t of tasks) {
+      if (t.customLinks && typeof t.customLinks === 'object') {
+        for (const k of Object.keys(t.customLinks)) {
+          if (k && !k.startsWith('crm-') && k !== 'dependencies') {
+            keys.add(k);
+          }
+        }
+      }
+    }
+    return Array.from(keys);
+  }, [tasks]);
+
+  const allColumnsList = useMemo(() => {
+    const standard = [
+      { key: 'id', label: 'Task ID' },
+      { key: 'title', label: 'Title' },
+      { key: 'status', label: 'Status' },
+      { key: 'priority', label: 'Priority' },
+      { key: 'due', label: 'Due Date' },
+      { key: 'start', label: 'Start Date' },
+      { key: 'assignee', label: 'Assignee' },
+      { key: 'deal', label: 'Linked Deal' },
+      { key: 'estimation', label: 'Estimation' },
+    ];
+    const custom = availableCustomFields.map((field) => ({
+      key: `custom:${field}`,
+      label: field.charAt(0).toUpperCase() + field.slice(1).replace(/[-_]/g, ' '),
+      isCustom: true,
+    }));
+    return [...standard, ...custom];
+  }, [availableCustomFields]);
+
+  const activeColumnsCount = useMemo(() => {
+    return allColumnsList.filter((col) => visibleColumns[col.key] ?? !col.key.startsWith('custom:')).length;
+  }, [allColumnsList, visibleColumns]);
+
+  const toggleColumn = (key: string) => {
+    setVisibleColumns((prev) => ({
+      ...prev,
+      [key]: prev[key] !== undefined ? !prev[key] : false,
+    }));
+  };
+
   return (
     <section className="bg-[#121214] border-b border-[#27272a] px-6 flex flex-col shrink-0 z-10">
-      {/* Top Row: View Switcher Tabs & Secondary Controls */}
+      {/* Top Row: View Switcher Tabs & Primary Action CTA */}
       <div className="flex items-center justify-between h-10 text-xs">
         {/* View Switcher Tabs */}
         <nav className="flex items-center gap-1.5 h-full font-medium">
@@ -192,8 +233,116 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
           </button>
         </nav>
 
-        {/* Right Secondary Matrix Toolbar */}
+        {/* Right Action Controls: Reset & Create Task */}
         <div className="flex items-center gap-2 text-xs text-zinc-400">
+          {/* Reset Filters CTA if active */}
+          {hasActiveFilters && onClearFilters && (
+            <button
+              type="button"
+              onClick={onClearFilters}
+              className="h-7 flex items-center gap-1 px-2.5 rounded-[6px] bg-orange-950/40 border border-orange-500/30 text-[11px] font-mono text-orange-400 hover:bg-orange-950/60 transition-colors cursor-pointer"
+              title="Clear all active task filters"
+            >
+              <span className="material-symbols-outlined text-[13px] leading-none shrink-0">filter_alt_off</span>
+              <span className="leading-none">Reset Filters</span>
+            </button>
+          )}
+
+          {!isReadOnly && onOpenCreateTask && (
+            <button
+              type="button"
+              onClick={onOpenCreateTask}
+              className="h-7 flex items-center gap-1 px-3 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white font-semibold text-[11px] shadow-sm transition-all active:scale-[0.98] cursor-pointer"
+            >
+              <span className="material-symbols-outlined text-[14px] leading-none shrink-0">add</span>
+              <span className="leading-none">Task</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Bottom Row: Secondary Toolbar (Quick Filters + Priority, Group, and Columns Controls) */}
+      <div className="h-10 flex items-center justify-between gap-3 overflow-x-auto border-t border-[#27272a] text-xs no-scrollbar">
+        {/* Left: Quick Filter Pills */}
+        <div className="flex items-center gap-2 shrink-0">
+          <span className="font-mono text-[10px] uppercase font-semibold text-zinc-500 shrink-0 mr-1 flex items-center gap-1.5 h-7">
+            <span className="material-symbols-outlined text-[14px] text-orange-400 leading-none shrink-0">tune</span>
+            <span className="leading-none">Quick:</span>
+          </span>
+
+          {/* All Tasks Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              onSelectQuickFilter?.(null);
+              onSelectFilterPriority?.(null);
+              onSelectFilterStatus?.(null);
+            }}
+            className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
+              !quickFilter && !filterPriority && !filterStatus
+                ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
+            }`}
+          >
+            <span className="leading-none">All Tasks</span>
+            <span className="font-mono text-[10px] opacity-80 leading-none">({totalCount})</span>
+          </button>
+
+          {/* Urgent Only Pill */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = quickFilter === 'urgent' ? null : 'urgent';
+              onSelectQuickFilter?.(next);
+              onSelectFilterPriority?.(next ? 'Urgent' : null);
+            }}
+            className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
+              quickFilter === 'urgent' || filterPriority === 'Urgent'
+                ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[13px] text-amber-400 leading-none shrink-0">bolt</span>
+            <span className="leading-none">Urgent Only</span>
+          </button>
+
+          {/* My Tasks */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = quickFilter === 'my-tasks' ? null : 'my-tasks';
+              onSelectQuickFilter?.(next);
+            }}
+            className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
+              quickFilter === 'my-tasks'
+                ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[13px] leading-none shrink-0">person</span>
+            <span className="leading-none">My Tasks ({userInitials})</span>
+          </button>
+
+          {/* Due Soon */}
+          <button
+            type="button"
+            onClick={() => {
+              const next = quickFilter === 'due-soon' ? null : 'due-soon';
+              onSelectQuickFilter?.(next);
+            }}
+            className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
+              quickFilter === 'due-soon'
+                ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
+                : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
+            }`}
+          >
+            <span className="material-symbols-outlined text-[13px] leading-none shrink-0">schedule</span>
+            <span className="leading-none">Due Soon</span>
+          </button>
+        </div>
+
+        {/* Right: Secondary Toolbar Matrix Controls (Priority, Group, Columns) */}
+        <div className="flex items-center gap-2 shrink-0">
           {/* Interactive Priority Dropdown */}
           <div ref={priorityRef} className="relative">
             <button
@@ -291,7 +440,7 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
             )}
           </div>
 
-          {/* Interactive Columns Visibility Toggle */}
+          {/* Interactive Columns Visibility Toggle with Custom Fields */}
           <div ref={columnsRef} className="relative">
             <button
               type="button"
@@ -300,186 +449,74 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
               title="Column visibility"
             >
               <span className="material-symbols-outlined text-[14px] leading-none shrink-0">view_column</span>
-              <span className="leading-none">Columns ({Object.values(visibleColumns).filter(Boolean).length})</span>
+              <span className="leading-none">Columns ({activeColumnsCount})</span>
+              <span className="material-symbols-outlined text-[13px] opacity-70 leading-none shrink-0">
+                {isColumnsOpen ? 'expand_less' : 'expand_more'}
+              </span>
             </button>
 
             {isColumnsOpen && (
-              <div className="absolute right-0 top-full mt-1.5 min-w-full w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100">
-                <div className="px-2 py-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold">
-                  Visible Columns
+              <div className="absolute right-0 top-full mt-1.5 min-w-[200px] w-max max-w-xs ui-dropdown-menu bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2 flex flex-col gap-1 text-xs animate-in fade-in zoom-in-95 duration-100 max-h-80 overflow-y-auto">
+                <div className="px-2 py-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold border-b border-[#27272a]">
+                  Standard Columns
                 </div>
-                {[
-                  { key: 'id', label: 'Task ID' },
-                  { key: 'title', label: 'Title' },
-                  { key: 'priority', label: 'Priority' },
-                  { key: 'due', label: 'Due Date' },
-                  { key: 'assignee', label: 'Assignee' },
-                  { key: 'deal', label: 'Linked Deal' },
-                ].map((col) => (
-                  <label
-                    key={col.key}
-                    className="flex items-center gap-2 px-2 py-1.5 rounded-[6px] hover:bg-[#18181b] cursor-pointer text-zinc-300 hover:text-zinc-100"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={visibleColumns[col.key] ?? true}
-                      onChange={() =>
-                        setVisibleColumns((prev) => ({
-                          ...prev,
-                          [col.key]: !prev[col.key],
-                        }))
-                      }
-                      className="rounded-[6px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-orange-500"
-                    />
-                    <span>{col.label}</span>
-                  </label>
-                ))}
+                {allColumnsList
+                  .filter((col) => !col.key.startsWith('custom:'))
+                  .map((col) => {
+                    const isChecked = visibleColumns[col.key] ?? true;
+                    return (
+                      <label
+                        key={col.key}
+                        className="flex items-center gap-2 px-2 py-1.5 rounded-[6px] hover:bg-[#18181b] cursor-pointer text-zinc-300 hover:text-zinc-100 select-none"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isChecked}
+                          onChange={() => toggleColumn(col.key)}
+                          className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-orange-500 cursor-pointer"
+                        />
+                        <span>{col.label}</span>
+                      </label>
+                    );
+                  })}
+
+                {availableCustomFields.length > 0 && (
+                  <>
+                    <div className="px-2 py-1 mt-1 text-[10px] font-mono uppercase text-zinc-500 font-semibold border-b border-[#27272a]">
+                      Custom Fields
+                    </div>
+                    {allColumnsList
+                      .filter((col) => col.key.startsWith('custom:'))
+                      .map((col) => {
+                        const isChecked = visibleColumns[col.key] ?? false;
+                        return (
+                          <label
+                            key={col.key}
+                            className="flex items-center gap-2 px-2 py-1.5 rounded-[6px] hover:bg-[#18181b] cursor-pointer text-zinc-300 hover:text-zinc-100 select-none"
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleColumn(col.key)}
+                              className="rounded-[4px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-orange-500 cursor-pointer"
+                            />
+                            <span className="flex items-center gap-1.5">
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-400"></span>
+                              <span>{col.label}</span>
+                            </span>
+                          </label>
+                        );
+                      })}
+                  </>
+                )}
               </div>
             )}
           </div>
 
-          {/* Reset Filters CTA if active */}
-          {hasActiveFilters && onClearFilters && (
-            <button
-              type="button"
-              onClick={onClearFilters}
-              className="h-7 flex items-center gap-1 px-2 rounded-[6px] bg-orange-950/40 border border-orange-500/30 text-[11px] font-mono text-orange-400 hover:bg-orange-950/60 transition-colors cursor-pointer"
-              title="Clear all active task filters"
-            >
-              <span className="material-symbols-outlined text-[13px] leading-none shrink-0">filter_alt_off</span>
-              <span className="leading-none">Reset</span>
-            </button>
-          )}
-
-          {!isReadOnly && onOpenCreateTask && (
-            <button
-              type="button"
-              onClick={onOpenCreateTask}
-              className="h-7 flex items-center gap-1 px-3 rounded-[6px] bg-orange-600 hover:bg-orange-700 text-white font-semibold text-[11px] shadow-sm transition-all active:scale-[0.98] ml-1 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-[14px] leading-none shrink-0">add</span>
-              <span className="leading-none">Task</span>
-            </button>
-          )}
+          <span className="font-mono text-[10px] text-zinc-500 shrink-0 hidden sm:inline ml-1">
+            {taskCount} items
+          </span>
         </div>
-      </div>
-
-      {/* Bottom Row: Quick Actions Filter Bar */}
-      <div className="h-10 flex items-center gap-2 overflow-x-auto border-t border-[#27272a] text-xs no-scrollbar">
-        <span className="font-mono text-[10px] uppercase font-semibold text-zinc-500 shrink-0 mr-1 flex items-center gap-1.5 h-7">
-          <span className="material-symbols-outlined text-[14px] text-orange-400 leading-none shrink-0">tune</span>
-          <span className="leading-none">Quick:</span>
-        </span>
-
-        {/* All Tasks Pill */}
-        <button
-          type="button"
-          onClick={() => {
-            onSelectQuickFilter?.(null);
-            onSelectFilterPriority?.(null);
-            onSelectFilterStatus?.(null);
-          }}
-          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
-            !quickFilter && !filterPriority && !filterStatus
-              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
-              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-          }`}
-        >
-          <span className="leading-none">All Tasks</span>
-          <span className="font-mono text-[10px] opacity-80 leading-none">({totalCount})</span>
-        </button>
-
-        {/* Urgent Only Pill */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = quickFilter === 'urgent' ? null : 'urgent';
-            onSelectQuickFilter?.(next);
-            onSelectFilterPriority?.(next ? 'Urgent' : null);
-          }}
-          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
-            quickFilter === 'urgent' || filterPriority === 'Urgent'
-              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
-              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[13px] text-amber-400 leading-none shrink-0">bolt</span>
-          <span className="leading-none">Urgent Only</span>
-        </button>
-
-        {/* My Tasks */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = quickFilter === 'my-tasks' ? null : 'my-tasks';
-            onSelectQuickFilter?.(next);
-          }}
-          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
-            quickFilter === 'my-tasks'
-              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
-              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[13px] leading-none shrink-0">person</span>
-          <span className="leading-none">My Tasks ({userInitials})</span>
-        </button>
-
-        {/* In Progress */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = quickFilter === 'in-progress' ? null : 'in-progress';
-            onSelectQuickFilter?.(next);
-            onSelectFilterStatus?.(next ? 'In Progress' : null);
-          }}
-          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
-            quickFilter === 'in-progress' || filterStatus === 'In Progress'
-              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
-              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-          }`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-orange-500 shrink-0"></span>
-          <span className="leading-none">In Progress</span>
-        </button>
-
-        {/* In Review */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = quickFilter === 'needs-review' ? null : 'needs-review';
-            onSelectQuickFilter?.(next);
-            onSelectFilterStatus?.(next ? 'In Review' : null);
-          }}
-          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
-            quickFilter === 'needs-review' || filterStatus === 'In Review'
-              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
-              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-          }`}
-        >
-          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
-          <span className="leading-none">Needs Review</span>
-        </button>
-
-        {/* Due Soon */}
-        <button
-          type="button"
-          onClick={() => {
-            const next = quickFilter === 'due-soon' ? null : 'due-soon';
-            onSelectQuickFilter?.(next);
-          }}
-          className={`h-7 flex items-center justify-center gap-1.5 px-2.5 rounded-[6px] text-[11px] font-medium border transition-colors shrink-0 cursor-pointer ${
-            quickFilter === 'due-soon'
-              ? 'bg-orange-950/50 text-orange-400 border-orange-500/40 font-semibold'
-              : 'bg-[#18181b] border-[#27272a] text-zinc-300 hover:bg-zinc-800'
-          }`}
-        >
-          <span className="material-symbols-outlined text-[13px] leading-none shrink-0">schedule</span>
-          <span className="leading-none">Due Soon</span>
-        </button>
-
-        <span className="ml-auto font-mono text-[10px] text-zinc-500 shrink-0 flex items-center h-7 leading-none">
-          Showing {taskCount} items
-        </span>
       </div>
     </section>
   );

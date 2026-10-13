@@ -281,7 +281,12 @@ export interface TaskItem {
     points: number;
   };
   targetCycle: string;
+  listId?: string;
   dueDate: string;
+  startDate?: string;
+  completedAt?: string;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
   isRecurring?: boolean;
   recurrenceRule?: string;
   recurrenceConfig?: RecurrenceConfig;

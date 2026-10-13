@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { ListSettings } from '../types';
+import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { TaskSpaceViewsBar } from '../components/TaskSpaceViewsBar';
 import { KanbanBoard } from '../components/KanbanBoard';
@@ -36,14 +37,17 @@ export const ListPage: React.FC = () => {
     setCurrentView,
     filteredTasks,
     tasks,
+    searchQuery,
     filterPriority,
     setFilterPriority,
     filterStatus,
     setFilterStatus,
+    filterAssignee,
     quickFilter,
     setQuickFilter,
     taskGroupBy,
     setTaskGroupBy,
+    visibleColumns,
     handleClearAllFilters,
     setNewItemDefaultStatus,
     setNewItemType,
@@ -65,6 +69,7 @@ export const ListPage: React.FC = () => {
     handleUpdateTask,
     members,
   } = useWorkspace();
+  const { user } = useAuth();
 
   const currentSpaceId = spaceId || activeUserSpaceId || userSpaces[0]?.id || 'space-main';
   const spacePrefix = `/space/${currentSpaceId}`;
@@ -126,15 +131,51 @@ export const ListPage: React.FC = () => {
     }
   }, [effectiveView, currentView, setCurrentView]);
 
-  // Filter tasks specific to this list
-  const listTasks = filteredTasks.filter((t) => {
-    if (!listId) return true;
-    const matchId = t.targetCycle === listId || t.targetCycle.toLowerCase().includes(listId.toLowerCase());
-    const matchName = currentListItem && t.targetCycle.toLowerCase().includes(currentListItem.name.toLowerCase());
-    return matchId || matchName;
-  });
+  // 1. Strictly scope all tasks to this list only
+  const allListTasks = useMemo(() => {
+    if (!listId) return tasks;
+    const lowerListId = listId.toLowerCase();
+    const lowerListName = currentListItem?.name ? currentListItem.name.toLowerCase() : '';
+    return tasks.filter((t) => {
+      if (t.listId && (t.listId === listId || t.listId.toLowerCase() === lowerListId)) return true;
+      if (t.targetCycle) {
+        const lowerTc = t.targetCycle.toLowerCase();
+        if (t.targetCycle === listId || lowerTc === lowerListId || lowerTc.includes(lowerListId)) return true;
+        if (lowerListName && (lowerTc === lowerListName || lowerTc.includes(lowerListName))) return true;
+      }
+      return false;
+    });
+  }, [tasks, listId, currentListItem]);
 
-  const displayTasks = listTasks.length > 0 ? listTasks : filteredTasks;
+  // 2. Apply filters strictly within this list's tasks
+  const scopedFilteredTasks = useMemo(() => {
+    return allListTasks.filter((t) => {
+      const matchesSearch =
+        !searchQuery ||
+        searchQuery.trim() === '' ||
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (t.assignee?.name && t.assignee.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
+        (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
+
+      const matchesPriority = filterPriority === null || t.priority === filterPriority;
+      const matchesStatus = filterStatus === null || t.status === filterStatus;
+      const matchesAssignee = filterAssignee === null || (t.assignee?.name && t.assignee.name === filterAssignee);
+
+      let matchesQuick = true;
+      if (quickFilter === 'my-tasks') {
+        matchesQuick = Boolean(user && t.assignee?.name?.toLowerCase() === user.name?.toLowerCase());
+      } else if (quickFilter === 'due-soon') {
+        matchesQuick = Boolean(t.dueDate && (t.dueDate.includes('Oct') || t.dueDate.includes('Today')));
+      } else if (quickFilter === 'urgent') {
+        matchesQuick = t.priority === 'Urgent';
+      }
+
+      return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesQuick;
+    });
+  }, [allListTasks, searchQuery, filterPriority, filterStatus, filterAssignee, quickFilter, user]);
+
+  const displayTasks = scopedFilteredTasks;
 
   const handleSelectView = (
     nextView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs'
@@ -164,7 +205,7 @@ export const ListPage: React.FC = () => {
         currentView={view || 'board'}
         onSelectView={handleSelectView}
         taskCount={displayTasks.length}
-        totalCount={tasks.length}
+        totalCount={allListTasks.length}
         filterPriority={filterPriority}
         onSelectFilterPriority={setFilterPriority}
         filterStatus={filterStatus}
@@ -202,6 +243,8 @@ export const ListPage: React.FC = () => {
             onQuickStatusChange={(taskId, status) => handleMoveTaskStatus(taskId, status)}
             onMoveTaskStatus={handleMoveTaskStatus}
             onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
+            groupBy={taskGroupBy}
+            visibleColumns={visibleColumns}
           />
         )}
 

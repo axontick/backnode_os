@@ -67,6 +67,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
   const [taskStatus, setTaskStatus] = useState<TaskStatus>(defaultStatus);
   const [priority, setPriority] = useState<PriorityLevel>('Medium');
   const [assigneeId, setAssigneeId] = useState('');
+  const [startDate, setStartDate] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceRule, setRecurrenceRule] = useState<string>('weekly');
@@ -97,12 +98,13 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setModalType('task');
       setTitle(taskToEdit.title || '');
       const matched = availableLists.find(
-        (l) => l.id === taskToEdit.targetCycle || l.name.toLowerCase() === (taskToEdit.targetCycle || '').toLowerCase()
+        (l) => l.id === taskToEdit.targetCycle || l.id === taskToEdit.listId || l.name.toLowerCase() === (taskToEdit.targetCycle || '').toLowerCase()
       );
-      setSpace(matched?.id || taskToEdit.targetCycle || availableLists[0]?.id || '');
+      setSpace(matched?.id || taskToEdit.listId || taskToEdit.targetCycle || availableLists[0]?.id || '');
       setTaskStatus(taskToEdit.status || defaultStatus);
       setPriority((taskToEdit.priority as PriorityLevel) || 'Medium');
       setAssigneeId(taskToEdit.assignee?.id || members[0]?.id || '');
+      setStartDate(taskToEdit.startDate || '');
       setDueDate(taskToEdit.dueDate || '');
       setIsRecurring(!!taskToEdit.isRecurring);
       setRecurrenceRule(taskToEdit.recurrenceRule || 'weekly');
@@ -131,10 +133,11 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       const matchedActive = availableLists.find(
         (l) => l.id === activeSpace || l.name.toLowerCase() === (activeSpace || '').toLowerCase()
       );
-      setSpace(matchedActive?.id || availableLists[0]?.id || (folders[0]?.items?.[0]?.id ?? 'sprint-14'));
+      setSpace(matchedActive?.id || availableLists[0]?.id || '');
       setTaskStatus(defaultStatus);
       setPriority('Medium');
       setAssigneeId(members[0]?.id || '');
+      setStartDate('');
       setDueDate('');
       setIsRecurring(false);
       setRecurrenceRule('weekly');
@@ -188,6 +191,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
 
     if (modalType === 'task') {
       if (!title.trim()) return;
+      if (!space || availableLists.length === 0) {
+        alert('A valid task list is required. Tasks cannot exist outside a list.');
+        return;
+      }
       const assignedMember = members.find((m) => m.id === assigneeId) || members[0];
 
       if (taskToEdit && onUpdateTask) {
@@ -200,7 +207,9 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           status: taskStatus,
           priority: priority,
           assignee: assignedMember,
+          listId: space,
           targetCycle: space,
+          startDate: startDate || undefined,
           dueDate: dueDate,
           isRecurring: isRecurring,
           recurrenceRule: isRecurring ? recurrenceRule : undefined,
@@ -224,6 +233,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           status: taskStatus,
           priority: priority,
           assignee: assignedMember,
+          listId: space,
+          targetCycle: space,
+          startDate: startDate || undefined,
+          dueDate: dueDate,
           tags: ['Deliverable'],
           isRecurring: isRecurring,
           recurrenceRule: isRecurring ? recurrenceRule : undefined,
@@ -239,8 +252,6 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
             hours: priority === 'Urgent' ? 14 : priority === 'High' ? 10 : 6,
             points: priority === 'Urgent' ? 5 : 3,
           },
-          targetCycle: space,
-          dueDate: dueDate,
           gitBranch: `feat/${title.toLowerCase().replace(/[^a-z0-9]/g, '-').slice(0, 20)}`,
           replicationHash: `${Math.random().toString(36).substring(2, 7)}...${Math.random().toString(36).substring(2, 6)}`,
           timeInStage: 'Just created',
@@ -436,8 +447,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                         );
                       })}
                       {availableLists.length === 0 && (
-                        <option value={space || 'sprint-14'}>
-                          {space || 'Default List (Sprint 14)'}
+                        <option value="" disabled>
+                          No task lists available (create one first)
                         </option>
                       )}
                     </select>
@@ -471,8 +482,15 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                   </div>
                 </div>
 
-                {/* Grid: Assignee, Due Date */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                {availableLists.length === 0 && (
+                  <div className="p-3 rounded-[6px] bg-red-950/40 border border-red-500/30 text-red-300 text-xs flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[16px] text-red-400">warning</span>
+                    <span>No task lists exist. You must create a list before adding tasks.</span>
+                  </div>
+                )}
+
+                {/* Grid: Assignee, Start Date, Due Date */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
                   <div className="space-y-1">
                     <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
                       Assignee
@@ -488,6 +506,18 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                         </option>
                       ))}
                     </select>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="font-mono text-[10px] text-zinc-400 uppercase font-semibold">
+                      Start Date
+                    </label>
+                    <input
+                      type="date"
+                      value={startDate && startDate.match(/^\d{4}-\d{2}-\d{2}$/) ? startDate : ''}
+                      onChange={(e) => setStartDate(e.target.value)}
+                      className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
+                    />
                   </div>
 
                   <div className="space-y-1">
@@ -848,7 +878,12 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="flex items-center gap-2 px-5 py-2 rounded-[6px] bg-orange-600 hover:bg-orange-700 active:scale-[0.98] text-white font-semibold text-xs transition-all shadow-sm cursor-pointer"
+                disabled={modalType === 'task' && (!space || availableLists.length === 0)}
+                className={`flex items-center gap-2 px-5 py-2 rounded-[6px] text-white font-semibold text-xs transition-all shadow-sm ${
+                  modalType === 'task' && (!space || availableLists.length === 0)
+                    ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-60'
+                    : 'bg-orange-600 hover:bg-orange-700 active:scale-[0.98] cursor-pointer'
+                }`}
               >
                 <span className="material-symbols-outlined text-[16px]">
                   {isEditing ? 'save' : modalType === 'task' ? 'add_task' : 'monetization_on'}

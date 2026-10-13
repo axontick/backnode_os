@@ -88,7 +88,7 @@ export const authApi = {
 };
 
 export const tasksApi = {
-  getAll: async (params?: { status?: string; priority?: string; assigneeId?: string }): Promise<TaskItem[]> => {
+  getAll: async (params?: { status?: string; priority?: string; assigneeId?: string; listId?: string }): Promise<TaskItem[]> => {
     const res = await apiClient.get<TaskItem[]>('/tasks', { params });
     return res.data;
   },
@@ -247,6 +247,10 @@ export const workspaceApi = {
   },
   deleteFolder: async (id: string): Promise<{ id: string }> => {
     const res = await apiClient.delete<{ id: string }>(`/folders/${id}`);
+    return res.data;
+  },
+  deleteList: async (id: string): Promise<{ id: string; success: boolean }> => {
+    const res = await apiClient.delete<{ id: string; success: boolean }>(`/lists/${id}`);
     return res.data;
   },
   exportSpace: async (spaceId: string, listId?: string): Promise<any> => {
