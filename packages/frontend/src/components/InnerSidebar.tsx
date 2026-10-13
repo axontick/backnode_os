@@ -89,7 +89,7 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
 }) => {
   const navigate = useNavigate();
   const { spaceId } = useParams<{ spaceId?: string }>();
-  const { listSettings } = useWorkspace();
+  const { listSettings, tasks } = useWorkspace();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
   const isExpanded = !!expandedSubFolderIds[subFolder.id] || Boolean(filterText);
   const hasItems = subFolder.items && subFolder.items.length > 0;
@@ -253,7 +253,7 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                             : 'bg-zinc-800/80 text-zinc-400'
                         }`}
                       >
-                        {subItem.taskCount}
+                        {tasks.filter((t) => t.listId === subItem.id).length}
                       </span>
 
                       {!isReadOnly && (
@@ -605,7 +605,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const { effectiveRole } = useAuth();
-  const { listSettings, crmSettings, filteredDeals: deals, setItemToDelete } = useWorkspace();
+  const { listSettings, crmSettings, filteredDeals: deals, setItemToDelete, tasks } = useWorkspace();
   const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
   const { spaceId } = useParams<{ spaceId?: string }>();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
@@ -979,7 +979,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                               : 'bg-zinc-800/80 text-zinc-400'
                                           }`}
                                         >
-                                          {subItem.taskCount}
+                                          {tasks.filter((t) => t.listId === subItem.id).length}
                                         </span>
 
                                         {!isReadOnly && (

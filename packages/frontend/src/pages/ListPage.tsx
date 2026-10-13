@@ -131,21 +131,16 @@ export const ListPage: React.FC = () => {
     }
   }, [effectiveView, currentView, setCurrentView]);
 
+  // Reset filters when switching between lists
+  useEffect(() => {
+    handleClearAllFilters();
+  }, [listId]);
+
   // 1. Strictly scope all tasks to this list only
   const allListTasks = useMemo(() => {
     if (!listId) return tasks;
-    const lowerListId = listId.toLowerCase();
-    const lowerListName = currentListItem?.name ? currentListItem.name.toLowerCase() : '';
-    return tasks.filter((t) => {
-      if (t.listId && (t.listId === listId || t.listId.toLowerCase() === lowerListId)) return true;
-      if (t.targetCycle) {
-        const lowerTc = t.targetCycle.toLowerCase();
-        if (t.targetCycle === listId || lowerTc === lowerListId || lowerTc.includes(lowerListId)) return true;
-        if (lowerListName && (lowerTc === lowerListName || lowerTc.includes(lowerListName))) return true;
-      }
-      return false;
-    });
-  }, [tasks, listId, currentListItem]);
+    return tasks.filter((t) => t.listId === listId);
+  }, [tasks, listId]);
 
   // 2. Apply filters strictly within this list's tasks
   const scopedFilteredTasks = useMemo(() => {
@@ -224,7 +219,7 @@ export const ListPage: React.FC = () => {
 
       {/* Main View Area */}
       <div className="flex-1 flex overflow-hidden relative">
-        {view === 'board' && (
+        {effectiveView === 'board' && (
           <KanbanBoard
             tasks={displayTasks}
             selectedTaskId={selectedTaskId}
@@ -235,7 +230,7 @@ export const ListPage: React.FC = () => {
           />
         )}
 
-        {view === 'list' && (
+        {effectiveView === 'list' && (
           <ListView
             tasks={displayTasks}
             selectedTaskId={selectedTaskId}
@@ -248,7 +243,7 @@ export const ListPage: React.FC = () => {
           />
         )}
 
-        {view === 'table' && (
+        {effectiveView === 'table' && (
           <DeliverablesTableView
             tasks={displayTasks}
             selectedTaskId={selectedTaskId}
@@ -263,7 +258,7 @@ export const ListPage: React.FC = () => {
           />
         )}
 
-        {view === 'timeline' && (
+        {effectiveView === 'timeline' && (
           <GanttTimelineView
             tasks={displayTasks}
             onSelectTask={(t) => setSelectedTaskId(t.id)}
@@ -273,7 +268,7 @@ export const ListPage: React.FC = () => {
           />
         )}
 
-        {view === 'calendar' && (
+        {effectiveView === 'calendar' && (
           <MonthlyCalendarView
             tasks={displayTasks}
             onSelectTask={(t) => setSelectedTaskId(t.id)}
@@ -283,13 +278,13 @@ export const ListPage: React.FC = () => {
           />
         )}
 
-        {view === 'docs' && (
+        {effectiveView === 'docs' && (
           <DocsCanvasView
             onNavigateToTasks={() => handleSelectView('board')}
           />
         )}
 
-        {view === 'settings' && (
+        {effectiveView === 'settings' && (
           <TaskSpaceSettings
             settings={effectiveListSettings}
             statuses={statuses}
@@ -307,7 +302,7 @@ export const ListPage: React.FC = () => {
         )}
 
         {/* Task Inspector Slide-Over */}
-        {selectedTask && view !== 'settings' && view !== 'docs' && (
+        {selectedTask && effectiveView !== 'settings' && effectiveView !== 'docs' && (
           <TaskInspector
             task={selectedTask}
             members={members}

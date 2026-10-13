@@ -20,18 +20,22 @@
 
 ## 4. Tasks & Task Spaces
 ### Hierarchy & Storage
-- [ ] Enforce that no task can exist outside of a list. Deleting a list or folder must cascade-delete all child and related items.
-- [ ] Fix empty list query bug: navigating to an empty list incorrectly fetches all tasks across all lists instead of displaying an empty list view.
-- [ ] Add missing standard date fields to tasks: `Date Created`, `Date Start`, etc.
+- [x] Enforce that no task can exist outside of a list. Deleting a list or folder must cascade-delete all child and related items.
+- [x] Fix empty list query bug: navigating to an empty list incorrectly fetches all tasks across all lists instead of displaying an empty list view.
+- [x] Add missing standard date fields to tasks: `Date Created`, `Date Start`, etc.
+- [x] Opening a list with existing tasks is showing empty.
+- [ ] Date Completed is showing "Completed" rather than showing the actual date.
+- [ ] If start/end date is set in the task detail panel, the edit modal for the task does not show the start or due date.
 
 ### Task List View & Filtering
-- [ ] In Task List view, move Priority, Group, and Columns controls down to the secondary toolbar alongside other filter fields.
-- [ ] Remove "In Progress" and "Needs Review" filter pills from the secondary toolbar.
-- [ ] Ensure that filters applied within a task list are strictly scoped to that list's data only.
+- [x] In Task List view, move Priority, Group, and Columns controls down to the secondary toolbar alongside other filter fields.
+- [ ] In Task List View, the Priority, Group and Columns controls dropdown is showing inside the list bar rather than externally as a dropdown.
+- [x] Remove "In Progress" and "Needs Review" filter pills from the secondary toolbar.
+- [x] Ensure that filters applied within a task list are strictly scoped to that list's data only.
 - [ ] Fix Group and Columns functionality: grouping by status or columns currently does not group or show accurate data, and columns must support custom fields.
 
 ### Kanban & Task Inspector
-- [ ] Fix runtime crash when opening a task from the Kanban board: `Uncaught TypeError: Cannot read properties of undefined (reading 'length') at TaskInspector (TaskInspector.tsx:846:30)`.
+- [x] Fix runtime crash when opening a task from the Kanban board: `Uncaught TypeError: Cannot read properties of undefined (reading 'length') at TaskInspector (TaskInspector.tsx:846:30)`.
 
 ## 5. Custom Fields & Dynamic Linked Fields
 - [ ] Refactor linked fields (e.g., Linked Contact) as database-defined and code-based fields. Enable full custom rendering (name, avatar, email in dropdowns and selected tags) and toggle availability based on active plugins.

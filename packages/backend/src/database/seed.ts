@@ -262,6 +262,7 @@ async function seed() {
       subtasks: t.subtasks,
       estimation: t.estimation,
       targetCycle: t.targetCycle || null,
+      listId: (t as any).listId || null,
       dueDate: t.dueDate || null,
       isRecurring: false,
       recurrenceRule: null,
