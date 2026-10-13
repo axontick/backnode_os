@@ -368,7 +368,7 @@ export const WorkspaceSettingsPage: React.FC = () => {
                 deliverables, folders, CRM pipelines, and team access records tied to this domain.
               </p>
               <p className="text-[11px] text-rose-300/80">
-                This action is irreversible and immediate across local and remote replication nodes.
+                This action is irreversible and cannot be undone.
               </p>
             </div>
 

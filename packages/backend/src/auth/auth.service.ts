@@ -11,6 +11,9 @@ import { Repository, MoreThan, IsNull } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { Response } from 'express';
+import { unlinkSync, existsSync } from 'fs';
+import { join } from 'path';
+import { getAvatarsUploadDir } from './avatar-upload.config';
 import {
   User,
   Account,
@@ -31,6 +34,7 @@ import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import {
   initialStatuses,
   initialListSettings,
@@ -179,6 +183,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         role: user.role,
+        avatarUrl: (user.avatarUrl && user.avatarUrl.trim()) || undefined,
         accountId: account.id,
         account: {
           id: account.id,
@@ -228,6 +233,7 @@ export class AuthService {
         canLogin: user.canLogin,
         allowedPages: member?.allowedPages || ['overview', 'task-spaces', 'crm-pipelines', 'contacts', 'docs', 'team', 'settings'],
         allowedActions: member?.allowedActions || (user.role === 'VIEWER' ? ['read'] : ['read', 'write', 'delete', 'publish', 'admin']),
+        avatarUrl: (user.avatarUrl && user.avatarUrl.trim()) || undefined,
         accountId: user.accountId,
         account: user.account
           ? {
@@ -274,6 +280,7 @@ export class AuthService {
         email: existingToken.user.email,
         name: existingToken.user.name,
         role: existingToken.user.role,
+        avatarUrl: (existingToken.user.avatarUrl && existingToken.user.avatarUrl.trim()) || undefined,
         accountId: existingToken.user.accountId,
         account: existingToken.user.account
           ? {
@@ -390,6 +397,7 @@ export class AuthService {
         canLogin: user.canLogin,
         allowedPages: member?.allowedPages || ['overview', 'task-spaces', 'crm-pipelines', 'contacts', 'docs', 'team', 'settings'],
         allowedActions: member?.allowedActions || (user.role === 'VIEWER' ? ['read'] : ['read', 'write', 'delete', 'publish', 'admin']),
+        avatarUrl: (user.avatarUrl && user.avatarUrl.trim()) || undefined,
         accountId: user.accountId,
         account: user.account
           ? {
@@ -400,6 +408,123 @@ export class AuthService {
           : undefined,
       },
     };
+  }
+
+  private deleteOldAvatarFile(avatarUrl?: string | null) {
+    if (!avatarUrl) return;
+    try {
+      const match = avatarUrl.match(/\/uploads\/avatars\/([^/?#]+)/);
+      if (match && match[1]) {
+        const filename = match[1];
+        const dir = getAvatarsUploadDir();
+        const filePath = join(dir, filename);
+        if (existsSync(filePath)) {
+          unlinkSync(filePath);
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to delete old avatar file:', err);
+    }
+  }
+
+  async uploadAvatar(userId: string, file: any, baseUrl: string) {
+    if (!file) {
+      throw new BadRequestException('No image file provided.');
+    }
+
+    const user = await this.userRepo.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    // Delete previous locally stored avatar file if one existed
+    this.deleteOldAvatarFile(user.avatarUrl);
+
+    // Build public URL pointing to backend static asset server
+    const avatarUrl = `${baseUrl.replace(/\/$/, '')}/api/uploads/avatars/${file.filename}`;
+
+    // Update user entity and database
+    user.avatarUrl = avatarUrl;
+    await this.userRepo.update(user.id, { avatarUrl });
+
+    // Synchronize corresponding TeamMember if exists
+    const member = await this.memberRepo.findOne({
+      where: { email: user.email.toLowerCase().trim(), accountId: user.accountId },
+    });
+    if (member) {
+      member.avatarUrl = avatarUrl;
+      await this.memberRepo.update(member.id, { avatarUrl });
+    }
+
+    return { avatarUrl };
+  }
+
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: { account: true },
+    });
+
+    if (!user) {
+      throw new UnauthorizedException('User not found.');
+    }
+
+    if (dto.name && dto.name.trim()) {
+      user.name = dto.name.trim();
+    }
+
+    if (dto.avatarUrl !== undefined) {
+      const cleanAvatar = dto.avatarUrl && dto.avatarUrl.trim() ? dto.avatarUrl.trim() : null;
+      if (user.avatarUrl && user.avatarUrl !== cleanAvatar) {
+        this.deleteOldAvatarFile(user.avatarUrl);
+      }
+      user.avatarUrl = cleanAvatar as any;
+      await this.userRepo.update(user.id, {
+        avatarUrl: cleanAvatar as any,
+      });
+    }
+
+    if (dto.newPassword) {
+      if (dto.currentPassword) {
+        const isMatch = await bcrypt.compare(dto.currentPassword, user.passwordHash);
+        if (!isMatch) {
+          throw new BadRequestException('Current password is incorrect.');
+        }
+      }
+      user.passwordHash = await bcrypt.hash(dto.newPassword, 10);
+    }
+
+    await this.userRepo.save(user);
+
+    // Synchronize corresponding TeamMember if exists
+    const member = await this.memberRepo.findOne({
+      where: { email: user.email.toLowerCase().trim(), accountId: user.accountId },
+    });
+
+    if (member) {
+      if (dto.name && dto.name.trim()) {
+        member.name = user.name;
+        member.initials = user.name
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .toUpperCase()
+          .slice(0, 2);
+      }
+      if (dto.avatarUrl !== undefined) {
+        const cleanAvatar = dto.avatarUrl && dto.avatarUrl.trim() ? dto.avatarUrl.trim() : null;
+        member.avatarUrl = cleanAvatar as any;
+        await this.memberRepo.update(member.id, {
+          avatarUrl: cleanAvatar as any,
+        });
+      }
+      if (dto.avatarBg) {
+        member.avatarBg = dto.avatarBg;
+      }
+      await this.memberRepo.save(member);
+    }
+
+    return this.getMe(user.id);
   }
 
   private async provisionDefaultAccountData(

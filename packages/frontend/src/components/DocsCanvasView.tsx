@@ -765,16 +765,6 @@ export const DocsCanvasView: React.FC<DocsCanvasViewProps> = ({
                 />
               </div>
             )}
-
-            <button
-              type="button"
-              disabled={isReadOnly}
-              onClick={onOpenCreateTask}
-              className="px-3 py-1 bg-orange-600 hover:bg-orange-700 disabled:opacity-40 text-white rounded-[6px] text-xs font-semibold flex items-center gap-1 cursor-pointer transition-colors shadow-sm"
-            >
-              <span className="material-symbols-outlined text-[15px]">add</span>
-              <span>New Task</span>
-            </button>
           </div>
         </div>
 

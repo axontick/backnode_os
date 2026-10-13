@@ -460,11 +460,11 @@ export const ListView: React.FC<ListViewProps> = ({
           </span>
         </div>
 
-        {/* Benchmark Badge */}
-        <div className="flex items-center gap-2 bg-orange-950/40 border border-orange-500/30 px-2.5 py-1 rounded-[6px]">
-          <span className="material-symbols-outlined text-[14px] text-orange-400">bolt</span>
+        {/* View Badge */}
+        <div className="flex items-center gap-2 bg-[#18181b] border border-[#27272a] px-2.5 py-1 rounded-[6px]">
+          <span className="material-symbols-outlined text-[14px] text-zinc-400">view_list</span>
           <span className="font-mono text-zinc-300 text-[10.5px]">
-            Zero-Latency List View
+            Task List View
           </span>
         </div>
       </div>

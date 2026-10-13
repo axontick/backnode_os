@@ -197,7 +197,7 @@ export const NewSubFolderModal: React.FC<NewSubFolderModalProps> = ({
                 autoFocus
                 value={subFolderName}
                 onChange={(e) => setSubFolderName(e.target.value)}
-                placeholder="e.g. Replication Core VFS, Milestone Alpha, Tier-1 PoCs"
+                placeholder="e.g. Platform Core, Milestone Alpha, Tier-1 PoCs"
                 className="w-full px-3.5 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] text-zinc-100 placeholder:text-zinc-500 focus:border-orange-500 text-sm font-medium focus:outline-none transition-all"
               />
             </div>

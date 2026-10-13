@@ -10,13 +10,13 @@
 - [x] Allow UI dropdown menus to expand wider than their trigger input field whenever content requires it.
 
 ## 2. Global Navigation, Sidebar & Account Controls
-- [ ] Top-left Workspace Switcher: Fix the dropdown so it is not confined strictly within the sidebar boundaries; position it cleanly outside and increase its width.
-- [ ] User Account Dropdown: Remove "Switch Account / Login". Add a "Profile" button to edit name, profile image, and change password.
-- [ ] Global UI Cleanup: Remove the "New Task" button from global / Docs sidebar contexts where it does not belong.
+- [x] Top-left Workspace Switcher: Fix the dropdown so it is not confined strictly within the sidebar boundaries; position it cleanly outside and increase its width.
+- [x] User Account Dropdown: Remove "Switch Account / Login". Add a "Profile" button to edit name, profile image, and change password.
+- [x] Global UI Cleanup: Remove the "New Task" button from global / Docs sidebar contexts where it does not belong.
 
 ## 3. Global Terminology & Simulation Cleanup
-- [ ] Remove all occurrences of "Instant local commit (0.2ms)", "WAL Encrypted", or similar simulated offline/WAL phrases throughout the application.
-- [ ] Remove all occurrences of "Local Draft" and other wording implying items are local/temporary drafts.
+- [x] Remove all occurrences of "Instant local commit (0.2ms)", "WAL Encrypted", or similar simulated offline/WAL phrases throughout the application.
+- [x] Remove all occurrences of "Local Draft" and other wording implying items are local/temporary drafts.
 
 ## 4. Tasks & Task Spaces
 ### Hierarchy & Storage

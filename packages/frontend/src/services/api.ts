@@ -22,6 +22,7 @@ import {
   RolePermissions,
   DocItem,
   DocFolder,
+  UpdateProfileDto,
 } from '../types';
 
 export const API_BASE_URL =
@@ -68,6 +69,18 @@ export const authApi = {
   getMe: async (): Promise<User> => {
     const res = await apiClient.get<any>('/auth/me');
     return res.data?.user || res.data;
+  },
+  updateProfile: async (dto: UpdateProfileDto): Promise<User> => {
+    const res = await apiClient.patch<any>('/auth/profile', dto);
+    return res.data?.user || res.data;
+  },
+  uploadAvatar: async (formData: FormData): Promise<{ avatarUrl: string }> => {
+    const res = await apiClient.post<{ avatarUrl: string }>('/auth/profile/avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data;
   },
   logout: async (): Promise<void> => {
     await apiClient.post('/auth/logout');

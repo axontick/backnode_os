@@ -663,7 +663,7 @@ export const ContactsDirectoryView: React.FC<ContactsDirectoryViewProps> = ({
                   </div>
                   <div className="flex items-center justify-between p-2 bg-[#121214] rounded-[6px] border border-[#27272a]">
                     <span className="font-mono text-[11px] text-zinc-200 font-medium truncate">
-                      Zero-Latency Node Pilot
+                      Enterprise Infrastructure Pilot
                     </span>
                     <span className="font-mono text-[9px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/30 px-1 rounded-[6px]">
                       Verified

@@ -6,6 +6,8 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { BacknodeLogo } from './BacknodeLogo';
 import { findSpaceBreadcrumbs, findPipelineSubFolderPath, findListItemById } from '../utils/treeUtils';
 import { TopBarImportExportModal } from './TopBarImportExportModal';
+import { EditProfileModal } from './EditProfileModal';
+import { resolveAvatarUrl } from '../utils/avatarUtils';
 
 interface TopNavBarProps {
   currentHub?: string;
@@ -100,6 +102,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
   const helpRef = useRef<HTMLDivElement>(null);
@@ -954,15 +957,15 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
               <div className="flex items-center justify-between pb-2 border-b border-[#27272a]">
                 <span className="font-semibold text-xs text-zinc-100">Notifications</span>
                 <span className="font-mono text-[10px] text-emerald-400 bg-emerald-950/40 px-2 py-0.5 rounded-[6px] border border-emerald-500/30">
-                  Sync Nominal
+                  Online
                 </span>
               </div>
               <div className="flex flex-col gap-2">
                 <div className="p-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-start gap-2.5">
                   <span className="material-symbols-outlined text-[16px] text-orange-500 mt-0.5">cloud_done</span>
                   <div>
-                    <div className="font-semibold text-[11px] text-zinc-100">Peer replication synced</div>
-                    <div className="text-[10px] text-zinc-400">Active node: us-east-local (0.11ms latency)</div>
+                    <div className="font-semibold text-[11px] text-zinc-100">Workspace data synced</div>
+                    <div className="text-[10px] text-zinc-400">All data backed up and in sync</div>
                   </div>
                 </div>
                 <div className="p-2.5 rounded-[6px] bg-[#18181b] border border-[#27272a] flex items-start gap-2.5">
@@ -1022,39 +1025,49 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                 Login
               </button>
             )}
-            <button
-              onClick={() => setIsProfileOpen(!isProfileOpen)}
-              className="w-8 h-8 rounded-full bg-[#18181b] text-zinc-100 border border-[#27272a] hover:border-orange-500/50 flex items-center justify-center text-xs font-bold font-mono shadow-sm cursor-pointer hover:ring-2 hover:ring-orange-500/30 transition-all relative"
-              title={user ? `Operator: ${user.name} (${user.role})` : 'Operator Profile'}
-            >
-              {user?.name
-                ? user.name
+            <div className="relative inline-flex items-center justify-center">
+              <button
+                onClick={() => setIsProfileOpen(!isProfileOpen)}
+                className="w-8 h-8 rounded-full bg-[#18181b] text-zinc-100 border border-[#27272a] hover:border-orange-500/50 flex items-center justify-center text-xs font-bold font-mono shadow-sm cursor-pointer hover:ring-2 hover:ring-orange-500/30 transition-all overflow-hidden"
+                title={user ? `Operator: ${user.name} (${user.role})` : 'Operator Profile'}
+              >
+                {user?.avatarUrl ? (
+                  <img src={resolveAvatarUrl(user.avatarUrl)} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                ) : user?.name ? (
+                  user.name
                     .split(' ')
                     .map((n) => n[0])
                     .join('')
                     .toUpperCase()
                     .slice(0, 2)
-                : 'AW'}
+                ) : (
+                  'AW'
+                )}
+              </button>
               <span
-                className={`absolute bottom-0 right-0 w-2 h-2 rounded-full border border-[#121214] ${
+                className={`absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0c0a09] pointer-events-none z-10 ${
                   isAuthenticated ? 'bg-emerald-500' : 'bg-amber-400'
                 }`}
               ></span>
-            </button>
+            </div>
           </div>
 
           {isProfileOpen && (
             <div className="absolute right-0 top-full mt-2 w-72 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-4 flex flex-col gap-3 text-xs animate-in fade-in zoom-in-95 duration-150">
               <div className="flex items-center gap-3 pb-3 border-b border-[#27272a]">
-                <div className="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center font-mono font-bold text-sm shadow-md">
-                  {user?.name
-                    ? user.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .toUpperCase()
-                        .slice(0, 2)
-                    : 'OP'}
+                <div className="w-10 h-10 rounded-full bg-orange-600 text-white flex items-center justify-center font-mono font-bold text-sm shadow-md overflow-hidden shrink-0">
+                  {user?.avatarUrl ? (
+                    <img src={resolveAvatarUrl(user.avatarUrl)} alt={user.name || 'User'} className="w-full h-full object-cover" />
+                  ) : user?.name ? (
+                    user.name
+                      .split(' ')
+                      .map((n) => n[0])
+                      .join('')
+                      .toUpperCase()
+                      .slice(0, 2)
+                  ) : (
+                    'OP'
+                  )}
                 </div>
                 <div className="flex flex-col min-w-0">
                   <div className="font-semibold text-sm text-zinc-100 truncate">
@@ -1071,23 +1084,44 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                       {effectiveDepartment}
                     </span>
                     <span className="text-[10px] text-zinc-400 truncate">
-                      {user?.account?.name || (isAuthenticated ? 'My Workspace' : 'Local Workspace')}
+                      {user?.account?.name || 'Workspace'}
                     </span>
                   </div>
                 </div>
               </div>
 
               <div className="flex flex-col gap-1.5">
-                <button
-                  onClick={() => {
-                    setIsProfileOpen(false);
-                    setIsAuthModalOpen(true);
-                  }}
-                  className="w-full text-left px-3 py-2 rounded-[6px] hover:bg-orange-950/30 text-zinc-200 hover:text-orange-400 font-medium transition-colors flex items-center justify-between cursor-pointer"
-                >
-                  <span>{isAuthenticated ? 'Switch Account / Login' : 'Login'}</span>
-                  <span className="text-xs text-orange-400">→</span>
-                </button>
+                {isAuthenticated ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsEditProfileOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-[6px] hover:bg-orange-950/30 text-zinc-200 hover:text-orange-400 font-medium transition-colors flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-orange-400">account_circle</span>
+                      <span>Profile</span>
+                    </div>
+                    <span className="text-xs text-orange-400">→</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsProfileOpen(false);
+                      setIsAuthModalOpen(true);
+                    }}
+                    className="w-full text-left px-3 py-2 rounded-[6px] hover:bg-orange-950/30 text-zinc-200 hover:text-orange-400 font-medium transition-colors flex items-center justify-between cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="material-symbols-outlined text-[16px] text-orange-400">login</span>
+                      <span>Login</span>
+                    </div>
+                    <span className="text-xs text-orange-400">→</span>
+                  </button>
+                )}
                 {isAuthenticated && (
                   <button
                     onClick={() => {
@@ -1115,6 +1149,12 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
       onProceedToImport={(space) => {
         handleOpenSpaceImport(space);
       }}
+    />
+
+    {/* Edit Profile Modal */}
+    <EditProfileModal
+      isOpen={isEditProfileOpen}
+      onClose={() => setIsEditProfileOpen(false)}
     />
   </>
   );

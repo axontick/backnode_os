@@ -327,13 +327,10 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
             </span>
             <div className="space-y-1">
               <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wide">
-                Local Permanent Deletion
+                Permanent Deletion
               </div>
               <p className="text-[11.5px] leading-relaxed text-amber-200/80">
-                Item will be purged immediately from local-first storage (
-                <span className="font-mono font-semibold text-amber-100">transaction commit 0.2ms</span>). This
-                change will propagate across peer replication clusters. This action cannot be
-                undone.
+                This item will be permanently deleted. This action cannot be undone.
               </p>
             </div>
           </div>
@@ -343,8 +340,8 @@ export const DeleteConfirmationModal: React.FC<DeleteConfirmationModalProps> = (
         <div className="shrink-0 px-6 py-4 bg-[#18181b] border-t border-[#27272a] flex items-center justify-between">
           {/* Left Side: Status / Engine Badge */}
           <div className="flex items-center gap-1.5 font-mono text-[10.5px] text-zinc-400 font-medium">
-            <span className="text-amber-500 font-bold">⚡</span>
-            <span>Immediate purge commit</span>
+            <span className="material-symbols-outlined text-[14px] text-rose-500">warning</span>
+            <span>Irreversible action</span>
           </div>
 
           {/* Right Side: Secondary Cancel + Destructive Primary Action */}

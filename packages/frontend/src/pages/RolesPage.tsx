@@ -89,7 +89,7 @@ export const RolesPage: React.FC<RolesPageProps> = ({
     return roles.find((r) => r.id === selectedRoleId) || roles[0];
   }, [roles, selectedRoleId]);
 
-  // Local draft of edited permissions for active role
+  // Edited permissions for active role
   const [draftExplicitPermissions, setDraftExplicitPermissions] = useState<string[]>([]);
   const [draftName, setDraftName] = useState('');
   const [draftDescription, setDraftDescription] = useState('');

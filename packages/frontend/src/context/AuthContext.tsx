@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { User, LoginDto, SignupDto, ForgotPasswordDto, ResetPasswordDto, UserRole, AuthResponse } from '../types';
+import { User, LoginDto, SignupDto, ForgotPasswordDto, ResetPasswordDto, UserRole, AuthResponse, UpdateProfileDto } from '../types';
 import { authApi } from '../services/api';
 
 interface AuthContextType {
@@ -13,6 +13,7 @@ interface AuthContextType {
   signup: (dto: SignupDto) => Promise<AuthResponse>;
   forgotPassword: (email: string) => Promise<{ message: string; devToken?: string }>;
   resetPassword: (dto: ResetPasswordDto) => Promise<{ message: string }>;
+  updateProfile: (dto: UpdateProfileDto) => Promise<User>;
   logout: () => Promise<void>;
   effectiveRole: UserRole;
   setEffectiveRole: (role: UserRole) => void;
@@ -124,6 +125,35 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return await authApi.resetPassword(dto);
   };
 
+  const updateProfile = async (dto: UpdateProfileDto): Promise<User> => {
+    try {
+      const updated = await authApi.updateProfile(dto);
+      const normalizedUser: User = {
+        ...updated,
+        avatarUrl: updated.avatarUrl?.trim() || undefined,
+      };
+      setUser(normalizedUser);
+      try {
+        localStorage.setItem('backnode_user_profile', JSON.stringify(normalizedUser));
+      } catch {}
+      return normalizedUser;
+    } catch (err) {
+      if (user) {
+        const updated: User = {
+          ...user,
+          name: dto.name?.trim() || user.name,
+          avatarUrl: dto.avatarUrl !== undefined ? (dto.avatarUrl.trim() || undefined) : user.avatarUrl,
+        };
+        setUser(updated);
+        try {
+          localStorage.setItem('backnode_user_profile', JSON.stringify(updated));
+        } catch {}
+        return updated;
+      }
+      throw err;
+    }
+  };
+
   const logout = async () => {
     try {
       await authApi.logout();
@@ -150,6 +180,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         signup,
         forgotPassword,
         resetPassword,
+        updateProfile,
         logout,
         effectiveRole,
         setEffectiveRole,

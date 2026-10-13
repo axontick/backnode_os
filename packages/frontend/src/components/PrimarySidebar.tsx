@@ -133,9 +133,8 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
 
   return (
     <aside
-      className={`shrink-0 h-screen border-r border-[#27272a] bg-[#0c0a09] text-zinc-100 flex flex-col justify-between transition-all duration-200 select-none z-30 ${
-        isCollapsed ? 'w-[60px] p-2 items-center' : 'w-[220px] p-3'
-      }`}
+      className={`shrink-0 h-screen border-r border-[#27272a] bg-[#0c0a09] text-zinc-100 flex flex-col justify-between transition-all duration-200 select-none z-30 ${isCollapsed ? 'w-[60px] p-2 items-center' : 'w-[220px] p-3'
+        }`}
     >
       {/* Top Header & Workspace Switcher */}
       <div className={`shrink-0 flex flex-col gap-2.5 relative w-full ${isCollapsed ? 'items-center' : ''}`}>
@@ -183,9 +182,8 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                 </div>
               </div>
               <span
-                className={`material-symbols-outlined text-zinc-400 text-[16px] transition-transform duration-200 ${
-                  isSpaceDropdownOpen ? 'rotate-180 text-orange-400' : 'opacity-70 group-hover:opacity-100'
-                }`}
+                className={`material-symbols-outlined text-zinc-400 text-[16px] transition-transform duration-200 ${isSpaceDropdownOpen ? 'rotate-180 text-orange-400' : 'opacity-70 group-hover:opacity-100'
+                  }`}
               >
                 unfold_more
               </span>
@@ -195,11 +193,7 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
           {/* User Spaces Dropdown */}
           {isSpaceDropdownOpen && (
             <div
-              className={`absolute mt-2 bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-50 p-2.5 flex flex-col gap-2 text-xs animate-in fade-in zoom-in-95 duration-150 ${
-                isCollapsed
-                  ? 'left-full top-0 ml-2 w-64'
-                  : 'top-full left-0 min-w-full w-max max-w-xs ui-dropdown-menu'
-              }`}
+              className="absolute left-full top-0 ml-2.5 w-[320px] max-w-[calc(100vw-80px)] bg-[#121214] border border-[#27272a] rounded-[6px] shadow-2xl z-[60] p-3.5 flex flex-col gap-2.5 text-xs animate-in fade-in zoom-in-95 duration-150"
             >
               <div className="px-1.5 py-1 flex items-center justify-between border-b border-[#27272a]">
                 <span className="font-mono text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
@@ -224,11 +218,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                         const subRoute = location.pathname.replace(/^\/space\/[^/]+/, '') || '/dashboard';
                         navigate(`/space/${space.id}${subRoute}`);
                       }}
-                      className={`w-full flex items-center justify-between p-2 rounded-[6px] text-left transition-all ${
-                        isActive
+                      className={`w-full flex items-center justify-between p-2 rounded-[6px] text-left transition-all ${isActive
                           ? 'bg-orange-950/40 border border-orange-500/30 text-orange-400'
                           : 'hover:bg-zinc-800/40 border border-transparent text-zinc-300'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center gap-2 min-w-0 flex-1">
                         <div
@@ -284,11 +277,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             type="button"
             disabled={!canWrite}
             onClick={onOpenNewItem}
-            className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-all shadow-sm active:scale-[0.98] ${
-              canWrite
+            className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-all shadow-sm active:scale-[0.98] ${canWrite
                 ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white cursor-pointer'
                 : 'bg-zinc-800/50 text-zinc-600 border border-[#27272a] cursor-not-allowed opacity-50'
-            }`}
+              }`}
             title={canWrite ? 'Create New Item' : 'Write / Authoring clearance required'}
           >
             <span className="material-symbols-outlined text-[20px]">add</span>
@@ -298,11 +290,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
             type="button"
             disabled={!canWrite}
             onClick={onOpenNewItem}
-            className={`w-full font-semibold text-xs py-2 px-3 rounded-[6px] flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98] ${
-              canWrite
+            className={`w-full font-semibold text-xs py-2 px-3 rounded-[6px] flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-[0.98] ${canWrite
                 ? 'bg-orange-600 hover:bg-orange-700 active:bg-orange-800 text-white cursor-pointer'
                 : 'bg-zinc-800/50 text-zinc-600 border border-[#27272a] cursor-not-allowed opacity-50'
-            }`}
+              }`}
             title={canWrite ? 'Create New Item' : 'Write / Authoring clearance required'}
           >
             <span className="material-symbols-outlined text-[16px]">add</span>
@@ -331,11 +322,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   navigate(hub.path);
                 }}
                 title={`${hub.label}: ${hub.description}${!isAuthorized ? ' (Clearance Required)' : ''}`}
-                className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer relative group ${
-                  isActive
+                className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer relative group ${isActive
                     ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30'
                     : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
-                }`}
+                  }`}
               >
                 <span
                   className="material-symbols-outlined text-[19px]"
@@ -365,11 +355,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                 onSelectHub(hub.id);
                 navigate(hub.path);
               }}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-[6px] text-left transition-colors cursor-pointer ${
-                isActive
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-[6px] text-left transition-colors cursor-pointer ${isActive
                   ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30 font-semibold'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2.5 truncate">
                 <span
@@ -414,11 +403,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                   navigate(`${spacePrefix}/settings`);
                 }}
                 title={`Workspace Settings${!isSettingsAuthorized ? ' (Clearance Required)' : ''}`}
-                className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer relative ${
-                  effectiveHub === 'settings'
+                className={`w-10 h-10 rounded-[6px] flex items-center justify-center transition-colors cursor-pointer relative ${effectiveHub === 'settings'
                     ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30'
                     : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
-                }`}
+                  }`}
               >
                 <span
                   className="material-symbols-outlined text-[19px]"
@@ -444,11 +432,10 @@ export const PrimarySidebar: React.FC<PrimarySidebarProps> = ({
                 onSelectHub('settings');
                 navigate(`${spacePrefix}/settings`);
               }}
-              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer ${
-                effectiveHub === 'settings'
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs font-medium rounded-[6px] transition-colors cursor-pointer ${effectiveHub === 'settings'
                   ? 'text-orange-400 bg-orange-950/40 border border-orange-500/30 font-semibold'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40 border border-transparent'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-2.5 truncate">
                 <span

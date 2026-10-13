@@ -2,10 +2,24 @@ import 'dotenv/config';
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
+import express from 'express';
+import { join } from 'path';
+import { existsSync, mkdirSync } from 'fs';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // Ensure uploads directory exists
+  const uploadsDir = join(__dirname, '..', 'uploads');
+  const avatarsDir = join(uploadsDir, 'avatars');
+  if (!existsSync(avatarsDir)) {
+    mkdirSync(avatarsDir, { recursive: true });
+  }
+
+  // Serve static uploaded files at both /uploads and /api/uploads
+  app.use('/uploads', express.static(uploadsDir));
+  app.use('/api/uploads', express.static(uploadsDir));
 
   const cookieMiddleware = (cookieParser as any)?.default || cookieParser;
   app.use(cookieMiddleware());

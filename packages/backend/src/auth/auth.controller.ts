@@ -2,22 +2,28 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Body,
   Req,
   Res,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
   HttpCode,
   HttpStatus,
   Inject,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { AuthService } from './auth.service';
 import { SignupDto } from './dto/signup.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { StrictJwtAuthGuard } from './jwt-auth.guard';
 import { CurrentUser, CurrentUserPayload } from './current-user.decorator';
+import { avatarUploadOptions } from './avatar-upload.config';
 
 @Controller('auth')
 export class AuthController {
@@ -76,5 +82,28 @@ export class AuthController {
   @UseGuards(StrictJwtAuthGuard)
   async getMe(@CurrentUser() user: CurrentUserPayload) {
     return this.authService.getMe(user.id);
+  }
+
+  @Patch('profile')
+  @UseGuards(StrictJwtAuthGuard)
+  async updateProfile(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.authService.updateProfile(user.id, dto);
+  }
+
+  @Post('profile/avatar')
+  @UseGuards(StrictJwtAuthGuard)
+  @UseInterceptors(FileInterceptor('file', avatarUploadOptions))
+  async uploadAvatar(
+    @CurrentUser() user: CurrentUserPayload,
+    @UploadedFile() file: any,
+    @Req() req: Request,
+  ) {
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.get('host') || 'localhost:3011';
+    const baseUrl = `${protocol}://${host}`;
+    return this.authService.uploadAvatar(user.id, file, baseUrl);
   }
 }

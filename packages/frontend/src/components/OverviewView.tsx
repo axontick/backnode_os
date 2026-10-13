@@ -397,7 +397,7 @@ export const OverviewView: React.FC<OverviewViewProps> = ({
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
               <span className="text-zinc-200 font-semibold">PostgreSQL Engine:</span>
-              <span className="text-emerald-400">Connected (4ms latency)</span>
+              <span className="text-emerald-400">Connected</span>
             </div>
             <div className="hidden sm:flex items-center gap-2 text-zinc-500">•</div>
             <div className="flex items-center gap-1.5">

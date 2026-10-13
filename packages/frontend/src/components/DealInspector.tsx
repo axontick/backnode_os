@@ -709,7 +709,7 @@ export const DealInspector: React.FC<DealInspectorProps> = ({
       <div className="p-4 border-t border-[#27272a] bg-[#0c0a09] flex items-center justify-between shrink-0">
         <div className="flex items-center gap-2 font-mono text-[11px] text-zinc-400">
           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-          <span>Changes saved locally to encrypted storage</span>
+          <span>Changes saved automatically</span>
         </div>
         <div className="flex items-center gap-2">
           {deal.isArchived ? (

@@ -28,6 +28,9 @@ export class User {
   @Column('varchar')
   name: string;
 
+  @Column('text', { name: 'avatar_url', nullable: true })
+  avatarUrl?: string;
+
   @Column('varchar', { default: 'OWNER' })
   role: string;
 

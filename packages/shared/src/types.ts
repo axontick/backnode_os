@@ -142,9 +142,18 @@ export interface User {
   allowedPages?: string[];
   allowedActions?: string[];
   permissionOverrides?: UserPermissionOverrides;
+  avatarUrl?: string;
   account?: Account;
   createdAt?: string;
   updatedAt?: string;
+}
+
+export interface UpdateProfileDto {
+  name?: string;
+  avatarUrl?: string;
+  avatarBg?: string;
+  currentPassword?: string;
+  newPassword?: string;
 }
 
 export interface AuthResponse {
@@ -208,6 +217,7 @@ export interface TeamMember {
   capacityStatus: 'Optimal' | 'Available' | 'Near capacity' | 'Overloaded' | string;
   avatarBg?: string;
   avatarColor?: string;
+  avatarUrl?: string;
   accountId?: string;
   email?: string;
   accessLevel?: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER' | string;

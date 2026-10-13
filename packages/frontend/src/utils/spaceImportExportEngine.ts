@@ -1134,7 +1134,7 @@ export function generateSampleJson(): string {
         },
         {
           id: 'EXT-202',
-          title: 'Benchmark snappy compression on WAL frames',
+          title: 'Benchmark snappy compression on query execution frames',
           description: 'Measure frame size reduction on 10k batch inserts',
           status: 'To Do',
           priority: 'High',

@@ -17,7 +17,7 @@
     "key": "tasks.create",
     "module": "tasks",
     "label": "Create Tasks",
-    "description": "Draft new tasks, deliverables, and sprint backlog items",
+    "description": "Create and manage tasks, deliverables, and sprint backlog items",
     "category": "Tasks & Execution"
   },
   "tasks.update.all": {
@@ -202,7 +202,7 @@
     "key": "docs.create",
     "module": "docs",
     "label": "Create Documents",
-    "description": "Draft new internal specifications, guides, and list documentation",
+    "description": "Create and manage internal specifications, guides, and list documentation",
     "category": "Docs & Specifications"
   },
   "docs.update.all": {

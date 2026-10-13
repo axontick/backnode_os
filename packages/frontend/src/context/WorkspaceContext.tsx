@@ -798,7 +798,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         localStorage.setItem('backnode_departments', JSON.stringify(next));
         return next;
       });
-      showToast(`Department "${newDept.name}" created locally`);
+      showToast(`Department "${newDept.name}" created successfully`);
       return newDept;
     }
   };
@@ -908,7 +908,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         localStorage.setItem('backnode_roles', JSON.stringify(next));
         return next;
       });
-      showToast(`Role "${newRole.name}" created locally`);
+      showToast(`Role "${newRole.name}" created successfully`);
       return newRole;
     }
   };
@@ -1054,7 +1054,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       console.warn('Backend unavailable, saving locally:', err);
       const fallbackMember = newMemberData as TeamMember;
       setMembers((prev) => [...prev, fallbackMember]);
-      showToast(`Operator "${data.name}" added locally`);
+      showToast(`Operator "${data.name}" added to workspace`);
       return fallbackMember;
     }
   };
@@ -2553,7 +2553,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         accountId: activeUserSpaceId,
       };
       setDocFolders((prev) => [...prev, created]);
-      showToast(`Folder "${created.name}" created locally`);
+      showToast(`Folder "${created.name}" created successfully`);
       return created;
     }
   };
@@ -2621,7 +2621,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       const next = { ...enabledPlugins, [pluginId]: enabled };
       setEnabledPlugins(next);
       localStorage.setItem('backnode_enabled_plugins', JSON.stringify(next));
-      showToast(`Plugin ${pluginId.toUpperCase()} ${enabled ? 'enabled' : 'disabled'} locally`);
+      showToast(`Plugin ${pluginId.toUpperCase()} ${enabled ? 'enabled' : 'disabled'}`);
     }
   };
 

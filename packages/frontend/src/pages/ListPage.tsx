@@ -243,7 +243,6 @@ export const ListPage: React.FC = () => {
         {view === 'docs' && (
           <DocsCanvasView
             onNavigateToTasks={() => handleSelectView('board')}
-            onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
           />
         )}
 

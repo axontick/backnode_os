@@ -2240,7 +2240,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
                       <tr>
                         <td className="py-2.5 px-3 font-semibold text-zinc-200">Create Tasks</td>
                         <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
-                          Draft new tasks, deliverables, and specs.
+                          Create and manage tasks, deliverables, and specs.
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <OverrideBooleanSelector
@@ -2366,7 +2366,7 @@ const EditMemberView: React.FC<EditMemberViewProps> = ({
                       <tr>
                         <td className="py-2.5 px-3 font-semibold text-zinc-200">Create Deals</td>
                         <td className="py-2.5 px-3 text-zinc-400 text-[11px]">
-                          Draft new opportunities and log accounts.
+                          Create and manage opportunities and accounts.
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <OverrideBooleanSelector

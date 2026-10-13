@@ -36,6 +36,9 @@ export class TeamMember {
   @Column('varchar', { name: 'avatar_color', nullable: true })
   avatarColor?: string;
 
+  @Column('text', { name: 'avatar_url', nullable: true })
+  avatarUrl?: string;
+
   @Column('varchar', { nullable: true })
   email?: string;
 
