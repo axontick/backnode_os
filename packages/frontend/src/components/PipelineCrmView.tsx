@@ -14,6 +14,7 @@ import { SecurityPolicy } from '../utils/security';
 
 interface PipelineCrmViewProps {
   deals: CrmDeal[];
+  onLoadMoreStageDeals?: (stage: string) => void;
   pipeline?: CrmPipeline;
   pipelines?: CrmPipeline[];
   onSelectPipeline?: (pipelineId: string) => void;
@@ -64,6 +65,7 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
   onClearSubFolderFilter,
   onAdvanceDealStage,
   onUpdateDeal,
+  onLoadMoreStageDeals,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
@@ -1625,6 +1627,12 @@ export const PipelineCrmView: React.FC<PipelineCrmViewProps> = ({
 
                   {/* Cards Container */}
                   <div
+                    onScroll={(e) => {
+                      const el = e.currentTarget;
+                      if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+                        onLoadMoreStageDeals?.(col.key);
+                      }
+                    }}
                     onDragOver={(e) => {
                       if (!isReadOnly && onAdvanceDealStage) {
                         e.preventDefault();

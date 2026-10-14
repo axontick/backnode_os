@@ -20,8 +20,7 @@ interface ListViewProps {
     position?: 'before' | 'after'
   ) => void;
   onOpenCreateTask?: () => void;
-  groupBy?: 'status' | 'priority' | 'assignee';
-  visibleColumns?: Record<string, boolean>;
+  onLoadMoreStatusTasks?: (status: TaskStatus) => void;
 }
 
 export const ListView: React.FC<ListViewProps> = ({
@@ -31,8 +30,7 @@ export const ListView: React.FC<ListViewProps> = ({
   onQuickStatusChange,
   onMoveTaskStatus,
   onOpenCreateTask,
-  groupBy = 'status',
-  visibleColumns,
+  onLoadMoreStatusTasks,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
@@ -195,12 +193,12 @@ export const ListView: React.FC<ListViewProps> = ({
     const baseStatuses = (statuses && statuses.length > 0)
       ? statuses
       : [
-          { id: 'st-backlog', name: 'Backlog', order: 0, color: '#71717a' },
-          { id: 'st-in-progress', name: 'In Progress', order: 1, color: '#ea580c' },
-          { id: 'st-in-review', name: 'In Review', order: 2, color: '#f59e0b' },
-          { id: 'st-blocked', name: 'Blocked', order: 3, color: '#ef4444' },
-          { id: 'st-done', name: 'Done', order: 4, color: '#10b981' },
-        ];
+        { id: 'st-backlog', name: 'Backlog', order: 0, color: '#71717a' },
+        { id: 'st-in-progress', name: 'In Progress', order: 1, color: '#ea580c' },
+        { id: 'st-in-review', name: 'In Review', order: 2, color: '#f59e0b' },
+        { id: 'st-blocked', name: 'Blocked', order: 3, color: '#ef4444' },
+        { id: 'st-done', name: 'Done', order: 4, color: '#10b981' },
+      ];
 
     const seen = new Set<string>();
     const groups = [...baseStatuses]
@@ -220,8 +218,8 @@ export const ListView: React.FC<ListViewProps> = ({
           st.name.toLowerCase() === 'in progress'
             ? 'bg-orange-950/50 text-orange-400 border border-orange-500/30'
             : st.name.toLowerCase() === 'done'
-            ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
-            : 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+              ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+              : 'bg-zinc-800 text-zinc-400 border border-zinc-700',
         filter: (t: TaskItem) =>
           (t.status || '').trim().toLowerCase() === st.name.trim().toLowerCase(),
         onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, st.name as TaskStatus),
@@ -315,19 +313,17 @@ export const ListView: React.FC<ListViewProps> = ({
           setDragOverTaskId(null);
           setDropPosition(null);
         }}
-        className={`group border rounded-[6px] p-3 transition-all relative ${
-          isDraggingThis
+        className={`group border rounded-[6px] p-3 transition-all relative ${isDraggingThis
             ? 'opacity-40 border-dashed border-orange-500 bg-orange-950/20'
             : isSelected
-            ? 'bg-orange-950/20 border-orange-500 shadow-sm'
-            : 'bg-[#121214] border-[#27272a] hover:border-orange-500/50 hover:bg-[#18181b]'
-        } ${
-          isDropBefore
+              ? 'bg-orange-950/20 border-orange-500 shadow-sm'
+              : 'bg-[#121214] border-[#27272a] hover:border-orange-500/50 hover:bg-[#18181b]'
+          } ${isDropBefore
             ? 'border-t-2 border-t-orange-500'
             : isDropAfter
-            ? 'border-b-2 border-b-orange-500'
-            : ''
-        }`}
+              ? 'border-b-2 border-b-orange-500'
+              : ''
+          }`}
       >
         {/* Parent Row Content */}
         <div
@@ -358,13 +354,11 @@ export const ListView: React.FC<ListViewProps> = ({
                 if (isReadOnly) return;
                 onQuickStatusChange(t.id, t.status === 'Done' ? 'In Progress' : 'Done');
               }}
-              className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${
-                isReadOnly ? 'cursor-default opacity-70' : 'cursor-pointer'
-              } ${
-                t.status === 'Done'
+              className={`w-4 h-4 rounded-full border flex items-center justify-center transition-colors shrink-0 ${isReadOnly ? 'cursor-default opacity-70' : 'cursor-pointer'
+                } ${t.status === 'Done'
                   ? 'border-emerald-500 bg-emerald-500/20 text-emerald-400'
                   : 'border-zinc-600 hover:border-orange-500 bg-transparent'
-              }`}
+                }`}
               title={isReadOnly ? 'Read-only view' : t.status === 'Done' ? 'Mark incomplete' : 'Mark complete'}
             >
               {t.status === 'Done' ? (
@@ -388,11 +382,10 @@ export const ListView: React.FC<ListViewProps> = ({
             {isColVisible('title') && (
               <span
                 onMouseDown={(e) => e.stopPropagation()}
-                className={`font-medium truncate transition-colors text-xs cursor-text select-text ${
-                  t.status === 'Done'
+                className={`font-medium truncate transition-colors text-xs cursor-text select-text ${t.status === 'Done'
                     ? 'line-through text-zinc-500'
                     : 'text-zinc-100 group-hover:text-orange-400'
-                }`}
+                  }`}
               >
                 {t.title}
               </span>
@@ -413,11 +406,10 @@ export const ListView: React.FC<ListViewProps> = ({
               <button
                 type="button"
                 onClick={(e) => toggleChecklist(t.id, e)}
-                className={`flex items-center gap-1 font-mono px-1.5 py-0.5 rounded-[6px] text-[10px] shrink-0 transition-colors cursor-pointer ${
-                  isChecklistOpen
+                className={`flex items-center gap-1 font-mono px-1.5 py-0.5 rounded-[6px] text-[10px] shrink-0 transition-colors cursor-pointer ${isChecklistOpen
                     ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
                     : 'bg-[#18181b] text-zinc-400 border border-[#27272a] hover:text-zinc-200'
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined text-[12px]">
                   {isChecklistOpen ? 'expand_less' : 'checklist'}
@@ -434,13 +426,12 @@ export const ListView: React.FC<ListViewProps> = ({
             {/* Status Column (Visible when toggled on, especially useful when grouped by Priority/Assignee) */}
             {isColVisible('status') && (
               <span
-                className={`w-20 text-center font-mono text-[10px] px-1.5 py-0.5 rounded-[6px] shrink-0 ${
-                  t.status === 'Done'
+                className={`w-20 text-center font-mono text-[10px] px-1.5 py-0.5 rounded-[6px] shrink-0 ${t.status === 'Done'
                     ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
                     : t.status === 'In Progress'
-                    ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
-                    : 'bg-[#18181b] text-zinc-400 border border-[#27272a]'
-                }`}
+                      ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
+                      : 'bg-[#18181b] text-zinc-400 border border-[#27272a]'
+                  }`}
               >
                 {t.status}
               </span>
@@ -559,9 +550,8 @@ export const ListView: React.FC<ListViewProps> = ({
                 >
                   <div className="flex items-center gap-2.5">
                     <div
-                      className={`w-3.5 h-3.5 rounded-[6px] flex items-center justify-center text-[10px] ${
-                        done ? 'bg-orange-600 text-white' : 'border border-zinc-600'
-                      }`}
+                      className={`w-3.5 h-3.5 rounded-[6px] flex items-center justify-center text-[10px] ${done ? 'bg-orange-600 text-white' : 'border border-zinc-600'
+                        }`}
                     >
                       {done && <span className="material-symbols-outlined text-[12px]">check</span>}
                     </div>
@@ -609,7 +599,15 @@ export const ListView: React.FC<ListViewProps> = ({
   }
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar">
+    <div
+      onScroll={(e) => {
+        const el = e.currentTarget;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+          statusGroups.forEach((sg) => onLoadMoreStatusTasks?.(sg.status));
+        }
+      }}
+      className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar"
+    >
       {/* Header Summary Stats Strip */}
       <div className="flex items-center justify-between bg-[#121214] border border-[#27272a] rounded-[6px] px-4 py-2.5 shadow-sm mb-5 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-3 text-xs flex-wrap">
@@ -680,11 +678,10 @@ export const ListView: React.FC<ListViewProps> = ({
                 setDragOverTaskId(null);
                 setDropPosition(null);
               }}
-              className={`flex flex-col gap-3 p-3 rounded-[6px] transition-all border ${
-                isSectionOver
+              className={`flex flex-col gap-3 p-3 rounded-[6px] transition-all border ${isSectionOver
                   ? 'border-orange-500/80 bg-orange-950/20 ring-1 ring-orange-500/30'
                   : 'border-transparent'
-              }`}
+                }`}
             >
               {/* Section Header */}
               <div className="flex items-center justify-between pb-1.5 border-b border-[#27272a]">
@@ -727,11 +724,10 @@ export const ListView: React.FC<ListViewProps> = ({
                 <div className="space-y-2.5">
                   {groupTasks.length === 0 ? (
                     <div
-                      className={`p-4 text-center text-xs font-mono rounded-[6px] border border-dashed transition-colors ${
-                        isSectionOver
+                      className={`p-4 text-center text-xs font-mono rounded-[6px] border border-dashed transition-colors ${isSectionOver
                           ? 'border-orange-500/50 bg-orange-950/30 text-orange-400'
                           : 'border-[#27272a] bg-[#18181b] text-zinc-500'
-                      }`}
+                        }`}
                     >
                       {isSectionOver
                         ? `Drop to move deliverable to ${group.label}`

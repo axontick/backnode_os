@@ -12,7 +12,7 @@ import { MonthlyCalendarView } from '../components/MonthlyCalendarView';
 import { DocsCanvasView } from '../components/DocsCanvasView';
 import { TaskSpaceSettings } from '../components/TaskSpaceSettings';
 import { TaskInspector } from '../components/TaskInspector';
-import { findFolderByListId, findListItemById } from '../utils/treeUtils';
+import { findFolderByListId, findListItemById, isTaskInList } from '../utils/treeUtils';
 import { mapDefaultViewToSlug } from '../utils/taskSpaceSettingsUtils';
 
 export const ListPage: React.FC = () => {
@@ -35,9 +35,9 @@ export const ListPage: React.FC = () => {
     setActiveSpace,
     currentView,
     setCurrentView,
-    filteredTasks,
     tasks,
     fetchTasksForList,
+    fetchMoreTasksForStatus,
     searchQuery,
     filterPriority,
     setFilterPriority,
@@ -132,55 +132,19 @@ export const ListPage: React.FC = () => {
     }
   }, [effectiveView, currentView, setCurrentView]);
 
-  // Reset filters and fetch tasks per list from the backend when switching between lists
+  // Fetch tasks on-demand when list is opened
   useEffect(() => {
-    handleClearAllFilters();
     if (listId) {
-      fetchTasksForList(listId);
+      fetchTasksForList({
+        list_id: listId,
+        search: searchQuery || undefined,
+        status: filterStatus || undefined,
+        priority: filterPriority || undefined,
+      });
     }
-  }, [listId]);
+  }, [listId, searchQuery, filterStatus, filterPriority, fetchTasksForList]);
 
-  // 1. Strictly scope all tasks to this list only
-  const allListTasks = useMemo(() => {
-    if (!listId) return tasks;
-    const q = listId.toLowerCase().trim();
-    return tasks.filter(
-      (t) =>
-        (t.listId && t.listId.toLowerCase().trim() === q) ||
-        (t.targetCycle && t.targetCycle.toLowerCase().trim() === q) ||
-        (currentListItem && t.targetCycle && t.targetCycle.toLowerCase().trim() === currentListItem.name.toLowerCase().trim())
-    );
-  }, [tasks, listId, currentListItem]);
-
-  // 2. Apply filters strictly within this list's tasks
-  const scopedFilteredTasks = useMemo(() => {
-    return allListTasks.filter((t) => {
-      const matchesSearch =
-        !searchQuery ||
-        searchQuery.trim() === '' ||
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (t.assignee?.name && t.assignee.name.toLowerCase().includes(searchQuery.toLowerCase())) ||
-        (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
-
-      const matchesPriority = filterPriority === null || t.priority === filterPriority;
-      const matchesStatus = filterStatus === null || t.status === filterStatus;
-      const matchesAssignee = filterAssignee === null || (t.assignee?.name && t.assignee.name === filterAssignee);
-
-      let matchesQuick = true;
-      if (quickFilter === 'my-tasks') {
-        matchesQuick = Boolean(user && t.assignee?.name?.toLowerCase() === user.name?.toLowerCase());
-      } else if (quickFilter === 'due-soon') {
-        matchesQuick = Boolean(t.dueDate && (t.dueDate.includes('Oct') || t.dueDate.includes('Today')));
-      } else if (quickFilter === 'urgent') {
-        matchesQuick = t.priority === 'Urgent';
-      }
-
-      return matchesSearch && matchesPriority && matchesStatus && matchesAssignee && matchesQuick;
-    });
-  }, [allListTasks, searchQuery, filterPriority, filterStatus, filterAssignee, quickFilter, user]);
-
-  const displayTasks = scopedFilteredTasks;
+  const displayTasks = tasks;
 
   const handleSelectView = (
     nextView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs'
@@ -237,8 +201,7 @@ export const ListPage: React.FC = () => {
             onAddTaskToColumn={handleOpenAddTaskToColumn}
             onMoveTaskStatus={handleMoveTaskStatus}
             onEditTask={handleOpenEditTask}
-            groupBy={taskGroupBy}
-            visibleColumns={visibleColumns}
+            onLoadMoreStatusTasks={(st) => fetchMoreTasksForStatus(st, listId)}
           />
         )}
 
@@ -250,8 +213,7 @@ export const ListPage: React.FC = () => {
             onQuickStatusChange={(taskId, status) => handleMoveTaskStatus(taskId, status)}
             onMoveTaskStatus={handleMoveTaskStatus}
             onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
-            groupBy={taskGroupBy}
-            visibleColumns={visibleColumns}
+            onLoadMoreStatusTasks={(st) => fetchMoreTasksForStatus(st, listId)}
           />
         )}
 

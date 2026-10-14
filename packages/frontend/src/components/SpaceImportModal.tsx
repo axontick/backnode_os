@@ -3,6 +3,7 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { SpaceFolder, FolderChildItem } from '../types';
 import { tasksApi } from '../services/api';
 import { getAllItemsFromFolder } from '../utils/treeUtils';
+import { workspaceApi } from '../services/api';
 import {
   parseCsv,
   parseJson,
@@ -72,6 +73,7 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
     handleUpdateStatuses,
     members,
     showToast,
+    refreshData,
   } = useWorkspace();
 
   // Wizard Step State
@@ -438,20 +440,34 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
       updatedSpace.items = currentItems;
       handleUpdateFolder(updatedSpace);
 
-      // 4. Commit tasks into state and storage
-      setExecutionProgress(90);
+      // 4. Commit tasks into database and storage
+      setExecutionProgress(85);
       setExecutionLog((prev) => [
         ...prev,
-        `Committing ${tasksToImport.length} tasks into database and workspace registry...`,
+        `Persisting ${tasksToImport.length} tasks and list structures to backend database...`,
       ]);
 
+      const newListsArray = previewStats.newListsToCreate.map((name) => ({
+        id: `list-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        name,
+      }));
+
+      const newStatusesArray = previewStats.newStatusesToCreate.map((name) => ({
+        name,
+      }));
+
       try {
-        await tasksApi.createMany(tasksToImport);
-      } catch (err) {
-        console.error('Failed to batch persist imported tasks to DB:', err);
+        await workspaceApi.importSpace(targetSpace.id, {
+          tasks: tasksToImport,
+          newLists: newListsArray,
+          newStatuses: newStatusesArray,
+        });
+      } catch (backendErr: any) {
+        console.warn('Backend API import error, keeping state in memory:', backendErr);
       }
 
       setTasks((prev) => [...prev, ...tasksToImport]);
+      await refreshData().catch(() => { });
 
       setExecutionProgress(100);
       setExecutionLog((prev) => [
@@ -543,22 +559,20 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
               return (
                 <div
                   key={s.num}
-                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-xs font-mono transition-all ${
-                    isCurrent
+                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[6px] text-xs font-mono transition-all ${isCurrent
                       ? 'bg-orange-950/50 border border-orange-500/40 text-orange-400 font-semibold'
                       : isPast
-                      ? 'bg-[#18181b] border border-[#27272a] text-zinc-300'
-                      : 'text-zinc-600 bg-transparent'
-                  }`}
+                        ? 'bg-[#18181b] border border-[#27272a] text-zinc-300'
+                        : 'text-zinc-600 bg-transparent'
+                    }`}
                 >
                   <span
-                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
-                      isCurrent
+                    className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${isCurrent
                         ? 'bg-orange-600 text-white'
                         : isPast
-                        ? 'bg-emerald-600 text-white'
-                        : 'bg-zinc-800 text-zinc-400'
-                    }`}
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-zinc-800 text-zinc-400'
+                      }`}
                   >
                     {isPast ? '✓' : s.num}
                   </span>
@@ -605,11 +619,10 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setInputMode('upload')}
-                    className={`px-3 py-1 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      inputMode === 'upload'
+                    className={`px-3 py-1 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${inputMode === 'upload'
                         ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
                         : 'text-zinc-400 hover:text-zinc-200'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-[15px]">upload_file</span>
                     <span>Upload CSV / JSON File</span>
@@ -617,11 +630,10 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setInputMode('paste')}
-                    className={`px-3 py-1 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${
-                      inputMode === 'paste'
+                    className={`px-3 py-1 rounded-[6px] text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5 ${inputMode === 'paste'
                         ? 'bg-orange-950/40 text-orange-400 border border-orange-500/30'
                         : 'text-zinc-400 hover:text-zinc-200'
-                    }`}
+                      }`}
                   >
                     <span className="material-symbols-outlined text-[15px]">content_paste</span>
                     <span>Paste Raw Text</span>
@@ -657,11 +669,10 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                   onClick={() => fileInputRef.current?.click()}
-                  className={`border-2 border-dashed rounded-[6px] p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${
-                    isDragging
+                  className={`border-2 border-dashed rounded-[6px] p-8 flex flex-col items-center justify-center gap-3 cursor-pointer transition-all ${isDragging
                       ? 'border-orange-500 bg-orange-950/20 scale-[0.99]'
                       : 'border-[#27272a] hover:border-zinc-700 bg-[#18181b]/50'
-                  }`}
+                    }`}
                 >
                   <input
                     ref={fileInputRef}
@@ -793,24 +804,23 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
                                     prev.map((m, i) =>
                                       i === idx
                                         ? {
-                                            ...m,
-                                            targetField: newTarget,
-                                            customFieldName:
-                                              newTarget === 'customField'
-                                                ? m.customFieldName || m.sourceColumn.toLowerCase().replace(/[^a-z0-9]/g, '_')
-                                                : undefined,
-                                          }
+                                          ...m,
+                                          targetField: newTarget,
+                                          customFieldName:
+                                            newTarget === 'customField'
+                                              ? m.customFieldName || m.sourceColumn.toLowerCase().replace(/[^a-z0-9]/g, '_')
+                                              : undefined,
+                                        }
                                         : m
                                     )
                                   );
                                 }}
-                                className={`h-7 px-2 rounded-[6px] text-xs font-mono bg-[#18181b] border outline-none cursor-pointer ${
-                                  isTitle
+                                className={`h-7 px-2 rounded-[6px] text-xs font-mono bg-[#18181b] border outline-none cursor-pointer ${isTitle
                                     ? 'border-orange-500/60 text-orange-400 font-semibold'
                                     : mapping.targetField === 'ignore'
-                                    ? 'border-[#27272a] text-zinc-500'
-                                    : 'border-[#27272a] text-zinc-200'
-                                }`}
+                                      ? 'border-[#27272a] text-zinc-500'
+                                      : 'border-[#27272a] text-zinc-200'
+                                  }`}
                               >
                                 {INTERNAL_FIELD_OPTIONS.map((opt) => (
                                   <option key={opt.value} value={opt.value}>
@@ -1049,15 +1059,15 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
                                         [listName]:
                                           val === '__new__'
                                             ? {
-                                                ...config,
-                                                action: 'create_new',
-                                                newListName: listName,
-                                              }
+                                              ...config,
+                                              action: 'create_new',
+                                              newListName: listName,
+                                            }
                                             : {
-                                                ...config,
-                                                action: 'map_to_existing',
-                                                targetListId: val,
-                                              },
+                                              ...config,
+                                              action: 'map_to_existing',
+                                              targetListId: val,
+                                            },
                                       },
                                     }));
                                   }}
@@ -1189,15 +1199,14 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
                           </td>
                           <td className="py-2 px-3 font-mono">
                             <span
-                              className={`text-[11px] font-semibold ${
-                                item.priority === 'Urgent'
+                              className={`text-[11px] font-semibold ${item.priority === 'Urgent'
                                   ? 'text-red-400'
                                   : item.priority === 'High'
-                                  ? 'text-orange-400'
-                                  : item.priority === 'Low'
-                                  ? 'text-zinc-500'
-                                  : 'text-amber-400'
-                              }`}
+                                    ? 'text-orange-400'
+                                    : item.priority === 'Low'
+                                      ? 'text-zinc-500'
+                                      : 'text-amber-400'
+                                }`}
                             >
                               {item.priority}
                             </span>

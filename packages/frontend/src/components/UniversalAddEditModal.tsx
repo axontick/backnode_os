@@ -98,10 +98,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
     if (taskToEdit) {
       setModalType('task');
       setTitle(taskToEdit.title || '');
-      const matched = availableLists.find(
-        (l) => l.id === taskToEdit.targetCycle || l.id === taskToEdit.listId || l.name.toLowerCase() === (taskToEdit.targetCycle || '').toLowerCase()
-      );
-      setSpace(matched?.id || taskToEdit.listId || taskToEdit.targetCycle || availableLists[0]?.id || '');
+      setSpace((taskToEdit as any).list_id || taskToEdit.targetCycle || activeSpace || '');
       setTaskStatus(taskToEdit.status || defaultStatus);
       setPriority((taskToEdit.priority as PriorityLevel) || 'Medium');
       setAssigneeId(taskToEdit.assignee?.id || members[0]?.id || '');
@@ -208,7 +205,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           status: taskStatus,
           priority: priority,
           assignee: assignedMember,
-          listId: space,
+          list_id: space,
           targetCycle: space,
           startDate: startDate ? formatDateDisplay(parseTaskDueDate(startDate)) : undefined,
           dueDate: dueDate ? formatDateDisplay(parseTaskDueDate(dueDate)) : '',
@@ -338,11 +335,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setModalType('task')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-semibold transition-all cursor-pointer ${
-                    modalType === 'task'
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-semibold transition-all cursor-pointer ${modalType === 'task'
                       ? 'bg-orange-600 text-white shadow-sm'
                       : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
+                    }`}
                 >
                   <span className="material-symbols-outlined text-[15px]">assignment</span>
                   <span>Task Deliverable</span>
@@ -350,11 +346,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                 <button
                   type="button"
                   onClick={() => setModalType('deal')}
-                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-semibold transition-all cursor-pointer ${
-                    modalType === 'deal'
+                  className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] text-xs font-semibold transition-all cursor-pointer ${modalType === 'deal'
                       ? 'bg-orange-600 text-white shadow-sm'
                       : 'text-zinc-400 hover:text-zinc-100'
-                  }`}
+                    }`}
                 >
                   <span className="material-symbols-outlined text-[15px]">monetization_on</span>
                   <span>CRM Opportunity</span>
@@ -381,10 +376,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
               {taskToEdit
                 ? 'Edit Task Deliverable'
                 : dealToEdit
-                ? 'Edit CRM Commercial Deal'
-                : modalType === 'task'
-                ? 'Create Task Deliverable'
-                : 'Create Enterprise CRM Deal'}
+                  ? 'Edit CRM Commercial Deal'
+                  : modalType === 'task'
+                    ? 'Create Task Deliverable'
+                    : 'Create Enterprise CRM Deal'}
             </h2>
           </div>
         </div>
@@ -610,9 +605,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                             className="w-4 h-4 rounded-[6px] accent-orange-500 cursor-pointer"
                           />
                           <span
-                            className={`text-xs truncate ${
-                              st.done ? 'line-through text-zinc-500' : 'text-zinc-200 font-medium'
-                            }`}
+                            className={`text-xs truncate ${st.done ? 'line-through text-zinc-500' : 'text-zinc-200 font-medium'
+                              }`}
                           >
                             {st.text}
                           </span>
@@ -880,11 +874,10 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
               <button
                 type="submit"
                 disabled={modalType === 'task' && (!space || availableLists.length === 0)}
-                className={`flex items-center gap-2 px-5 py-2 rounded-[6px] text-white font-semibold text-xs transition-all shadow-sm ${
-                  modalType === 'task' && (!space || availableLists.length === 0)
+                className={`flex items-center gap-2 px-5 py-2 rounded-[6px] text-white font-semibold text-xs transition-all shadow-sm ${modalType === 'task' && (!space || availableLists.length === 0)
                     ? 'bg-zinc-800 text-zinc-500 cursor-not-allowed opacity-60'
                     : 'bg-orange-600 hover:bg-orange-700 active:scale-[0.98] cursor-pointer'
-                }`}
+                  }`}
               >
                 <span className="material-symbols-outlined text-[16px]">
                   {isEditing ? 'save' : modalType === 'task' ? 'add_task' : 'monetization_on'}
@@ -893,8 +886,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                   {isEditing
                     ? 'Save Changes'
                     : modalType === 'task'
-                    ? 'Create Task'
-                    : 'Create Deal'}
+                      ? 'Create Task'
+                      : 'Create Deal'}
                 </span>
                 <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-[6px] bg-white/20 text-white">
                   ⌘↵

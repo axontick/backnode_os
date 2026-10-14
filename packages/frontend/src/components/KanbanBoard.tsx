@@ -20,8 +20,7 @@ export interface KanbanBoardProps {
     position?: 'before' | 'after'
   ) => void;
   onEditTask?: (task: TaskItem) => void;
-  groupBy?: 'status' | 'priority' | 'assignee';
-  visibleColumns?: Record<string, boolean>;
+  onLoadMoreStatusTasks?: (status: TaskStatus) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -31,8 +30,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onAddTaskToColumn,
   onMoveTaskStatus,
   onEditTask,
-  groupBy,
-  visibleColumns,
+  onLoadMoreStatusTasks,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
@@ -154,12 +152,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
     const baseStatuses = (statuses && statuses.length > 0)
       ? statuses
       : [
-          { id: 'st-backlog', name: 'Backlog', order: 0, color: '#71717a' },
-          { id: 'st-in-progress', name: 'In Progress', order: 1, color: '#ea580c' },
-          { id: 'st-in-review', name: 'In Review', order: 2, color: '#f59e0b' },
-          { id: 'st-blocked', name: 'Blocked', order: 3, color: '#ef4444' },
-          { id: 'st-done', name: 'Done', order: 4, color: '#10b981' },
-        ];
+        { id: 'st-backlog', name: 'Backlog', order: 0, color: '#71717a' },
+        { id: 'st-in-progress', name: 'In Progress', order: 1, color: '#ea580c' },
+        { id: 'st-in-review', name: 'In Review', order: 2, color: '#f59e0b' },
+        { id: 'st-blocked', name: 'Blocked', order: 3, color: '#ef4444' },
+        { id: 'st-done', name: 'Done', order: 4, color: '#10b981' },
+      ];
 
     const seen = new Set<string>();
     const cols = [...baseStatuses]
@@ -180,8 +178,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
           st.name.toLowerCase() === 'in progress'
             ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
             : st.name.toLowerCase() === 'done'
-            ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'
-            : undefined,
+              ? 'bg-emerald-950/60 text-emerald-400 border border-emerald-500/30'
+              : undefined,
         filter: (t: TaskItem) => (t.status || '').trim().toLowerCase() === st.name.trim().toLowerCase(),
         onDropTask: (taskId: string) => onMoveTaskStatus(taskId, st.name as TaskStatus),
         onDropTargetCard: (sourceTaskId: string, targetTaskId: string, position: 'before' | 'after') => {
@@ -279,11 +277,10 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
               setDragOverColumn(null);
               setDropTarget(null);
             }}
-            className={`w-[340px] shrink-0 flex flex-col h-full bg-[#121214] rounded-[6px] border transition-all duration-150 p-3.5 ${
-              isColumnOver
+            className={`w-[340px] shrink-0 flex flex-col h-full bg-[#121214] rounded-[6px] border transition-all duration-150 p-3.5 ${isColumnOver
                 ? 'border-orange-500/80 bg-orange-950/20 ring-1 ring-orange-500/30'
                 : 'border-[#27272a]'
-            }`}
+              }`}
           >
             {/* Column Header */}
             <div className="flex items-center justify-between mb-3 shrink-0">
@@ -291,9 +288,8 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                 <span className="w-2 h-2 rounded-full" style={{ backgroundColor: col.color }}></span>
                 <h2 className="font-semibold text-xs font-mono uppercase tracking-wider text-zinc-100">{col.title}</h2>
                 <span
-                  className={`font-mono text-[11px] px-2 py-0.5 rounded-[6px] font-medium ${
-                    col.countBadgeColor || 'bg-zinc-800 text-zinc-400'
-                  }`}
+                  className={`font-mono text-[11px] px-2 py-0.5 rounded-[6px] font-medium ${col.countBadgeColor || 'bg-zinc-800 text-zinc-400'
+                    }`}
                 >
                   {colTasks.length}
                 </span>
@@ -319,11 +315,18 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             </div>
 
             {/* Cards Stack */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+            <div
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+                  onLoadMoreStatusTasks?.(col.status);
+                }
+              }}
+              className="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1"
+            >
               {colTasks.length === 0 ? (
-                <div className={`p-6 text-center text-xs text-zinc-500 font-mono border border-dashed rounded-[6px] transition-colors ${
-                  isColumnOver ? 'border-orange-500/50 bg-orange-950/30 text-orange-400' : 'border-[#27272a]'
-                }`}>
+                <div className={`p-6 text-center text-xs text-zinc-500 font-mono border border-dashed rounded-[6px] transition-colors ${isColumnOver ? 'border-orange-500/50 bg-orange-950/30 text-orange-400' : 'border-[#27272a]'
+                  }`}>
                   {isColumnOver ? `Drop to move to ${col.title}` : `No tasks in ${col.title}`}
                 </div>
               ) : (
@@ -408,15 +411,13 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                           if (sel && sel.toString().trim().length > 0) return;
                           onSelectTask(t);
                         }}
-                        className={`bg-[#18181b] transition-all duration-150 rounded-[6px] p-3.5 relative cursor-pointer group ${
-                          isDraggingThis ? 'opacity-30 scale-[0.98] ring-2 ring-orange-500/40' : ''
-                        } ${
-                          isSelected
+                        className={`bg-[#18181b] transition-all duration-150 rounded-[6px] p-3.5 relative cursor-pointer group ${isDraggingThis ? 'opacity-30 scale-[0.98] ring-2 ring-orange-500/40' : ''
+                          } ${isSelected
                             ? 'border-2 border-orange-500 shadow-md ring-1 ring-orange-500/20'
                             : isFeatured
-                            ? 'border border-orange-500/40 hover:border-orange-500 shadow-sm'
-                            : 'border border-[#27272a] hover:border-orange-500/50 hover:bg-[#1f1f23]'
-                        }`}
+                              ? 'border border-orange-500/40 hover:border-orange-500 shadow-sm'
+                              : 'border border-[#27272a] hover:border-orange-500/50 hover:bg-[#1f1f23]'
+                          }`}
                       >
                         {/* Top Meta: Priority & ID */}
                         <div className="flex items-center justify-between mb-2">
@@ -532,13 +533,12 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
                             )}
                             {hasSubtasks && (
                               <div
-                                className={`flex items-center gap-1 font-mono text-[11px] ${
-                                  completedSubtasks === t.subtasks.length
+                                className={`flex items-center gap-1 font-mono text-[11px] ${completedSubtasks === t.subtasks.length
                                     ? 'text-emerald-400'
                                     : isFeatured
-                                    ? 'text-orange-400 font-semibold'
-                                    : 'text-zinc-500'
-                                }`}
+                                      ? 'text-orange-400 font-semibold'
+                                      : 'text-zinc-500'
+                                  }`}
                               >
                                 <span className="material-symbols-outlined text-[13px]">
                                   check_circle

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { SpaceFolder, SpaceSubFolder, CrmPipeline, CrmPipelineSubFolder, FolderChildItem } from '../types';
+import { isTaskInList } from '../utils/treeUtils';
 import { ActionContextMenu } from './ActionContextMenu';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -89,7 +90,7 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
 }) => {
   const navigate = useNavigate();
   const { spaceId } = useParams<{ spaceId?: string }>();
-  const { listSettings, tasks } = useWorkspace();
+  const { listSettings, getTaskCountForList } = useWorkspace();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
   const isExpanded = !!expandedSubFolderIds[subFolder.id] || Boolean(filterText);
   const hasItems = subFolder.items && subFolder.items.length > 0;
@@ -109,9 +110,8 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
             className="w-3.5 h-3.5 flex items-center justify-center text-zinc-500 group-hover/sub:text-orange-400 transition-all cursor-pointer shrink-0"
           >
             <span
-              className={`material-symbols-outlined text-[13px] transition-transform duration-200 ${
-                isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
-              }`}
+              className={`material-symbols-outlined text-[13px] transition-transform duration-200 ${isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
+                }`}
             >
               chevron_right
             </span>
@@ -165,9 +165,8 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                   }}
                   aria-haspopup="menu"
                   aria-expanded={activeMenuId === `subfld-${subFolder.id}`}
-                  className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                    activeMenuId === `subfld-${subFolder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/sub:opacity-100'
-                  }`}
+                  className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${activeMenuId === `subfld-${subFolder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/sub:opacity-100'
+                    }`}
                   title="Sub-folder actions"
                 >
                   <span className="material-symbols-outlined text-[14px]">more_vert</span>
@@ -210,24 +209,23 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                 const spaceIcon = (subItem as any).icon || (isMatchingListSettings && listSettings?.icon ? listSettings.icon : null) || (lower.includes('infra') || lower.includes('devops')
                   ? 'terminal'
                   : lower.includes('client') || lower.includes('deliverable')
-                  ? 'inventory_2'
-                  : lower.includes('bug') || lower.includes('triage')
-                  ? 'bug_report'
-                  : lower.includes('design') || lower.includes('ui')
-                  ? 'palette'
-                  : lower.includes('sprint') || lower.includes('backlog')
-                  ? 'checklist'
-                  : 'format_list_bulleted');
+                    ? 'inventory_2'
+                    : lower.includes('bug') || lower.includes('triage')
+                      ? 'bug_report'
+                      : lower.includes('design') || lower.includes('ui')
+                        ? 'palette'
+                        : lower.includes('sprint') || lower.includes('backlog')
+                          ? 'checklist'
+                          : 'format_list_bulleted');
                 const spaceColor = (subItem as any).color || (isMatchingListSettings && listSettings?.color ? listSettings.color : null);
 
                 return (
                   <div
                     key={subItem.id}
-                    className={`flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all group/item ${
-                      isActive
+                    className={`flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all group/item ${isActive
                         ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                         : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                    }`}
+                      }`}
                   >
                     <button
                       type="button"
@@ -235,9 +233,8 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                       className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left cursor-pointer"
                     >
                       <span
-                        className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${
-                          spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover/item:text-zinc-300')
-                        }`}
+                        className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover/item:text-zinc-300')
+                          }`}
                         style={spaceColor ? { color: spaceColor } : undefined}
                       >
                         {spaceIcon}
@@ -247,13 +244,12 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
 
                     <div className="flex items-center gap-1 shrink-0 ml-1.5">
                       <span
-                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 font-semibold ${
-                          isActive
+                        className={`text-[9px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 font-semibold ${isActive
                             ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
                             : 'bg-zinc-800/80 text-zinc-400'
-                        }`}
+                          }`}
                       >
-                        {tasks.filter((t) => t.listId === subItem.id).length}
+                        {getTaskCountForList(subItem.id, subItem.name)}
                       </span>
 
                       {!isReadOnly && (
@@ -267,9 +263,8 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                             }}
                             aria-haspopup="menu"
                             aria-expanded={activeMenuId === `sublist-${subItem.id}`}
-                            className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                              activeMenuId === `sublist-${subItem.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/item:opacity-100'
-                            }`}
+                            className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${activeMenuId === `sublist-${subItem.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/item:opacity-100'
+                              }`}
                             title="List actions"
                           >
                             <span className="material-symbols-outlined text-[14px]">more_vert</span>
@@ -400,11 +395,10 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
   return (
     <div className="flex flex-col mt-0.5">
       <div
-        className={`group/sub flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-          isSubActive
+        className={`group/sub flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${isSubActive
             ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
             : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-        }`}
+          }`}
       >
         <div className="flex items-center gap-1 flex-1 min-w-0">
           {hasChildSubFolders ? (
@@ -414,9 +408,8 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
               className="w-3.5 h-3.5 flex items-center justify-center text-zinc-500 group-hover/sub:text-orange-400 transition-all cursor-pointer shrink-0"
             >
               <span
-                className={`material-symbols-outlined text-[13px] transition-transform duration-200 ${
-                  isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
-                }`}
+                className={`material-symbols-outlined text-[13px] transition-transform duration-200 ${isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
+                  }`}
               >
                 chevron_right
               </span>
@@ -470,9 +463,8 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
                   }}
                   aria-haspopup="menu"
                   aria-expanded={activeMenuId === `pipe-sub-${subFolder.id}`}
-                  className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                    activeMenuId === `pipe-sub-${subFolder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/sub:opacity-100'
-                  }`}
+                  className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${activeMenuId === `pipe-sub-${subFolder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/sub:opacity-100'
+                    }`}
                   title="Sub-folder actions"
                 >
                   <span className="material-symbols-outlined text-[14px]">more_vert</span>
@@ -483,13 +475,13 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
                   items={[
                     ...(onOpenAddPipelineSubFolder
                       ? [
-                          {
-                            label: 'Add Sub-folder',
-                            icon: 'create_new_folder',
-                            iconColor: 'text-orange-400',
-                            onClick: () => onOpenAddPipelineSubFolder(pipe, subFolder.id),
-                          },
-                        ]
+                        {
+                          label: 'Add Sub-folder',
+                          icon: 'create_new_folder',
+                          iconColor: 'text-orange-400',
+                          onClick: () => onOpenAddPipelineSubFolder(pipe, subFolder.id),
+                        },
+                      ]
                       : []),
                     {
                       label: 'Move to Pipeline',
@@ -501,22 +493,22 @@ const RecursivePipelineSubFolderNode: React.FC<RecursivePipelineSubFolderNodePro
                     },
                     ...(onEditPipelineSubFolder
                       ? [
-                          {
-                            label: 'Edit Sub-folder',
-                            icon: 'edit',
-                            onClick: () => onEditPipelineSubFolder(pipe, subFolder),
-                          },
-                        ]
+                        {
+                          label: 'Edit Sub-folder',
+                          icon: 'edit',
+                          onClick: () => onEditPipelineSubFolder(pipe, subFolder),
+                        },
+                      ]
                       : []),
                     ...(onDeletePipelineSubFolder
                       ? [
-                          {
-                            label: 'Delete Sub-folder',
-                            icon: 'delete',
-                            danger: true,
-                            onClick: () => onDeletePipelineSubFolder(pipe, subFolder),
-                          },
-                        ]
+                        {
+                          label: 'Delete Sub-folder',
+                          icon: 'delete',
+                          danger: true,
+                          onClick: () => onDeletePipelineSubFolder(pipe, subFolder),
+                        },
+                      ]
                       : []),
                   ]}
                 />
@@ -605,7 +597,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const { effectiveRole } = useAuth();
-  const { listSettings, crmSettings, filteredDeals: deals, setItemToDelete, tasks } = useWorkspace();
+  const { listSettings, crmSettings, filteredDeals: deals, setItemToDelete, getTaskCountForList } = useWorkspace();
   const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
   const { spaceId } = useParams<{ spaceId?: string }>();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
@@ -784,11 +776,10 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                 onClick={() => {
                   if (onSelectDashboard) onSelectDashboard();
                 }}
-                className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-xs transition-all cursor-pointer ${
-                  currentView === 'dashboard'
+                className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-xs transition-all cursor-pointer ${currentView === 'dashboard'
                     ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                     : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-1.5 truncate">
                   <span className="material-symbols-outlined text-[15px] text-orange-400">
@@ -834,9 +825,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                               className="w-3.5 h-3.5 flex items-center justify-center text-zinc-400 group-hover:text-orange-400 transition-all cursor-pointer shrink-0"
                             >
                               <span
-                                className={`material-symbols-outlined text-[14px] transition-transform duration-200 ${
-                                  isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
-                                }`}
+                                className={`material-symbols-outlined text-[14px] transition-transform duration-200 ${isExpanded ? 'rotate-90 text-orange-400' : 'rotate-0'
+                                  }`}
                               >
                                 chevron_right
                               </span>
@@ -891,9 +881,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                     }}
                                     aria-haspopup="menu"
                                     aria-expanded={activeMenuId === `fld-${folder.id}`}
-                                    className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                                      activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
-                                    }`}
+                                    className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${activeMenuId === `fld-${folder.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
+                                      }`}
                                     title="Folder actions"
                                   >
                                     <span className="material-symbols-outlined text-[14px]" aria-hidden="true">more_vert</span>
@@ -936,24 +925,23 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                   const spaceIcon = (subItem as any).icon || (isMatchingListSettings && listSettings?.icon ? listSettings.icon : null) || (lower.includes('infra') || lower.includes('devops')
                                     ? 'terminal'
                                     : lower.includes('client') || lower.includes('deliverable')
-                                    ? 'inventory_2'
-                                    : lower.includes('bug') || lower.includes('triage')
-                                    ? 'bug_report'
-                                    : lower.includes('design') || lower.includes('ui')
-                                    ? 'palette'
-                                    : lower.includes('sprint') || lower.includes('backlog')
-                                    ? 'checklist'
-                                    : 'format_list_bulleted');
+                                      ? 'inventory_2'
+                                      : lower.includes('bug') || lower.includes('triage')
+                                        ? 'bug_report'
+                                        : lower.includes('design') || lower.includes('ui')
+                                          ? 'palette'
+                                          : lower.includes('sprint') || lower.includes('backlog')
+                                            ? 'checklist'
+                                            : 'format_list_bulleted');
                                   const spaceColor = (subItem as any).color || (isMatchingListSettings && listSettings?.color ? listSettings.color : null);
 
                                   return (
                                     <div
                                       key={subItem.id}
-                                      className={`flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all group/item ${
-                                        isActive
+                                      className={`flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-[11px] transition-all group/item ${isActive
                                           ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                                           : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                                      }`}
+                                        }`}
                                     >
                                       <button
                                         type="button"
@@ -961,9 +949,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                         className="flex items-center gap-1.5 truncate flex-1 min-w-0 text-left cursor-pointer"
                                       >
                                         <span
-                                          className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${
-                                            spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover/item:text-zinc-300')
-                                          }`}
+                                          className={`material-symbols-outlined text-[13px] shrink-0 transition-colors ${spaceColor ? '' : (isActive ? 'text-orange-400' : 'text-zinc-500 group-hover/item:text-zinc-300')
+                                            }`}
                                           style={spaceColor ? { color: spaceColor } : undefined}
                                         >
                                           {spaceIcon}
@@ -973,13 +960,12 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
 
                                       <div className="flex items-center gap-1 shrink-0 ml-1.5">
                                         <span
-                                          className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 font-semibold ${
-                                            isActive
+                                          className={`text-[9.5px] font-mono px-1.5 py-0.2 rounded-[6px] shrink-0 font-semibold ${isActive
                                               ? 'bg-orange-950/60 text-orange-400 border border-orange-500/30'
                                               : 'bg-zinc-800/80 text-zinc-400'
-                                          }`}
+                                            }`}
                                         >
-                                          {tasks.filter((t) => t.listId === subItem.id).length}
+                                          {getTaskCountForList(subItem.id, subItem.name)}
                                         </span>
 
                                         {!isReadOnly && (
@@ -993,9 +979,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                               }}
                                               aria-haspopup="menu"
                                               aria-expanded={activeMenuId === `list-${subItem.id}`}
-                                              className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                                                activeMenuId === `list-${subItem.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/item:opacity-100'
-                                              }`}
+                                              className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${activeMenuId === `list-${subItem.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover/item:opacity-100'
+                                                }`}
                                               title="List actions"
                                             >
                                               <span className="material-symbols-outlined text-[14px]">more_vert</span>
@@ -1091,11 +1076,10 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                 onClick={() => {
                   if (onSelectCrmDashboard) onSelectCrmDashboard();
                 }}
-                className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-xs transition-all cursor-pointer ${
-                  crmView === 'dashboard'
+                className={`flex items-center justify-between py-1.5 px-2 rounded-[6px] text-left text-xs transition-all cursor-pointer ${crmView === 'dashboard'
                     ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                     : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                }`}
+                  }`}
               >
                 <div className="flex items-center gap-1.5 truncate">
                   <span className="material-symbols-outlined text-[15px] text-orange-400">
@@ -1129,11 +1113,10 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                     return (
                       <div key={pipe.id} className="flex flex-col">
                         <div
-                          className={`group flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-xs transition-all ${
-                            isSelected
+                          className={`group flex items-center justify-between py-1 px-1.5 rounded-[6px] text-left text-xs transition-all ${isSelected
                               ? 'bg-orange-950/40 text-orange-400 font-semibold'
                               : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                          }`}
+                            }`}
                         >
                           <button
                             type="button"
@@ -1188,9 +1171,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                     }}
                                     aria-haspopup="menu"
                                     aria-expanded={activeMenuId === `pipe-${pipe.id}`}
-                                    className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${
-                                      activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
-                                    }`}
+                                    className={`w-5 h-5 rounded-[6px] hover:bg-zinc-800 text-zinc-400 hover:text-orange-400 flex items-center justify-center transition-all focus:outline-none ${activeMenuId === `pipe-${pipe.id}` ? 'opacity-100 text-orange-400' : 'opacity-0 group-hover:opacity-100'
+                                      }`}
                                     title="Pipeline actions"
                                   >
                                     <span className="material-symbols-outlined text-[15px]" aria-hidden="true">more_vert</span>
@@ -1214,32 +1196,32 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                       },
                                       ...(onOpenAddPipelineSubFolder
                                         ? [
-                                            {
-                                              label: 'Add Sub-folder',
-                                              icon: 'create_new_folder',
-                                              iconColor: 'text-orange-400',
-                                              onClick: () => onOpenAddPipelineSubFolder(pipe),
-                                            },
-                                          ]
+                                          {
+                                            label: 'Add Sub-folder',
+                                            icon: 'create_new_folder',
+                                            iconColor: 'text-orange-400',
+                                            onClick: () => onOpenAddPipelineSubFolder(pipe),
+                                          },
+                                        ]
                                         : []),
                                       ...(onEditPipeline
                                         ? [
-                                            {
-                                              label: 'Edit Pipeline',
-                                              icon: 'edit',
-                                              onClick: () => onEditPipeline(pipe),
-                                            },
-                                          ]
+                                          {
+                                            label: 'Edit Pipeline',
+                                            icon: 'edit',
+                                            onClick: () => onEditPipeline(pipe),
+                                          },
+                                        ]
                                         : []),
                                       ...(onDeletePipeline
                                         ? [
-                                            {
-                                              label: 'Delete Pipeline',
-                                              icon: 'delete',
-                                              danger: true,
-                                              onClick: () => onDeletePipeline(pipe),
-                                            },
-                                          ]
+                                          {
+                                            label: 'Delete Pipeline',
+                                            icon: 'delete',
+                                            danger: true,
+                                            onClick: () => onDeletePipeline(pipe),
+                                          },
+                                        ]
                                         : []),
                                     ]}
                                   />
@@ -1258,11 +1240,10 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                 if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'board');
                                 else if (onSelectCrmBoard) onSelectCrmBoard();
                               }}
-                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-                                crmView === 'board' && !activePipelineSubFolderId
+                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${crmView === 'board' && !activePipelineSubFolderId
                                   ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1.5 truncate">
                                 <span className="material-symbols-outlined text-[13px]">view_kanban</span>
@@ -1297,11 +1278,10 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                   onClick={() => {
                                     if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'analytics');
                                   }}
-                                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-                                    crmView === 'analytics'
+                                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${crmView === 'analytics'
                                       ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                                       : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex items-center gap-1.5 truncate">
                                     <span className="material-symbols-outlined text-[13px] text-emerald-400">leaderboard</span>
@@ -1309,9 +1289,8 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                   </div>
                                   {winRatePct !== null && (
                                     <span
-                                      className={`text-[9.5px] font-mono font-semibold ${
-                                        winRatePct > 0 ? 'text-emerald-400' : 'text-zinc-500'
-                                      }`}
+                                      className={`text-[9.5px] font-mono font-semibold ${winRatePct > 0 ? 'text-emerald-400' : 'text-zinc-500'
+                                        }`}
                                     >
                                       {winRatePct}%
                                     </span>
@@ -1325,11 +1304,10 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                               onClick={() => {
                                 if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'settings');
                               }}
-                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-                                crmView === 'settings'
+                              className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${crmView === 'settings'
                                   ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                              }`}
+                                }`}
                             >
                               <div className="flex items-center gap-1.5 truncate">
                                 <span className="material-symbols-outlined text-[13px]">tune</span>
@@ -1353,11 +1331,10 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                   onClick={() => {
                                     if (onSelectPipelineView) onSelectPipelineView(pipe.id, 'archived');
                                   }}
-                                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${
-                                    crmView === 'archived' && !activePipelineSubFolderId
+                                  className={`flex items-center justify-between py-1 px-2 rounded-[6px] text-left text-[11px] transition-all cursor-pointer ${crmView === 'archived' && !activePipelineSubFolderId
                                       ? 'bg-orange-950/40 text-orange-400 font-semibold border-l-2 border-orange-500'
                                       : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/40'
-                                  }`}
+                                    }`}
                                 >
                                   <div className="flex items-center gap-1.5 truncate">
                                     <span className="material-symbols-outlined text-[13px]">archive</span>

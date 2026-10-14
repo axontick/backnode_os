@@ -45,7 +45,7 @@ export class DocItem {
   @Column('varchar', { name: 'author_department', nullable: true })
   authorDepartment?: string;
 
-  @Column('jsonb', { name: 'custom_links', default: {} })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'custom_links', default: {} })
   customLinks: any;
 
   @Index()

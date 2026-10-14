@@ -249,11 +249,16 @@ export const initialTasks: TaskItem[] = [
     tags: ['Design System', 'Core UI'],
     subtasks: [
       { id: 'sub-1', text: 'Token mapping', done: true, author: 'AW', time: '2h ago' },
-      { id: 'sub-2', text: 'Viewport breakpoints', done: true, author: 'AW', time: '1h ago' }
+      { id: 'sub-2', text: 'Viewport breakpoints', done: true, author: 'AW', time: '1h ago' },
+      { id: 'sub-3', text: 'Hairline border alignment test', done: true, author: 'AW', time: '25m ago' },
+      { id: 'sub-4', text: 'Export CSS custom properties module', done: true, author: 'DR', time: '10m ago' },
+      { id: 'sub-5', text: 'Run cross-browser canvas visual regression tests', done: false, author: 'AW', time: 'Active' }
     ],
-    estimation: { hours: 12, points: 5 },
-    listId: 'sprint-14',
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    estimation: {
+      hours: 12,
+      points: 5
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 28, 2024',
     startDate: 'Oct 14, 2024',
     gitBranch: 'feat/eng-094-grid-tokens',
@@ -274,11 +279,15 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[5], // David Rivera
     tags: ['Core Engine', 'SQLite'],
     subtasks: [
-      { id: 'sub-11', text: 'Mutex latch benchmark under 1,000 tx/sec', done: true, author: 'DR', time: '1d ago' }
+      { id: 'sub-11', text: 'Mutex latch benchmark under 1,000 tx/sec', done: true, author: 'DR', time: '1d ago' },
+      { id: 'sub-12', text: 'Vector clock conflict resolution test matrix', done: true, author: 'DR', time: '4h ago' },
+      { id: 'sub-13', text: 'Peer heartbeat ACK latency validation', done: false, author: 'MK', time: 'Active' }
     ],
-    estimation: { hours: 16, points: 8 },
-    listId: 'sprint-14',
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    estimation: {
+      hours: 16,
+      points: 8
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 30, 2024',
     startDate: 'Oct 15, 2024',
     gitBranch: 'feat/bk-1092-async-serialization',
@@ -293,32 +302,19 @@ export const initialTasks: TaskItem[] = [
     specMarkdown: 'High-frequency event collector for local replication and distributed sync logs.',
     status: 'Backlog',
     priority: 'High',
-    assignee: initialTeamMembers[3], // Carlos Gomez
-    tags: ['Telemetry', 'Perf'],
-    subtasks: [],
-    estimation: { hours: 10, points: 5 },
-    listId: 'sprint-14',
-    targetCycle: 'Sprint 14 - Q4 Infra',
-    dueDate: 'Nov 02, 2024',
-    startDate: 'Oct 20, 2024',
-    gitBranch: 'feat/telemetry-ring-buffer',
-    replicationHash: '0x44a1...012',
-    timeInStage: 'Queued',
-    activity: []
-  },
-  {
-    id: 'ENG-088',
-    title: 'Optimistic UI transaction rollback buffer',
-    description: 'Implement transient in-memory transaction buffer for instant UI optimistic updates with rollback parity.',
-    specMarkdown: 'Guarantees zero perceived latency on card status transitions and inline cell editing.',
-    status: 'Done',
-    priority: 'Medium',
-    assignee: initialTeamMembers[1], // Priya Sharma
-    tags: ['UI', 'LocalFirst'],
-    subtasks: [],
-    estimation: { hours: 8, points: 3 },
-    listId: 'sprint-14',
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    assignee: initialTeamMembers[0], // Alex Wong
+    tags: ['Backend', 'Storage'],
+    subtasks: [
+      { id: 'sub-21', text: 'IndexedDB schema migration generator', done: true, author: 'AW', time: '2d ago' },
+      { id: 'sub-22', text: 'Delta compression via Snappy/Brotli', done: false, author: 'AW', time: 'Pending' },
+      { id: 'sub-23', text: 'Transaction rollback on conflict', done: false, author: 'KR', time: 'Pending' },
+      { id: 'sub-24', text: 'Synthetic 50MB burst test', done: false, author: 'AW', time: 'Pending' }
+    ],
+    estimation: {
+      hours: 8,
+      points: 3
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 12, 2024',
     startDate: 'Oct 05, 2024',
     completedAt: '2024-10-12T14:30:00.000Z',
@@ -342,13 +338,14 @@ export const initialTasks: TaskItem[] = [
       { id: 'sub-sec-1', text: 'Entropy pool audit under load', done: true, author: 'MK', time: '1d ago' },
       { id: 'sub-sec-2', text: 'Peer handshake replay prevention test', done: false, author: 'MK', time: 'Active' }
     ],
-    estimation: { hours: 14, points: 5 },
-    listId: 'security-audits',
-    targetCycle: 'Security Audits',
-    dueDate: 'Nov 05, 2024',
-    startDate: 'Oct 18, 2024',
-    gitBranch: 'sec/key-rotation',
-    replicationHash: '0x77c2...11b',
+    estimation: {
+      hours: 4,
+      points: 2
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 15, 2024',
+    gitBranch: 'feat/eng-112-nav-tree',
+    replicationHash: '0x712e...88a',
     timeInStage: 'Active for 2 days',
     activity: []
   },
@@ -362,37 +359,14 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[4], // Marcus Vance
     tags: ['SOC-2', 'Compliance'],
     subtasks: [],
-    estimation: { hours: 10, points: 5 },
-    listId: 'security-audits',
-    targetCycle: 'Security Audits',
-    dueDate: 'Nov 08, 2024',
-    startDate: 'Oct 20, 2024',
-    gitBranch: 'sec/soc2-audit-guard',
-    replicationHash: '0x99a3...44c',
-    timeInStage: 'In review',
-    activity: []
-  },
-
-  // 3. Core Engine Replicas (core-replication)
-  {
-    id: 'REP-101',
-    title: 'CRDT delta vector synchronization protocol',
-    description: 'Optimize state-based CRDT delta exchange between local nodes to minimize network bandwidth consumption.',
-    specMarkdown: 'Compress vector clock state frames using Snappy compression over WebSocket connections.',
-    status: 'In Progress',
-    priority: 'Urgent',
-    assignee: initialTeamMembers[5], // David Rivera
-    tags: ['CRDT', 'Networking'],
-    subtasks: [
-      { id: 'sub-rep-1', text: 'Delta payload compression benchmark', done: true, author: 'DR', time: '3h ago' }
-    ],
-    estimation: { hours: 18, points: 8 },
-    listId: 'core-replication',
-    targetCycle: 'Core Engine Replicas',
-    dueDate: 'Nov 01, 2024',
-    startDate: 'Oct 16, 2024',
-    gitBranch: 'feat/crdt-snappy-vectors',
-    replicationHash: '0x55b1...88a',
+    estimation: {
+      hours: 6,
+      points: 2
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 19, 2024',
+    gitBranch: 'docs/zero-auth-guide',
+    replicationHash: '0x99a1...10b',
     timeInStage: 'Active for 4 days',
     activity: []
   },
@@ -406,14 +380,15 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[0], // Alex Wong
     tags: ['CRDT', 'StateTree'],
     subtasks: [],
-    estimation: { hours: 12, points: 5 },
-    listId: 'core-replication',
-    targetCycle: 'Core Engine Replicas',
-    dueDate: 'Nov 12, 2024',
-    startDate: 'Oct 25, 2024',
-    gitBranch: 'feat/tree-conflict-resolver',
-    replicationHash: '0x12a9...33d',
-    timeInStage: 'Backlog',
+    estimation: {
+      hours: 14,
+      points: 5
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 24, 2024',
+    gitBranch: 'feat/wasm-arm64',
+    replicationHash: '0x43ff...231',
+    timeInStage: 'Active for 1 day',
     activity: []
   },
 
@@ -425,16 +400,21 @@ export const initialTasks: TaskItem[] = [
     specMarkdown: 'Leverage browser OPFS SyncAccessHandle to achieve sub-millisecond synchronous SQLite page writes.',
     status: 'In Progress',
     priority: 'High',
-    assignee: initialTeamMembers[3], // Carlos Gomez
-    tags: ['WASM', 'OPFS'],
-    subtasks: [],
-    estimation: { hours: 14, points: 5 },
-    listId: 'vfs-sqlite-driver',
-    targetCycle: 'VFS SQLite Driver',
-    dueDate: 'Nov 06, 2024',
-    startDate: 'Oct 19, 2024',
-    gitBranch: 'feat/opfs-sync-handle',
-    replicationHash: '0x33d1...77e',
+    assignee: initialTeamMembers[3], // Elena Chen
+    tags: ['API', 'MCP'],
+    subtasks: [
+      { id: 'sub-41', text: 'Zod schema compilation', done: true, author: 'EC', time: '1d ago' },
+      { id: 'sub-42', text: 'Error boundary response formatting', done: true, author: 'EC', time: '4h ago' },
+      { id: 'sub-43', text: 'Automated test suite run', done: false, author: 'EC', time: 'Active' }
+    ],
+    estimation: {
+      hours: 8,
+      points: 3
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Tomorrow',
+    gitBranch: 'feat/mcp-schema',
+    replicationHash: '0x12b5...001',
     timeInStage: 'Active for 2 days',
     activity: []
   },
@@ -448,9 +428,11 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[6], // Mikhail K.
     tags: ['VFS', 'Windows'],
     subtasks: [],
-    estimation: { hours: 8, points: 3 },
-    listId: 'vfs-sqlite-driver',
-    targetCycle: 'VFS SQLite Driver',
+    estimation: {
+      hours: 5,
+      points: 2
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 10, 2024',
     startDate: 'Oct 02, 2024',
     completedAt: '2024-10-10T11:00:00.000Z',
@@ -471,16 +453,19 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[2], // Elena Rostova
     tags: ['Enterprise', 'Client'],
     subtasks: [
-      { id: 'sub-cli-1', text: 'Schema transformation script', done: true, author: 'ER', time: '1d ago' }
+      { id: 'sub-51', text: 'Profile 25k transactions', done: true, author: 'AW', time: '2d ago' },
+      { id: 'sub-52', text: 'Flamegraph generation', done: true, author: 'AW', time: '1d ago' },
+      { id: 'sub-53', text: 'Memory ceiling audit', done: true, author: 'AW', time: '5h ago' }
     ],
-    estimation: { hours: 16, points: 8 },
-    listId: 'client-deliverables',
-    targetCycle: 'Acme Corp Milestone Alpha',
-    dueDate: 'Oct 31, 2024',
-    startDate: 'Oct 15, 2024',
-    gitBranch: 'client/acme-etl-gateway',
-    replicationHash: '0xaa12...99b',
-    timeInStage: 'Active for 3 days',
+    estimation: {
+      hours: 10,
+      points: 5
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 08, 2024',
+    gitBranch: 'perf/query-latency',
+    replicationHash: '0x9923...bb1',
+    timeInStage: 'Active for 1 day',
     activity: []
   },
   {
@@ -493,35 +478,14 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[4], // Marcus Vance
     tags: ['SSO', 'Okta'],
     subtasks: [],
-    estimation: { hours: 12, points: 5 },
-    listId: 'client-deliverables',
-    targetCycle: 'Acme Corp Milestone Alpha',
-    dueDate: 'Nov 04, 2024',
-    startDate: 'Oct 21, 2024',
-    gitBranch: 'client/sso-saml2-endpoint',
-    replicationHash: '0x66e4...11a',
-    timeInStage: 'In review',
-    activity: []
-  },
-
-  // 6. GlobalBank SOC-2 Audit SLA (globalbank-sla)
-  {
-    id: 'SLA-401',
-    title: 'Sub-50ms peer ping monitor telemetry daemon',
-    description: 'Continuous heartbeat ping daemon tracking node replication latency across EU and US regions.',
-    specMarkdown: 'Enforces strict SLA threshold alerting. Triggers P0 notification if 99th percentile ping exceeds 50ms.',
-    status: 'In Progress',
-    priority: 'Urgent',
-    assignee: initialTeamMembers[3], // Carlos Gomez
-    tags: ['SLA', 'Monitoring'],
-    subtasks: [],
-    estimation: { hours: 10, points: 5 },
-    listId: 'globalbank-sla',
-    targetCycle: 'GlobalBank SOC-2 Audit SLA',
-    dueDate: 'Nov 03, 2024',
-    startDate: 'Oct 17, 2024',
-    gitBranch: 'sla/ping-daemon',
-    replicationHash: '0x22c9...55b',
+    estimation: {
+      hours: 7,
+      points: 3
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 09, 2024',
+    gitBranch: 'feat/crdt-gc',
+    replicationHash: '0x6612...41a',
     timeInStage: 'Active for 2 days',
     activity: []
   },
@@ -532,57 +496,18 @@ export const initialTasks: TaskItem[] = [
     specMarkdown: 'Verify standby node promotes to quorum master in less than 3 seconds without transaction data loss.',
     status: 'Backlog',
     priority: 'High',
-    assignee: initialTeamMembers[5], // David Rivera
-    tags: ['Failover', 'DR'],
-    subtasks: [],
-    estimation: { hours: 14, points: 8 },
-    listId: 'globalbank-sla',
-    targetCycle: 'GlobalBank SOC-2 Audit SLA',
-    dueDate: 'Nov 15, 2024',
-    startDate: 'Oct 28, 2024',
-    gitBranch: 'sla/failover-drill',
-    replicationHash: '0x44d8...99c',
-    timeInStage: 'Scheduled',
-    activity: []
-  },
-
-  // 7. Hyperion Edge POS Rollout (poc-hyperion-pos)
-  {
-    id: 'POC-501',
-    title: 'Edge POS offline transaction queue manager',
-    description: 'Store-and-forward SQLite queue for retail point-of-sale terminals operating under intermittent offline connectivity.',
-    specMarkdown: 'Transactions queue safely on terminal disk and drain automatically upon network reconnection.',
-    status: 'In Progress',
-    priority: 'High',
-    assignee: initialTeamMembers[1], // Priya Sharma
-    tags: ['Retail', 'OfflineFirst'],
-    subtasks: [],
-    estimation: { hours: 12, points: 5 },
-    listId: 'poc-hyperion-pos',
-    targetCycle: 'Hyperion Edge POS Rollout',
-    dueDate: 'Nov 07, 2024',
-    startDate: 'Oct 22, 2024',
-    gitBranch: 'poc/pos-offline-queue',
-    replicationHash: '0x11a5...66d',
-    timeInStage: 'Active for 2 days',
-    activity: []
-  },
-  {
-    id: 'POC-502',
-    title: 'Barcode scanner serial USB communication hook',
-    description: 'WebUSB interface listener to capture fast hardware scanner inputs directly into sales order line items.',
-    specMarkdown: 'Captures 1D/2D symbologies with sub-10ms event dispatcher latency.',
-    status: 'Done',
-    priority: 'Medium',
-    assignee: initialTeamMembers[3], // Carlos Gomez
-    tags: ['WebUSB', 'Hardware'],
-    subtasks: [],
-    estimation: { hours: 8, points: 3 },
-    listId: 'poc-hyperion-pos',
-    targetCycle: 'Hyperion Edge POS Rollout',
-    dueDate: 'Oct 14, 2024',
-    startDate: 'Oct 04, 2024',
-    completedAt: '2024-10-14T16:00:00.000Z',
+    assignee: initialTeamMembers[0], // Alex Wong
+    tags: ['Setup', 'Design'],
+    subtasks: [
+      { id: 'sub-61', text: 'Palette definition', done: true, author: 'AW', time: '2w ago' },
+      { id: 'sub-62', text: 'Tailwind config integration', done: true, author: 'AW', time: '2w ago' }
+    ],
+    estimation: {
+      hours: 20,
+      points: 8
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 01, 2024',
     gitBranch: 'main',
     replicationHash: '0x77d2...33a',
     timeInStage: 'Completed',
@@ -600,74 +525,12 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[5], // David Rivera
     tags: ['Bug', 'Hotfix'],
     subtasks: [],
-    estimation: { hours: 6, points: 5 },
-    listId: 'bugs-triages',
-    targetCycle: 'P0 Immediate Blockers',
-    dueDate: 'Oct 26, 2024',
-    startDate: 'Oct 24, 2024',
-    gitBranch: 'hotfix/cursor-leak',
-    replicationHash: '0x99f1...22b',
-    timeInStage: 'Active for 1 day',
-    activity: []
-  },
-  {
-    id: 'BUG-602',
-    title: 'Resolve deadlock on concurrent peer sync writes',
-    description: 'Two peer nodes writing to the same record simultaneously cause lock escalation timeouts.',
-    specMarkdown: 'Introduce exponential jitter backoff on transaction commit collision.',
-    status: 'Backlog',
-    priority: 'Urgent',
-    assignee: initialTeamMembers[6], // Mikhail K.
-    tags: ['Bug', 'Concurrency'],
-    subtasks: [],
-    estimation: { hours: 8, points: 5 },
-    listId: 'bugs-triages',
-    targetCycle: 'P0 Immediate Blockers',
-    dueDate: 'Oct 29, 2024',
-    startDate: 'Oct 25, 2024',
-    gitBranch: 'hotfix/peer-deadlock-jitter',
-    replicationHash: '0x55a4...99e',
-    timeInStage: 'Triaged',
-    activity: []
-  },
-
-  // 9. Reported Edge Defects (reported-triages)
-  {
-    id: 'DEF-701',
-    title: 'Flaky websocket reconnect backoff on mobile client',
-    description: 'Mobile browser sleeping background tabs disconnect and fail to reconnect without manual page refresh.',
-    specMarkdown: 'Implement visibilitychange event listener to trigger immediate reconnect and queue flush.',
-    status: 'In Review',
-    priority: 'High',
-    assignee: initialTeamMembers[0], // Alex Wong
-    tags: ['Mobile', 'WebSocket'],
-    subtasks: [],
-    estimation: { hours: 8, points: 3 },
-    listId: 'reported-triages',
-    targetCycle: 'Reported Edge Defects',
-    dueDate: 'Nov 02, 2024',
-    startDate: 'Oct 22, 2024',
-    gitBranch: 'bug/mobile-reconnect-backoff',
-    replicationHash: '0x88b2...11c',
-    timeInStage: 'In review',
-    activity: []
-  },
-  {
-    id: 'DEF-702',
-    title: 'Incorrect timezone parsing in calendar widget',
-    description: 'Users in UTC+9 seeing due dates rendered one calendar day earlier on month view.',
-    specMarkdown: 'Normalize all calendar date tokens using UTC noon anchor instead of midnight offset.',
-    status: 'Done',
-    priority: 'Medium',
-    assignee: initialTeamMembers[1], // Priya Sharma
-    tags: ['Calendar', 'Date'],
-    subtasks: [],
-    estimation: { hours: 4, points: 2 },
-    listId: 'reported-triages',
-    targetCycle: 'Reported Edge Defects',
-    dueDate: 'Oct 15, 2024',
-    startDate: 'Oct 11, 2024',
-    completedAt: '2024-10-15T10:00:00.000Z',
+    estimation: {
+      hours: 12,
+      points: 5
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 04, 2024',
     gitBranch: 'main',
     replicationHash: '0x66c7...44d',
     timeInStage: 'Completed',
@@ -705,12 +568,12 @@ export const initialTasks: TaskItem[] = [
     assignee: initialTeamMembers[0], // Alex Wong
     tags: ['Design', 'Tokens'],
     subtasks: [],
-    estimation: { hours: 8, points: 3 },
-    listId: 'design-system-v3',
-    targetCycle: 'Design Tokens & Bento Matrix',
-    dueDate: 'Oct 18, 2024',
-    startDate: 'Oct 12, 2024',
-    completedAt: '2024-10-18T17:00:00.000Z',
+    estimation: {
+      hours: 8,
+      points: 3
+    },
+    list_id: 'Sprint 14 - Q4 Infra',
+    dueDate: 'Oct 02, 2024',
     gitBranch: 'main',
     replicationHash: '0x99a2...77f',
     timeInStage: 'Completed',

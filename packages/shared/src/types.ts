@@ -280,8 +280,8 @@ export interface TaskItem {
     hours: number;
     points: number;
   };
-  targetCycle: string;
-  listId?: string;
+  list_id?: string;
+  targetCycle?: string;
   dueDate: string;
   startDate?: string;
   completedAt?: string;
@@ -1109,6 +1109,7 @@ export interface SpaceExportPayload {
 export type InternalFieldTarget =
   | 'title'
   | 'id'
+  | 'list_id'
   | 'targetCycle'
   | 'status'
   | 'priority'

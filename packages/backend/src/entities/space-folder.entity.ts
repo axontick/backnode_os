@@ -24,10 +24,10 @@ export class SpaceFolder {
   @Column('varchar', { nullable: true })
   description?: string;
 
-  @Column('jsonb', { default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { default: [] })
   items: any;
 
-  @Column('jsonb', { default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { default: [] })
   subFolders?: any;
 
   @Index()

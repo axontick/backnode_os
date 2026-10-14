@@ -40,14 +40,14 @@ export class TaskItem {
   @Column('text', { array: true, default: '{}' })
   tags: string[];
 
-  @Column('jsonb', { default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { default: [] })
   subtasks: any;
 
-  @Column('jsonb', { nullable: true })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { nullable: true })
   estimation?: any;
 
-  @Column('varchar', { name: 'target_cycle', nullable: true })
-  targetCycle?: string;
+  @Column('varchar', { name: 'list_id', nullable: true })
+  list_id?: string;
 
   @Column('varchar', { name: 'list_id', nullable: true })
   listId?: string;
@@ -76,13 +76,13 @@ export class TaskItem {
   @Column('varchar', { name: 'time_in_stage', nullable: true })
   timeInStage?: string;
 
-  @Column('jsonb', { name: 'linked_crm_deal', nullable: true })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'linked_crm_deal', nullable: true })
   linkedCrmDeal?: any;
 
-  @Column('jsonb', { name: 'custom_links', default: {} })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'custom_links', default: {} })
   customLinks: any;
 
-  @Column('jsonb', { default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { default: [] })
   activity: any;
 
   @Index()

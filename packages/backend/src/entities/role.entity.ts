@@ -34,7 +34,7 @@ export class Role {
   @Column('boolean', { name: 'is_default', default: false })
   isDefault: boolean;
 
-  @Column('jsonb', { name: 'permissions' })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'permissions' })
   permissions: any;
 
   @Index()
