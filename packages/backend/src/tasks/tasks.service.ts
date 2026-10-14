@@ -120,7 +120,7 @@ export class TasksService {
       tasks = tasks.filter((t) => this.isAssignedToUser(t, currentUser));
     }
 
-    return result;
+    return tasks;
   }
 
   async createMany(accountId: string, tasksData: any[], currentUser?: CurrentUserPayload) {
@@ -160,7 +160,7 @@ export class TasksService {
         subtasks: Array.isArray(data.subtasks) ? data.subtasks : [],
         estimation: data.estimation || null,
         targetCycle: effectiveListId,
-        listId: data.listId || effectiveListId,
+        list_id: data.listId || data.list_id || effectiveListId,
         dueDate: data.dueDate || '',
         startDate: resolvedStartDate,
         completedAt: resolvedCompletedAt,
@@ -259,6 +259,8 @@ export class TasksService {
 
     const resolvedAssigneeId = assigneeId || (assignee ? assignee.id : null);
     const resolvedListId = list_id || listId || targetCycle || 'sprint-14';
+    const resolvedStartDate = startDate || null;
+    const resolvedCompletedAt = completedAt || (status === 'Done' ? new Date().toISOString() : null);
 
     const task = this.taskRepo.create({
       id,
@@ -272,6 +274,7 @@ export class TasksService {
       subtasks,
       estimation,
       list_id: resolvedListId,
+      targetCycle: targetCycle || resolvedListId,
       dueDate,
       startDate: resolvedStartDate,
       completedAt: resolvedCompletedAt,
@@ -338,6 +341,9 @@ export class TasksService {
     if (data.list_id !== undefined) task.list_id = data.list_id;
     else if (data.listId !== undefined) task.list_id = data.listId;
     else if (data.targetCycle !== undefined) task.list_id = data.targetCycle;
+
+    if (data.targetCycle !== undefined) task.targetCycle = data.targetCycle;
+    else if (task.list_id) task.targetCycle = task.list_id;
     if (data.dueDate !== undefined) task.dueDate = data.dueDate;
     if (data.startDate !== undefined) task.startDate = data.startDate;
     if (data.completedAt !== undefined) task.completedAt = data.completedAt;

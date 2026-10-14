@@ -14,9 +14,10 @@
     "build:backend": "yarn workspace @backnode/backend build",
     "lint": "yarn workspace @backnode/frontend lint",
     "test": "yarn workspace @backnode/backend test",
-    "db:push": "yarn workspace @backnode/backend prisma:push",
-    "db:seed": "yarn workspace @backnode/backend prisma:seed",
-    "db:generate": "yarn workspace @backnode/backend prisma:generate"
+    "db:migrate": "yarn workspace @backnode/backend migration:run",
+    "db:migrate:generate": "yarn workspace @backnode/backend migration:generate",
+    "db:migrate:revert": "yarn workspace @backnode/backend migration:revert",
+    "db:seed": "yarn workspace @backnode/backend seed"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

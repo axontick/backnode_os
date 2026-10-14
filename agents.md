@@ -99,7 +99,7 @@ Before writing or submitting any UI code, verify your implementation against thi
 
 Backnode OS is structured as a monorepo:
 * **`packages/frontend`**: React 19, Vite, Tailwind CSS v4, Lucide icons, Material Symbols.
-* **`packages/backend`**: NestJS REST API, Prisma ORM, PostgreSQL connection.
+* **`packages/backend`**: NestJS REST API, TypeORM, PostgreSQL connection.
 * **`packages/shared`**: Shared TypeScript types, interfaces, seed schemas.
 
 When creating new items or data structures:

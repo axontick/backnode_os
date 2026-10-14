@@ -11,7 +11,7 @@ The project is structured as a Yarn monorepo under `packages/`:
 | Package | Directory | Description |
 |---|---|---|
 | `@backnode/frontend` | [`packages/frontend`](packages/frontend) | React 19, Vite, Tailwind CSS, Lucide icons UI |
-| `@backnode/backend` | [`packages/backend`](packages/backend) | NestJS REST API, Prisma ORM, PostgreSQL connection |
+| `@backnode/backend` | [`packages/backend`](packages/backend) | NestJS REST API, TypeORM, PostgreSQL connection |
 | `@backnode/shared` | [`packages/shared`](packages/shared) | Shared TypeScript interfaces, data models, and canonical seeds |
 
 ---
@@ -32,8 +32,8 @@ The project is structured as a Yarn monorepo under `packages/`:
 
 2. **Database Setup (PostgreSQL):**
    ```bash
-   # Push schema to PostgreSQL database 'backnode_os'
-   yarn db:push
+   # Run TypeORM migrations to create tables in PostgreSQL database 'backnode_os'
+   yarn db:migrate
 
    # Seed database with initial workspace data
    yarn db:seed
@@ -66,7 +66,6 @@ The project is structured as a Yarn monorepo under `packages/`:
 | `yarn build` | Compile both frontend and backend |
 | `yarn build:frontend` | Build Vite frontend production bundle |
 | `yarn build:backend` | Compile NestJS TypeScript to `dist/` |
-| `yarn db:push` | Sync Prisma schema to PostgreSQL database |
+| `yarn db:migrate` | Run TypeORM migrations to set up PostgreSQL database |
 | `yarn db:seed` | Run database seed script importing from `@backnode/shared` |
-| `yarn db:generate` | Regenerate Prisma client |
 | `yarn lint` | Run TypeScript check on frontend |

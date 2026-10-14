@@ -35,10 +35,10 @@ async function seed() {
   console.log('🌱 Starting TypeORM database wipe and fresh seeding for Backnode OS...');
   await AppDataSource.initialize();
   console.log('📦 Connected to PostgreSQL database.');
-  console.log('🔄 Dropping public schema and synchronizing fresh TypeORM entities...');
+  console.log('🔄 Dropping public schema and running fresh TypeORM migrations...');
   await AppDataSource.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
-  await AppDataSource.synchronize();
-  console.log('✨ Fresh public schema created successfully.');
+  await AppDataSource.runMigrations();
+  console.log('✨ Fresh public schema and migrations applied successfully.');
 
   const accountRepo = AppDataSource.getRepository(Account);
   const memberRepo = AppDataSource.getRepository(TeamMember);

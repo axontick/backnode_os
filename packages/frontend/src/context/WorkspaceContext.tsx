@@ -1723,17 +1723,6 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setTargetSubFolderIdForNewList(null);
   };
 
-  const fetchTasksForList = async (listId: string): Promise<TaskItem[]> => {
-    try {
-      const fetched = await tasksApi.getAll({ listId });
-      setTasks(fetched);
-      return fetched;
-    } catch (err) {
-      console.error(`Failed to fetch tasks for list ${listId}:`, err);
-      return [];
-    }
-  };
-
   const handleCreateTask = (newTask: Partial<TaskItem>) => {
     if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
       if (effectivePermissions.tasks.create === false) {

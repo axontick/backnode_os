@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { join } from 'path';
 import * as entities from './entities';
 import { AuthModule } from './auth/auth.module';
 import { TasksModule } from './tasks/tasks.module';
@@ -17,26 +18,18 @@ const dbUrl = (process.env.DATABASE_URL || 'postgresql://postgres:asimwattoo123@
   '',
 );
 
-const useSqlite = process.env.DB_TYPE === 'sqlite' || (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'production');
-
 @Module({
   imports: [
     TypeOrmModule.forRoot(
-      useSqlite
-        ? {
-            type: 'better-sqlite3',
-            database: 'backnode.sqlite',
-            entities: Object.values(entities),
-            synchronize: true,
-            autoLoadEntities: true,
-          }
-        : {
-            type: 'postgres',
-            url: dbUrl,
-            entities: Object.values(entities),
-            synchronize: true,
-            autoLoadEntities: true,
-          },
+      {
+        type: 'postgres',
+        url: dbUrl,
+        entities: Object.values(entities),
+        synchronize: false,
+        migrationsRun: true,
+        migrations: [join(__dirname, 'database', 'migrations', '*{.ts,.js}').replace(/\\/g, '/')],
+        autoLoadEntities: true,
+      }
     ),
     AuthModule,
     TasksModule,
@@ -50,4 +43,4 @@ const useSqlite = process.env.DB_TYPE === 'sqlite' || (!process.env.DATABASE_URL
     DocsModule,
   ],
 })
-export class AppModule {}
+export class AppModule { }

@@ -49,8 +49,16 @@ export class TaskItem {
   @Column('varchar', { name: 'list_id', nullable: true })
   list_id?: string;
 
-  @Column('varchar', { name: 'list_id', nullable: true })
-  listId?: string;
+  @Column('varchar', { name: 'target_cycle', nullable: true })
+  targetCycle?: string;
+
+  get listId(): string | undefined {
+    return this.list_id;
+  }
+
+  set listId(val: string | undefined) {
+    this.list_id = val;
+  }
 
   @Column('varchar', { name: 'due_date', nullable: true })
   dueDate?: string;
