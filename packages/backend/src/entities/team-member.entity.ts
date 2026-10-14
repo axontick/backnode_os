@@ -48,13 +48,13 @@ export class TeamMember {
   @Column('boolean', { name: 'can_login', default: true })
   canLogin: boolean;
 
-  @Column('jsonb', {
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), {
     name: 'allowed_pages',
     default: ['overview', 'task-spaces', 'crm-pipelines', 'contacts', 'docs', 'team', 'settings'],
   })
   allowedPages: string[];
 
-  @Column('jsonb', {
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), {
     name: 'allowed_actions',
     default: ['read', 'write', 'delete', 'publish'],
   })
@@ -63,7 +63,7 @@ export class TeamMember {
   @Column('varchar', { name: 'role_id', nullable: true })
   roleId?: string;
 
-  @Column('jsonb', { name: 'permission_overrides', nullable: true })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'permission_overrides', nullable: true })
   permissionOverrides?: any;
 
   @Column('varchar', { name: 'invited_at', nullable: true })

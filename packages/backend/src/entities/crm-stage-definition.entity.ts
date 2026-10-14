@@ -35,7 +35,7 @@ export class CrmStageDefinition {
   @Column('boolean', { name: 'is_highlighted', nullable: true, default: false })
   isHighlighted?: boolean;
 
-  @Column('jsonb', { name: 'required_gates', default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'required_gates', default: [] })
   requiredGates: any;
 
   @Column('boolean', { name: 'webhook_enabled', default: false })

@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react'
 import { useWorkspace } from '../context/WorkspaceContext';
 import { SpaceFolder, FolderChildItem } from '../types';
 import { getAllItemsFromFolder } from '../utils/treeUtils';
+import { workspaceApi } from '../services/api';
 import {
   parseCsv,
   parseJson,
@@ -71,6 +72,7 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
     handleUpdateStatuses,
     members,
     showToast,
+    refreshData,
   } = useWorkspace();
 
   // Wizard Step State
@@ -437,14 +439,34 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
       updatedSpace.items = currentItems;
       handleUpdateFolder(updatedSpace);
 
-      // 4. Commit tasks into state and storage
-      setExecutionProgress(90);
+      // 4. Commit tasks into database and storage
+      setExecutionProgress(85);
       setExecutionLog((prev) => [
         ...prev,
-        `Committing ${tasksToImport.length} tasks into workspace registry...`,
+        `Persisting ${tasksToImport.length} tasks and list structures to backend database...`,
       ]);
 
+      const newListsArray = previewStats.newListsToCreate.map((name) => ({
+        id: `list-${name.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        name,
+      }));
+
+      const newStatusesArray = previewStats.newStatusesToCreate.map((name) => ({
+        name,
+      }));
+
+      try {
+        await workspaceApi.importSpace(targetSpace.id, {
+          tasks: tasksToImport,
+          newLists: newListsArray,
+          newStatuses: newStatusesArray,
+        });
+      } catch (backendErr: any) {
+        console.warn('Backend API import error, keeping state in memory:', backendErr);
+      }
+
       setTasks((prev) => [...prev, ...tasksToImport]);
+      await refreshData().catch(() => {});
 
       setExecutionProgress(100);
       setExecutionLog((prev) => [

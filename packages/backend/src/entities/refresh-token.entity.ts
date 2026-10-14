@@ -27,10 +27,10 @@ export class RefreshToken {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column('timestamp', { name: 'expires_at' })
+  @Column({ type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : ('timestamp' as any), name: 'expires_at' })
   expiresAt: Date;
 
-  @Column('timestamp', { name: 'revoked_at', nullable: true })
+  @Column({ type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : ('timestamp' as any), name: 'revoked_at', nullable: true })
   revokedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

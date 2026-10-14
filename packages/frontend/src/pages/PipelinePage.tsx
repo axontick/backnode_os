@@ -20,6 +20,8 @@ export const PipelinePage: React.FC = () => {
     userSpaces,
     pipelines,
     activePipelineId,
+    fetchDealsForPipeline,
+    fetchMoreDealsForStage,
     setActivePipelineId,
     crmView,
     setCrmView,
@@ -69,6 +71,14 @@ export const PipelinePage: React.FC = () => {
       setActivePipelineSubFolderId(subFolderId);
     }
   }, [subFolderId, activePipelineSubFolderId, setActivePipelineSubFolderId]);
+
+  // Fetch deals on demand for current pipeline and subfolder
+  useEffect(() => {
+    const pipeId = pipelineId || activePipelineId;
+    if (pipeId) {
+      fetchDealsForPipeline(pipeId, subFolderId || undefined, searchQuery || undefined);
+    }
+  }, [pipelineId, activePipelineId, subFolderId, searchQuery, fetchDealsForPipeline]);
 
   const handleSelectView = (
     nextView: 'dashboard' | 'board' | 'list' | 'table' | 'analytics' | 'settings' | 'archived'
@@ -123,6 +133,7 @@ export const PipelinePage: React.FC = () => {
         }}
         onAdvanceDealStage={handleAdvanceDealStage}
         onUpdateDeal={handleUpdateDeal}
+        onLoadMoreStageDeals={(stg) => fetchMoreDealsForStage(stg, pipelineId)}
       />
 
       {/* Deal Inspector Slide-Over */}

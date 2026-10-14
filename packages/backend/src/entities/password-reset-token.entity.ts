@@ -27,10 +27,10 @@ export class PasswordResetToken {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @Column('timestamp', { name: 'expires_at' })
+  @Column({ type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : ('timestamp' as any), name: 'expires_at' })
   expiresAt: Date;
 
-  @Column('timestamp', { name: 'used_at', nullable: true })
+  @Column({ type: process.env.DB_TYPE === 'sqlite' ? 'datetime' : ('timestamp' as any), name: 'used_at', nullable: true })
   usedAt: Date | null;
 
   @CreateDateColumn({ name: 'created_at' })

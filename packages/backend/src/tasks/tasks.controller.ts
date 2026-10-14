@@ -19,14 +19,36 @@ import { CurrentUser, CurrentUserPayload } from '../auth/current-user.decorator'
 export class TasksController {
   constructor(@Inject(TasksService) private readonly tasksService: TasksService) {}
 
+  @Get('counts')
+  async getCounts(@CurrentUser() user: CurrentUserPayload) {
+    return this.tasksService.getCountsByList(user.accountId);
+  }
+
   @Get()
   async findAll(
     @CurrentUser() user: CurrentUserPayload,
+    @Query('list_id') list_id?: string,
+    @Query('listId') listId?: string,
     @Query('status') status?: string,
     @Query('priority') priority?: string,
     @Query('assigneeId') assigneeId?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.tasksService.findAll(user.accountId, { status, priority, assigneeId }, user);
+    return this.tasksService.findAll(
+      user.accountId,
+      {
+        list_id: list_id || listId,
+        status,
+        priority,
+        assigneeId,
+        search,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      },
+      user,
+    );
   }
 
   @Get(':id')

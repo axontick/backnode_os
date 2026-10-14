@@ -379,13 +379,13 @@ export class WorkspaceService {
     });
 
     let matchedTasks = allTasks.filter((t) => {
-      const tc = (t.targetCycle || '').toLowerCase();
+      const tc = (t.list_id || '').toLowerCase();
       return childListNames.has(tc) || childListIds.has(tc) || tc.includes(space.name.toLowerCase());
     });
 
     if (filterListId) {
       matchedTasks = matchedTasks.filter((t) => {
-        const tc = (t.targetCycle || '').toLowerCase();
+        const tc = (t.list_id || '').toLowerCase();
         return tc === filterListId.toLowerCase();
       });
     }
@@ -470,34 +470,27 @@ export class WorkspaceService {
       }
     }
 
-    // 3. Save tasks
-    const savedTasks: TaskItem[] = [];
+    // 3. Save tasks in batch chunks for high performance
+    const savedTasks: any[] = [];
     if (Array.isArray(payload.tasks) && payload.tasks.length > 0) {
-      for (const t of payload.tasks) {
-        const taskEntity = this.taskRepo.create({
+      const taskEntities = payload.tasks.map((t) =>
+        this.taskRepo.create({
           ...t,
+          list_id: t.list_id || t.listId || t.targetCycle || 'sprint-14',
           accountId,
           assigneeId: t.assigneeId || (t.assignee ? t.assignee.id : null),
-        });
-        const saved = await this.taskRepo.save(taskEntity as any);
-        savedTasks.push(saved as TaskItem);
+        })
+      );
+      // Batch save in chunks of 100 for optimal DB throughput
+      const chunkSize = 100;
+      for (let i = 0; i < taskEntities.length; i += chunkSize) {
+        const chunk = taskEntities.slice(i, i + chunkSize);
+        const savedChunk = await this.taskRepo.save(chunk as any);
+        savedTasks.push(...savedChunk);
       }
     }
 
-    // 4. Update list task counts on space
-    if (Array.isArray(space.items)) {
-      const updatedItems = space.items.map((item: any) => {
-        const count = savedTasks.filter(
-          (st) => st.targetCycle === item.name || st.targetCycle === item.id
-        ).length;
-        return {
-          ...item,
-          taskCount: (item.taskCount || 0) + count,
-        };
-      });
-      space.items = updatedItems;
-      await this.folderRepo.save(space);
-    }
+    await this.folderRepo.save(space);
 
     return {
       success: true,

@@ -23,8 +23,24 @@ export class DealsController {
   async findAll(
     @CurrentUser() user: CurrentUserPayload,
     @Query('pipelineId') pipelineId?: string,
+    @Query('subFolderId') subFolderId?: string,
+    @Query('stage') stage?: string,
+    @Query('search') search?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
   ) {
-    return this.dealsService.findAll(user.accountId, pipelineId, user);
+    return this.dealsService.findAll(
+      user.accountId,
+      {
+        pipelineId,
+        subFolderId,
+        stage,
+        search,
+        limit: limit ? parseInt(limit, 10) : undefined,
+        offset: offset ? parseInt(offset, 10) : undefined,
+      },
+      user,
+    );
   }
 
   @Get(':id')

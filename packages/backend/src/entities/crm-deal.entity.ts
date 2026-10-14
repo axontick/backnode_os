@@ -36,7 +36,7 @@ export class CrmDeal {
   @Column('varchar', { name: 'target_close_date' })
   targetCloseDate: string;
 
-  @Column('jsonb')
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any))
   contact: any;
 
   @Column('varchar')
@@ -66,13 +66,13 @@ export class CrmDeal {
   @Column('varchar', { name: 'closed_at', nullable: true })
   closedAt?: string;
 
-  @Column('jsonb', { name: 'linked_tasks', default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'linked_tasks', default: [] })
   linkedTasks: any;
 
-  @Column('jsonb', { name: 'custom_links', default: {} })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'custom_links', default: {} })
   customLinks: any;
 
-  @Column('jsonb', { default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { default: [] })
   history: any;
 
   @Column('boolean', { name: 'is_archived', default: false })

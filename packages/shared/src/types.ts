@@ -268,7 +268,8 @@ export interface TaskItem {
     hours: number;
     points: number;
   };
-  targetCycle: string;
+  list_id?: string;
+  targetCycle?: string;
   dueDate: string;
   isRecurring?: boolean;
   recurrenceRule?: string;
@@ -1092,6 +1093,7 @@ export interface SpaceExportPayload {
 export type InternalFieldTarget =
   | 'title'
   | 'id'
+  | 'list_id'
   | 'targetCycle'
   | 'status'
   | 'priority'

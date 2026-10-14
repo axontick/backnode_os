@@ -33,7 +33,7 @@ export class Account {
   @Column('varchar', { name: 'owner_id', nullable: true })
   ownerId?: string;
 
-  @Column('jsonb', { name: 'enabled_plugins', default: ['tasks', 'crm', 'contacts', 'docs'] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'enabled_plugins', default: ['tasks', 'crm', 'contacts', 'docs'] })
   enabledPlugins: string[];
 
   @CreateDateColumn({ name: 'created_at' })

@@ -253,6 +253,15 @@ const FIELD_ALIASES: Record<Exclude<InternalFieldTarget, 'customField' | 'ignore
     'identifier',
     'number',
   ],
+  list_id: [
+    'list_id',
+    'list id',
+    'list',
+    'list name',
+    'list_name',
+    'target cycle',
+    'target_cycle',
+  ],
   targetCycle: [
     'list',
     'list name',

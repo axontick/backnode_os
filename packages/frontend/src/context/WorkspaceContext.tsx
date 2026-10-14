@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, ReactNode } from 'react';
 import {
   initialTasks,
   initialStatuses,
@@ -73,6 +73,11 @@ interface WorkspaceContextType {
   // Data
   tasks: TaskItem[];
   setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>;
+  taskCounts: Record<string, number>;
+  getTaskCountForList: (listId: string, listName?: string) => number;
+  fetchTasksForList: (params?: { list_id?: string; listId?: string; search?: string; status?: string; priority?: string }) => Promise<void>;
+  fetchMoreTasksForStatus: (status: string, listId?: string) => Promise<void>;
+  refreshTaskCounts: () => Promise<void>;
   statuses: StatusDefinition[];
   setStatuses: React.Dispatch<React.SetStateAction<StatusDefinition[]>>;
   listSettings: ListSettings;
@@ -87,6 +92,8 @@ interface WorkspaceContextType {
   setPipelines: React.Dispatch<React.SetStateAction<CrmPipeline[]>>;
   activePipelineId: string;
   setActivePipelineId: (id: string) => void;
+  fetchDealsForPipeline: (pipelineId?: string, subFolderId?: string, search?: string) => Promise<void>;
+  fetchMoreDealsForStage: (stage: string, pipelineId?: string) => Promise<void>;
   activePipelineSubFolderId: string | null;
   setActivePipelineSubFolderId: (id: string | null) => void;
   deals: CrmDeal[];
@@ -352,6 +359,33 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const { token, user } = useAuth();
 
   const [tasks, setTasks] = useState<TaskItem[]>([]);
+  const [taskCounts, setTaskCounts] = useState<Record<string, number>>({});
+
+  const refreshTaskCounts = useCallback(async () => {
+    try {
+      const counts = await tasksApi.getCounts();
+      setTaskCounts(counts || {});
+    } catch (err) {
+      console.error('Failed to fetch task counts:', err);
+    }
+  }, []);
+
+  const getTaskCountForList = useCallback((listId: string, listName?: string): number => {
+    if (!listId && !listName) return 0;
+    if (listId && taskCounts[listId] !== undefined) return taskCounts[listId];
+    if (listName && taskCounts[listName] !== undefined) return taskCounts[listName];
+    for (const [k, v] of Object.entries(taskCounts)) {
+      if (
+        (listId && k.toLowerCase() === listId.toLowerCase()) ||
+        (listName && k.toLowerCase() === listName.toLowerCase())
+      ) {
+        return v;
+      }
+    }
+    return 0;
+  }, [taskCounts]);
+
+
   const [statuses, setStatuses] = useState<StatusDefinition[]>(() => deduplicateStatuses(initialStatuses));
   const [listSettings, setListSettings] = useState(initialListSettings);
   const [members, setMembers] = useState<TeamMember[]>([]);
@@ -533,6 +567,119 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
   const [taskGroupBy, setTaskGroupBy] = useState<'status' | 'priority' | 'assignee'>('status');
   const [crmFilterStage, setCrmFilterStage] = useState<string | null>(null);
   const [crmFilterOwner, setCrmFilterOwner] = useState<string | null>(null);
+
+  const fetchTasksForList = useCallback(
+    async (params?: { list_id?: string; listId?: string; search?: string; status?: string; priority?: string }) => {
+      try {
+        const activeListId = params?.list_id || params?.listId;
+        if (params?.status) {
+          const listTasks = await tasksApi.getAll({ ...params, limit: 10, offset: 0 });
+          setTasks(listTasks || []);
+        } else {
+          const statusList = statuses.map((s) => s.name);
+          const taskArrays = await Promise.all(
+            statusList.map((st) =>
+              tasksApi.getAll({
+                list_id: activeListId,
+                status: st,
+                search: params?.search,
+                priority: params?.priority,
+                limit: 10,
+                offset: 0,
+              }),
+            ),
+          );
+          const combined = taskArrays.flat();
+          setTasks(combined || []);
+        }
+      } catch (err) {
+        console.error('Failed to fetch list tasks:', err);
+      }
+    },
+    [statuses],
+  );
+
+  const fetchMoreTasksForStatus = useCallback(
+    async (status: string, listId?: string) => {
+      try {
+        const currentTasksForStatus = tasks.filter((t) => t.status === status);
+        const offset = currentTasksForStatus.length;
+        const activeListId = listId || activeSpace;
+        const more = await tasksApi.getAll({
+          list_id: activeListId,
+          status,
+          search: searchQuery || undefined,
+          priority: filterPriority || undefined,
+          limit: 10,
+          offset,
+        });
+
+        if (more && more.length > 0) {
+          setTasks((prev) => {
+            const existingIds = new Set(prev.map((t) => t.id));
+            const newTasks = more.filter((m) => !existingIds.has(m.id));
+            return [...prev, ...newTasks];
+          });
+        }
+      } catch (err) {
+        console.error(`Failed to fetch more tasks for status ${status}:`, err);
+      }
+    },
+    [tasks, activeSpace, searchQuery, filterPriority],
+  );
+
+  const fetchDealsForPipeline = useCallback(
+    async (pipelineId?: string, subFolderId?: string, search?: string) => {
+      try {
+        const targetPipe = pipelineId || activePipelineId;
+        const stagesList = ['Qualified Lead', 'Discovery & Demo', 'Proposal Submitted', 'Contract & Legal', 'Closed Won'];
+        const dealArrays = await Promise.all(
+          stagesList.map((stg) =>
+            dealsApi.getAll({
+              pipelineId: targetPipe,
+              subFolderId,
+              stage: stg,
+              search,
+              limit: 10,
+              offset: 0,
+            }),
+          ),
+        );
+        const combined = dealArrays.flat();
+        setDeals(combined || []);
+      } catch (err) {
+        console.error('Failed to fetch pipeline deals:', err);
+      }
+    },
+    [activePipelineId],
+  );
+
+  const fetchMoreDealsForStage = useCallback(
+    async (stage: string, pipelineId?: string) => {
+      try {
+        const targetPipe = pipelineId || activePipelineId;
+        const currentDealsForStage = deals.filter((d) => d.stage === stage);
+        const offset = currentDealsForStage.length;
+        const more = await dealsApi.getAll({
+          pipelineId: targetPipe,
+          stage,
+          limit: 10,
+          offset,
+        });
+
+        if (more && more.length > 0) {
+          setDeals((prev) => {
+            const existingIds = new Set(prev.map((d) => d.id));
+            const newDeals = more.filter((m) => !existingIds.has(m.id));
+            return [...prev, ...newDeals];
+          });
+        }
+      } catch (err) {
+        console.error(`Failed to fetch more deals for stage ${stage}:`, err);
+      }
+    },
+    [deals, activePipelineId],
+  );
 
   // Filter helper to purge any mock or dummy workspaces
   const filterRealWorkspaces = (spaces: UserSpace[]): UserSpace[] => {
@@ -1176,7 +1323,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     try {
       setSyncStatus('syncing');
       const [
-        fetchedTasks,
+        fetchedTaskCounts,
         fetchedDeals,
         fetchedPipelines,
         fetchedStages,
@@ -1193,7 +1340,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         fetchedDocFolders,
         fetchedDocs,
       ] = await Promise.all([
-        tasksApi.getAll(),
+        tasksApi.getCounts(),
         dealsApi.getAll(),
         pipelinesApi.getAll(),
         pipelinesApi.getStages(),
@@ -1245,7 +1392,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
       }
 
-      setTasks(fetchedTasks || []);
+      setTaskCounts(fetchedTaskCounts || {});
       setDeals(fetchedDeals || []);
       const sanitizedPipelines = (fetchedPipelines || []).map((p) => ({
         ...p,
@@ -1584,7 +1731,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       createdAt: 'Just now',
     } as TaskItem;
     setTasks((prev) => [created, ...prev]);
-    tasksApi.create(created).catch((err) => {
+    tasksApi.create(created).then(() => refreshTaskCounts()).catch((err) => {
       console.error('Failed to create task in DB:', err);
     });
     showToast(`Task ${created.id} created successfully`);
@@ -2630,6 +2777,11 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       value={{
         tasks,
         setTasks,
+        taskCounts,
+        getTaskCountForList,
+        fetchTasksForList,
+        fetchMoreTasksForStatus,
+        refreshTaskCounts,
         statuses,
         setStatuses,
         listSettings,
@@ -2644,6 +2796,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         setPipelines,
         activePipelineId,
         setActivePipelineId,
+        fetchDealsForPipeline,
+        fetchMoreDealsForStage,
         activePipelineSubFolderId,
         setActivePipelineSubFolderId,
         deals,

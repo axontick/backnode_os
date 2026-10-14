@@ -11,7 +11,7 @@ import { MonthlyCalendarView } from '../components/MonthlyCalendarView';
 import { DocsCanvasView } from '../components/DocsCanvasView';
 import { TaskSpaceSettings } from '../components/TaskSpaceSettings';
 import { TaskInspector } from '../components/TaskInspector';
-import { findFolderByListId, findListItemById } from '../utils/treeUtils';
+import { findFolderByListId, findListItemById, isTaskInList } from '../utils/treeUtils';
 import { mapDefaultViewToSlug } from '../utils/taskSpaceSettingsUtils';
 
 export const ListPage: React.FC = () => {
@@ -34,8 +34,10 @@ export const ListPage: React.FC = () => {
     setActiveSpace,
     currentView,
     setCurrentView,
-    filteredTasks,
     tasks,
+    fetchTasksForList,
+    fetchMoreTasksForStatus,
+    searchQuery,
     filterPriority,
     setFilterPriority,
     filterStatus,
@@ -126,15 +128,19 @@ export const ListPage: React.FC = () => {
     }
   }, [effectiveView, currentView, setCurrentView]);
 
-  // Filter tasks specific to this list
-  const listTasks = filteredTasks.filter((t) => {
-    if (!listId) return true;
-    const matchId = t.targetCycle === listId || t.targetCycle.toLowerCase().includes(listId.toLowerCase());
-    const matchName = currentListItem && t.targetCycle.toLowerCase().includes(currentListItem.name.toLowerCase());
-    return matchId || matchName;
-  });
+  // Fetch tasks on-demand when list is opened
+  useEffect(() => {
+    if (listId) {
+      fetchTasksForList({
+        list_id: listId,
+        search: searchQuery || undefined,
+        status: filterStatus || undefined,
+        priority: filterPriority || undefined,
+      });
+    }
+  }, [listId, searchQuery, filterStatus, filterPriority, fetchTasksForList]);
 
-  const displayTasks = listTasks.length > 0 ? listTasks : filteredTasks;
+  const displayTasks = tasks;
 
   const handleSelectView = (
     nextView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs'
@@ -191,6 +197,7 @@ export const ListPage: React.FC = () => {
             onAddTaskToColumn={handleOpenAddTaskToColumn}
             onMoveTaskStatus={handleMoveTaskStatus}
             onEditTask={handleOpenEditTask}
+            onLoadMoreStatusTasks={(st) => fetchMoreTasksForStatus(st, listId)}
           />
         )}
 
@@ -202,6 +209,7 @@ export const ListPage: React.FC = () => {
             onQuickStatusChange={(taskId, status) => handleMoveTaskStatus(taskId, status)}
             onMoveTaskStatus={handleMoveTaskStatus}
             onOpenCreateTask={() => handleOpenCreateTask('In Progress')}
+            onLoadMoreStatusTasks={(st) => fetchMoreTasksForStatus(st, listId)}
           />
         )}
 

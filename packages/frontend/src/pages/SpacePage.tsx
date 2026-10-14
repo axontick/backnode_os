@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation, Link } from 'react-router-dom';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { SpaceFolder, FolderChildItem } from '../types';
-import { getAllItemsFromFolder } from '../utils/treeUtils';
+import { getAllItemsFromFolder, isTaskInList } from '../utils/treeUtils';
 import { ActionContextMenu } from '../components/ActionContextMenu';
 import { MoveListModal } from '../components/MoveListModal';
 
@@ -16,6 +16,7 @@ export const SpacePage: React.FC = () => {
     userSpaces,
     folders,
     tasks,
+    getTaskCountForList,
     handleUpdateFolder,
     handleOpenAddListToFolder,
     handleOpenAddSubFolder,
@@ -81,15 +82,13 @@ export const SpacePage: React.FC = () => {
 
   // Calculate metrics for this space
   const allChildLists: FolderChildItem[] = getAllItemsFromFolder(folder);
-  const childListIds = new Set(allChildLists.map((i) => i.id));
   const spaceTasks = tasks.filter(
     (t) =>
-      childListIds.has(t.targetCycle) ||
-      t.targetCycle.toLowerCase().includes(folder.name.toLowerCase()) ||
-      allChildLists.some((cl) => t.targetCycle.toLowerCase().includes(cl.name.toLowerCase()))
+      allChildLists.some((cl) => isTaskInList(t, cl.id, cl.name)) ||
+      (t.targetCycle && t.targetCycle.toLowerCase().includes(folder.name.toLowerCase()))
   );
 
-  const totalTasks = spaceTasks.length || allChildLists.reduce((sum, cl) => sum + cl.taskCount, 0);
+  const totalTasks = allChildLists.reduce((sum, cl) => sum + getTaskCountForList(cl.id, cl.name), 0) || spaceTasks.length;
   const doneTasks = spaceTasks.filter((t) => t.status === 'Done').length;
   const inProgressTasks = spaceTasks.filter((t) => t.status === 'In Progress').length;
   const urgentTasks = spaceTasks.filter((t) => t.priority === 'Urgent').length;
@@ -351,7 +350,7 @@ export const SpacePage: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-1.5 shrink-0" onClick={(e) => e.stopPropagation()}>
                             <span className="px-2 py-0.5 rounded-[6px] text-[10px] font-mono bg-zinc-800 text-zinc-400">
-                              {item.taskCount} tasks
+                              {getTaskCountForList(item.id, item.name)} tasks
                             </span>
                             <div className="relative">
                               <button
@@ -501,7 +500,7 @@ export const SpacePage: React.FC = () => {
                               </div>
                               <div className="flex items-center gap-1.5 shrink-0 ml-1.5">
                                 <span className="text-[10px] font-mono text-orange-400 font-semibold">
-                                  {subItem.taskCount} tasks
+                                  {getTaskCountForList(subItem.id, subItem.name)} tasks
                                 </span>
                                 <div className="relative">
                                   <button

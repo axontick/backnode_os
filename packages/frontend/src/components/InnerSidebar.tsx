@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { SpaceFolder, SpaceSubFolder, CrmPipeline, CrmPipelineSubFolder, FolderChildItem } from '../types';
+import { isTaskInList } from '../utils/treeUtils';
 import { ActionContextMenu } from './ActionContextMenu';
 import { useAuth } from '../context/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -89,7 +90,7 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
 }) => {
   const navigate = useNavigate();
   const { spaceId } = useParams<{ spaceId?: string }>();
-  const { listSettings } = useWorkspace();
+  const { listSettings, getTaskCountForList } = useWorkspace();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
   const isExpanded = !!expandedSubFolderIds[subFolder.id] || Boolean(filterText);
   const hasItems = subFolder.items && subFolder.items.length > 0;
@@ -253,7 +254,7 @@ const RecursiveSubFolderNode: React.FC<RecursiveSubFolderNodeProps> = ({
                             : 'bg-zinc-800/80 text-zinc-400'
                         }`}
                       >
-                        {subItem.taskCount}
+                        {getTaskCountForList(subItem.id, subItem.name)}
                       </span>
 
                       {!isReadOnly && (
@@ -605,7 +606,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const { effectiveRole } = useAuth();
-  const { listSettings, crmSettings, filteredDeals: deals, setItemToDelete } = useWorkspace();
+  const { listSettings, crmSettings, filteredDeals: deals, setItemToDelete, getTaskCountForList } = useWorkspace();
   const isReadOnly = SecurityPolicy.isReadOnly(effectiveRole);
   const { spaceId } = useParams<{ spaceId?: string }>();
   const spacePrefix = spaceId ? `/space/${spaceId}` : '';
@@ -979,7 +980,7 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                                               : 'bg-zinc-800/80 text-zinc-400'
                                           }`}
                                         >
-                                          {subItem.taskCount}
+                                          {getTaskCountForList(subItem.id, subItem.name)}
                                         </span>
 
                                         {!isReadOnly && (

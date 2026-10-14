@@ -42,10 +42,10 @@ export class CrmPipelineSettings {
   @Column('varchar', { name: 'default_view', default: 'Kanban Board' })
   defaultView: string;
 
-  @Column('jsonb')
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any))
   cardProps: any;
 
-  @Column('jsonb')
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any))
   governance: any;
 
   @Index()

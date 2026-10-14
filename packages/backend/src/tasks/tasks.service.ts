@@ -24,9 +24,36 @@ export class TasksService {
     return false;
   }
 
+  async getCountsByList(accountId: string): Promise<Record<string, number>> {
+    const raw = await this.taskRepo
+      .createQueryBuilder('task')
+      .select('task.list_id', 'list_id')
+      .addSelect('COUNT(task.id)', 'count')
+      .where('task.accountId = :accountId', { accountId })
+      .andWhere('task.list_id IS NOT NULL')
+      .groupBy('task.list_id')
+      .getRawMany();
+
+    const counts: Record<string, number> = {};
+    for (const row of raw) {
+      if (row.list_id) {
+        counts[row.list_id] = parseInt(row.count, 10) || 0;
+      }
+    }
+    return counts;
+  }
+
   async findAll(
     accountId: string,
-    query?: { status?: string; priority?: string; assigneeId?: string },
+    query?: {
+      list_id?: string;
+      status?: string;
+      priority?: string;
+      assigneeId?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    },
     currentUser?: CurrentUserPayload,
   ) {
     let canViewAll = true;
@@ -49,21 +76,48 @@ export class TasksService {
       }
     }
 
-    const where: any = { accountId };
-    if (query?.status) where.status = query.status;
-    if (query?.priority) where.priority = query.priority;
-    if (query?.assigneeId) where.assigneeId = query.assigneeId;
+    const qb = this.taskRepo
+      .createQueryBuilder('task')
+      .leftJoinAndSelect('task.assignee', 'assignee')
+      .where('task.accountId = :accountId', { accountId });
 
-    const tasks = await this.taskRepo.find({
-      where,
-      relations: { assignee: true },
-      order: {
-        createdAt: 'ASC',
-      },
-    });
+    if (query?.list_id) {
+      qb.andWhere('task.list_id = :list_id', { list_id: query.list_id });
+    }
+
+    if (query?.status) {
+      qb.andWhere('task.status = :status', { status: query.status });
+    }
+
+    if (query?.priority) {
+      qb.andWhere('task.priority = :priority', { priority: query.priority });
+    }
+
+    if (query?.assigneeId) {
+      qb.andWhere('task.assigneeId = :assigneeId', { assigneeId: query.assigneeId });
+    }
+
+    if (query?.search) {
+      const searchLower = `%${query.search.toLowerCase()}%`;
+      qb.andWhere(
+        '(LOWER(task.title) LIKE :search OR LOWER(task.id) LIKE :search OR LOWER(task.description) LIKE :search)',
+        { search: searchLower },
+      );
+    }
+
+    qb.orderBy('task.createdAt', 'ASC');
+
+    if (query?.limit !== undefined && !isNaN(query.limit)) {
+      qb.take(Math.max(1, query.limit));
+      if (query?.offset !== undefined && !isNaN(query.offset)) {
+        qb.skip(Math.max(0, query.offset));
+      }
+    }
+
+    let tasks = await qb.getMany();
 
     if (currentUser && !canViewAll && canViewMe) {
-      return tasks.filter((t) => this.isAssignedToUser(t, currentUser));
+      tasks = tasks.filter((t) => this.isAssignedToUser(t, currentUser));
     }
 
     return tasks;
@@ -125,7 +179,9 @@ export class TasksService {
       tags = [],
       subtasks = [],
       estimation,
-      targetCycle = 'Sprint 14 - Q4 Infra',
+      list_id,
+      listId,
+      targetCycle,
       dueDate = '',
       gitBranch = '',
       replicationHash = '0x' + Math.random().toString(16).substring(2, 8),
@@ -138,6 +194,7 @@ export class TasksService {
     } = data;
 
     const resolvedAssigneeId = assigneeId || (assignee ? assignee.id : null);
+    const resolvedListId = list_id || listId || targetCycle || 'sprint-14';
 
     const task = this.taskRepo.create({
       id,
@@ -150,7 +207,7 @@ export class TasksService {
       tags,
       subtasks,
       estimation,
-      targetCycle,
+      list_id: resolvedListId,
       dueDate,
       gitBranch,
       replicationHash,
@@ -213,7 +270,9 @@ export class TasksService {
     if (data.tags !== undefined) task.tags = data.tags;
     if (data.subtasks !== undefined) task.subtasks = data.subtasks;
     if (data.estimation !== undefined) task.estimation = data.estimation;
-    if (data.targetCycle !== undefined) task.targetCycle = data.targetCycle;
+    if (data.list_id !== undefined) task.list_id = data.list_id;
+    else if (data.listId !== undefined) task.list_id = data.listId;
+    else if (data.targetCycle !== undefined) task.list_id = data.targetCycle;
     if (data.dueDate !== undefined) task.dueDate = data.dueDate;
     if (data.gitBranch !== undefined) task.gitBranch = data.gitBranch;
     if (data.replicationHash !== undefined) task.replicationHash = data.replicationHash;

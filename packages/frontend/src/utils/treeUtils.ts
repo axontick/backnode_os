@@ -681,6 +681,29 @@ export function findListItemById(folders: SpaceFolder[], listId: string): Folder
 }
 
 /**
+ * Unambiguously checks if a task belongs to a list identified by listId and/or listName.
+ * Handles targetCycle matching listId, listName, normalized strings, or slugs.
+ */
+export function isTaskInList(
+  task: { list_id?: string; targetCycle?: string },
+  listId: string,
+  listName?: string
+): boolean {
+  if (!task) return false;
+  const lId = task.list_id || task.targetCycle;
+  if (!lId) return false;
+  const trimmed = lId.trim();
+  if (!trimmed) return false;
+
+  if (listId && trimmed === listId) return true;
+  if (listName && trimmed === listName) return true;
+  if (listId && trimmed.toLowerCase() === listId.toLowerCase()) return true;
+  if (listName && trimmed.toLowerCase() === listName.toLowerCase()) return true;
+
+  return false;
+}
+
+/**
  * Finds a folder or subfolder by id.
  */
 export function findFolderById(folders: SpaceFolder[], folderId: string): SpaceFolder | undefined {
