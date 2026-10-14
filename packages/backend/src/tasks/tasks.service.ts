@@ -258,7 +258,7 @@ export class TasksService {
     } = data;
 
     const resolvedAssigneeId = assigneeId || (assignee ? assignee.id : null);
-    const resolvedListId = list_id || listId || targetCycle || 'sprint-14';
+    const resolvedListId = list_id || listId || targetCycle || '';
     const resolvedStartDate = startDate || null;
     const resolvedCompletedAt = completedAt || (status === 'Done' ? new Date().toISOString() : null);
 

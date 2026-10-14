@@ -16,6 +16,7 @@
     "migration:create": "typeorm-ts-node-commonjs migration:create",
     "seed": "tsx src/database/seed.ts",
     "clean:tasks": "tsx src/database/clean-tasks-and-folders.ts",
+    "clean:all": "tsx src/database/clean-all-tables.ts",
     "test": "tsx test/clean-account.test.ts",
     "test:account": "tsx test/clean-account.test.ts"
   },

@@ -299,7 +299,7 @@ interface WorkspaceContextType {
   setActiveUserSpaceId: (id: string) => void;
   activeUserSpace: UserSpace;
   handleSelectUserSpace: (spaceId: string) => void;
-  handleCreateUserSpace: (space: { name: string; color?: string; icon?: string }) => void;
+  handleCreateUserSpace: (space: { name: string; color?: string; icon?: string }) => Promise<UserSpace | null>;
   handleUpdateWorkspace: (workspaceId: string, updates: { name?: string; color?: string; icon?: string }) => Promise<void>;
   handleDeleteWorkspace: (workspaceId: string) => Promise<void>;
 
@@ -404,7 +404,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     } catch (e) {
       console.warn('Failed to parse cached departments:', e);
     }
-    return initialDepartments;
+    return [];
   });
 
   const [roles, setRoles] = useState<WorkspaceRole[]>(() => {
@@ -511,7 +511,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
 
   // Navigation state
   const [currentHub, setCurrentHub] = useState<string>('overview');
-  const [activeSpace, setActiveSpace] = useState<string>('sprint-14');
+  const [activeSpace, setActiveSpace] = useState<string>('');
   const [currentView, setCurrentView] = useState<
     'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs'
   >('dashboard');
@@ -609,6 +609,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           const taskArrays = await Promise.all(
             statusList.map((st) =>
               tasksApi.getAll({
+                listId: activeListId,
                 list_id: activeListId,
                 status: st,
                 search: params?.search,
@@ -635,6 +636,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         const offset = currentTasksForStatus.length;
         const activeListId = listId || activeSpace;
         const more = await tasksApi.getAll({
+          listId: activeListId,
           list_id: activeListId,
           status,
           search: searchQuery || undefined,
@@ -842,7 +844,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     }
   };
 
-  const handleCreateUserSpace = async (space: { name: string; color?: string; icon?: string }) => {
+  const handleCreateUserSpace = async (space: { name: string; color?: string; icon?: string }): Promise<UserSpace | null> => {
     try {
       const createdSpace = await workspaceApi.createWorkspace({
         name: space.name.trim(),
@@ -854,10 +856,27 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       setActiveUserSpaceId(createdSpace.id);
       localStorage.setItem('backnode_user_spaces', JSON.stringify(updated));
       localStorage.setItem('backnode_active_user_space_id', createdSpace.id);
+
+      // Clean slate in memory for newly created workspace
+      setTasks([]);
+      setTaskCounts({});
+      setSelectedTaskId(null);
+      setDeals([]);
+      setSelectedDealId(null);
+      setPipelines([]);
+      setActivePipelineId('');
+      setDirectoryContacts([]);
+      setFolders([]);
+      setActiveSpace('');
+      setDocs([]);
+      setDocFolders([]);
+      setDepartments([]);
+
       showToast(`Workspace "${createdSpace.name}" created and activated!`);
       setTimeout(() => {
         loadData();
       }, 0);
+      return createdSpace;
     } catch (err) {
       console.warn('Backend workspace creation error, falling back locally:', err);
       const createdSpace: UserSpace = {
@@ -874,7 +893,23 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       setActiveUserSpaceId(createdSpace.id);
       localStorage.setItem('backnode_user_spaces', JSON.stringify(updated));
       localStorage.setItem('backnode_active_user_space_id', createdSpace.id);
+
+      setTasks([]);
+      setTaskCounts({});
+      setSelectedTaskId(null);
+      setDeals([]);
+      setSelectedDealId(null);
+      setPipelines([]);
+      setActivePipelineId('');
+      setDirectoryContacts([]);
+      setFolders([]);
+      setActiveSpace('');
+      setDocs([]);
+      setDocFolders([]);
+      setDepartments([]);
+
       showToast(`Workspace "${createdSpace.name}" created!`);
+      return createdSpace;
     }
   };
 
@@ -1392,13 +1427,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         localStorage.setItem('backnode_enabled_plugins', JSON.stringify(fetchedPluginsRes.enabledPlugins));
       }
 
-      if (fetchedDocFolders && Array.isArray(fetchedDocFolders)) {
-        setDocFolders(fetchedDocFolders);
-      }
-
-      if (fetchedDocs && Array.isArray(fetchedDocs)) {
-        setDocs(fetchedDocs);
-      }
+      setDocFolders(Array.isArray(fetchedDocFolders) ? fetchedDocFolders : []);
+      setDocs(Array.isArray(fetchedDocs) ? fetchedDocs : []);
 
       if (fetchedRoles && fetchedRoles.length > 0) {
         setRoles(fetchedRoles);
@@ -1421,6 +1451,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         }
       }
 
+      setTasks([]);
       setTaskCounts(fetchedTaskCounts || {});
       setDeals(fetchedDeals || []);
       const sanitizedPipelines = (fetchedPipelines || []).map((p) => ({
@@ -1436,6 +1467,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           }
           return curr;
         });
+      } else {
+        setActivePipelineId('');
       }
       if (fetchedStages && fetchedStages.length > 0) setCrmStages(fetchedStages);
       if (fetchedCrmSettings) {
@@ -1477,6 +1510,8 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
           }
           return curr;
         });
+      } else {
+        setActiveSpace('');
       }
       if (fetchedStatuses && fetchedStatuses.length > 0) setStatuses(deduplicateStatuses(fetchedStatuses));
       if (fetchedListSettings) setListSettings(fetchedListSettings);
@@ -1485,6 +1520,12 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
         try {
           localStorage.setItem(`backnode_departments_${activeUserSpaceId}`, JSON.stringify(fetchedDepartments));
           localStorage.setItem('backnode_departments', JSON.stringify(fetchedDepartments));
+        } catch { }
+      } else {
+        setDepartments([]);
+        try {
+          localStorage.removeItem(`backnode_departments_${activeUserSpaceId}`);
+          localStorage.setItem('backnode_departments', JSON.stringify([]));
         } catch { }
       }
       setSyncStatus('connected');
@@ -1742,7 +1783,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       return;
     }
 
-    const finalTargetCycle = matchedList ? matchedList.id : (effectiveListId || 'sprint-14');
+    const finalTargetCycle = matchedList ? matchedList.id : (effectiveListId || allAvailableLists[0]?.id || '');
 
     const defaultAssignee: TeamMember = members[0] || {
       id: `tm-${user?.id || 'owner'}`,
@@ -2317,7 +2358,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     const isContained = deletedItems.some((i) => i.id === activeSpace);
     if (isContained) {
       const remainingItems = remaining.flatMap((f) => getAllItemsFromFolder(f));
-      const nextSpace = remainingItems[0]?.id || 'sprint-14';
+      const nextSpace = remainingItems[0]?.id || remaining[0]?.id || '';
       setActiveSpace(nextSpace);
     }
     workspaceApi.deleteFolder(folderId).catch((err) => {
@@ -2393,7 +2434,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     // If activeSpace is this list, find next available space
     if (activeSpace === listId) {
       const allRemainingItems = newFolders.flatMap((f) => getAllItemsFromFolder(f));
-      const nextSpace = allRemainingItems[0]?.id || 'sprint-14';
+      const nextSpace = allRemainingItems[0]?.id || newFolders[0]?.id || '';
       setActiveSpace(nextSpace);
     }
 
@@ -2490,7 +2531,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       const deletedItems = getAllItemsFromSubFolder(deleted);
       if (deletedItems.some((i) => i.id === activeSpace)) {
         const remainingItems = updatedFolders.flatMap((f) => getAllItemsFromFolder(f));
-        const nextSpace = remainingItems[0]?.id || 'sprint-14';
+        const nextSpace = remainingItems[0]?.id || updatedFolders[0]?.id || '';
         setActiveSpace(nextSpace);
       }
     }

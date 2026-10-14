@@ -605,14 +605,16 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
   const [filterText, setFilterText] = useState('');
   const [listToMove, setListToMove] = useState<{ list: FolderChildItem; folderId: string; subFolderId?: string } | null>(null);
   const [pipeSubFolderToMove, setPipeSubFolderToMove] = useState<{ subFolder: CrmPipelineSubFolder; pipelineId: string } | null>(null);
-  const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
-    'fld-engineering': true,
-    'fld-client-deliverables': true,
+  const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    if (folders && folders.length > 0) {
+      folders.forEach((f) => {
+        initial[f.id] = true;
+      });
+    }
+    return initial;
   });
-  const [expandedSubFolderIds, setExpandedSubFolderIds] = useState<Record<string, boolean>>({
-    'sub-platform-core': true,
-    'sub-enterprise-poc': true,
-  });
+  const [expandedSubFolderIds, setExpandedSubFolderIds] = useState<Record<string, boolean>>({});
 
   const toggleFolder = (folderId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -800,7 +802,25 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                   <span>Folders ({filteredFolders.length})</span>
                 </div>
 
-                {filteredFolders.length === 0 ? (
+                {folders.length === 0 ? (
+                  <div className="py-8 px-3 text-center flex flex-col items-center justify-center text-zinc-500 text-xs gap-2">
+                    <span className="material-symbols-outlined text-[24px] text-zinc-600">folder_off</span>
+                    <span className="font-medium text-zinc-400">No space folders yet</span>
+                    <span className="text-[11px] text-zinc-500 leading-relaxed">
+                      Create your first folder to organize sprints, tasks, and project spaces.
+                    </span>
+                    {!isReadOnly && onOpenAddFolder && (
+                      <button
+                        type="button"
+                        onClick={onOpenAddFolder}
+                        className="mt-1 px-3 py-1.5 rounded-[6px] bg-orange-600/20 text-orange-400 hover:bg-orange-600 hover:text-white border border-orange-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">create_new_folder</span>
+                        <span>New Folder</span>
+                      </button>
+                    )}
+                  </div>
+                ) : filteredFolders.length === 0 ? (
                   <div className="py-8 px-2 text-center flex flex-col items-center justify-center text-zinc-500 text-xs">
                     <span className="material-symbols-outlined text-[20px] mb-1.5 text-zinc-600">search_off</span>
                     <span className="font-medium text-zinc-400">No spaces found</span>
@@ -1100,7 +1120,25 @@ export const InnerSidebar: React.FC<InnerSidebarProps> = ({
                   <span>Pipelines ({filteredPipelines.length})</span>
                 </div>
 
-                {filteredPipelines.length === 0 ? (
+                {pipelines.length === 0 ? (
+                  <div className="py-8 px-3 text-center flex flex-col items-center justify-center text-zinc-500 text-xs gap-2">
+                    <span className="material-symbols-outlined text-[24px] text-zinc-600">leaderboard</span>
+                    <span className="font-medium text-zinc-400">No pipelines yet</span>
+                    <span className="text-[11px] text-zinc-500 leading-relaxed">
+                      Create your first pipeline to track deals and customer relationships.
+                    </span>
+                    {!isReadOnly && onOpenAddPipeline && (
+                      <button
+                        type="button"
+                        onClick={onOpenAddPipeline}
+                        className="mt-1 px-3 py-1.5 rounded-[6px] bg-orange-600/20 text-orange-400 hover:bg-orange-600 hover:text-white border border-orange-500/30 text-xs font-semibold flex items-center gap-1.5 transition-all cursor-pointer"
+                      >
+                        <span className="material-symbols-outlined text-[14px]">add</span>
+                        <span>New Pipeline</span>
+                      </button>
+                    )}
+                  </div>
+                ) : filteredPipelines.length === 0 ? (
                   <div className="py-8 px-2 text-center flex flex-col items-center justify-center text-zinc-500 text-xs">
                     <span className="material-symbols-outlined text-[20px] mb-1.5 text-zinc-600">search_off</span>
                     <span className="font-medium text-zinc-400">No pipelines found</span>

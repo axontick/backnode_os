@@ -34,7 +34,7 @@ export const ListView: React.FC<ListViewProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { statuses, listSettings, members, handleUpdateTask } = useWorkspace();
+  const { statuses, listSettings, members, handleUpdateTask, taskGroupBy: groupBy, visibleColumns } = useWorkspace();
   const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
@@ -603,7 +603,7 @@ export const ListView: React.FC<ListViewProps> = ({
       onScroll={(e) => {
         const el = e.currentTarget;
         if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
-          statusGroups.forEach((sg) => onLoadMoreStatusTasks?.(sg.status));
+          statuses.forEach((st) => onLoadMoreStatusTasks?.(st.name as TaskStatus));
         }
       }}
       className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar"

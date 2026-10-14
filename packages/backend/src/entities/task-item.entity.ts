@@ -47,17 +47,17 @@ export class TaskItem {
   estimation?: any;
 
   @Column('varchar', { name: 'list_id', nullable: true })
-  list_id?: string;
+  listId?: string;
 
   @Column('varchar', { name: 'target_cycle', nullable: true })
   targetCycle?: string;
 
-  get listId(): string | undefined {
-    return this.list_id;
+  get list_id(): string | undefined {
+    return this.listId;
   }
 
-  set listId(val: string | undefined) {
-    this.list_id = val;
+  set list_id(val: string | undefined) {
+    this.listId = val;
   }
 
   @Column('varchar', { name: 'due_date', nullable: true })

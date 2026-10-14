@@ -19,6 +19,7 @@ export const OverviewPage: React.FC = () => {
     handleOpenCreateTask,
     handleUpdateTask,
     folders,
+    pipelines,
     activePipeline,
   } = useWorkspace();
 
@@ -27,16 +28,24 @@ export const OverviewPage: React.FC = () => {
 
   const handleSelectTask = (task: any) => {
     setSelectedTaskId(task.id);
-    const targetListId = task.targetCycle || 'sprint-14';
+    const targetListId = task.targetCycle || task.listId;
     const parentFolder = findFolderByListId(folders, targetListId);
-    const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
-    navigate(`${spacePrefix}/spaces/${parentId}/lists/${targetListId}/board`);
+    const parentId = parentFolder?.id || folders[0]?.id;
+    if (parentId && targetListId) {
+      navigate(`${spacePrefix}/spaces/${parentId}/lists/${targetListId}/board`);
+    } else {
+      navigate(`${spacePrefix}/spaces`);
+    }
   };
 
   const handleSelectDeal = (deal: any) => {
     setSelectedDealId(deal.id);
-    const pipeId = deal.pipelineId || activePipeline?.id || 'pipe-enterprise';
-    navigate(`${spacePrefix}/crm/pipelines/${pipeId}/board`);
+    const pipeId = deal.pipelineId || activePipeline?.id || pipelines[0]?.id;
+    if (pipeId) {
+      navigate(`${spacePrefix}/crm/pipelines/${pipeId}/board`);
+    } else {
+      navigate(`${spacePrefix}/crm`);
+    }
   };
 
   if (overviewMode === 'cockpit') {
@@ -67,8 +76,12 @@ export const OverviewPage: React.FC = () => {
         onSelectDeal={handleSelectDeal}
         onNavigateToBoard={() => {
           const firstFolder = folders[0];
-          const firstList = firstFolder?.items[0]?.id || 'sprint-14';
-          navigate(`${spacePrefix}/spaces/${firstFolder?.id || 'fld-engineering'}/lists/${firstList}/board`);
+          const firstList = firstFolder?.items[0]?.id;
+          if (firstFolder?.id && firstList) {
+            navigate(`${spacePrefix}/spaces/${firstFolder.id}/lists/${firstList}/board`);
+          } else {
+            navigate(`${spacePrefix}/spaces`);
+          }
         }}
         onNavigateToDeals={() => {
           setSelectedDealId(null);

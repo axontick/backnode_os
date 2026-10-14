@@ -9,7 +9,7 @@
     "dev": "concurrently -n \"web,api\" -c \"cyan,magenta\" \"yarn workspace @backnode/frontend dev\" \"yarn workspace @backnode/backend start:dev\"",
     "dev:frontend": "yarn workspace @backnode/frontend dev",
     "dev:backend": "yarn workspace @backnode/backend start:dev",
-    "build": "yarn workspace @backnode/frontend build && yarn workspace @backnode/backend build",
+    "build": "yarn workspace @backnode/shared build && yarn workspace @backnode/frontend build && yarn workspace @backnode/backend build",
     "build:frontend": "yarn workspace @backnode/frontend build",
     "build:backend": "yarn workspace @backnode/backend build",
     "lint": "yarn workspace @backnode/frontend lint",
@@ -17,7 +17,8 @@
     "db:migrate": "yarn workspace @backnode/backend migration:run",
     "db:migrate:generate": "yarn workspace @backnode/backend migration:generate",
     "db:migrate:revert": "yarn workspace @backnode/backend migration:revert",
-    "db:seed": "yarn workspace @backnode/backend seed"
+    "db:seed": "yarn workspace @backnode/backend seed",
+    "db:clean": "yarn workspace @backnode/backend clean:all"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"

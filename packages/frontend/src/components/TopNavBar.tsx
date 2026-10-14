@@ -829,9 +829,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({
                       onClick={() => {
                         setIsSearchFocused(false);
                         setActiveDocId(doc.id);
-                        const targetFolder = folders[0]?.id || 'fld-engineering';
-                        const targetList = folders[0]?.items[0]?.id || 'sprint-14';
-                        navigate(`${spacePrefix}/spaces/${targetFolder}/lists/${targetList}/docs`);
+                        const targetFolder = folders[0]?.id;
+                        const targetList = folders[0]?.items[0]?.id;
+                        if (targetFolder && targetList) {
+                          navigate(`${spacePrefix}/spaces/${targetFolder}/lists/${targetList}/docs`);
+                        } else {
+                          navigate(`${spacePrefix}/spaces`);
+                        }
                       }}
                       className="px-2.5 py-1.5 rounded-[6px] hover:bg-zinc-800/60 text-left flex items-center justify-between group transition-colors cursor-pointer"
                     >

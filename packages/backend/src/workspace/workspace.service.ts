@@ -147,41 +147,6 @@ export class WorkspaceService {
       });
     }
 
-    await this.listSettingsRepo.save({
-      id: `list-settings-${saved.id.slice(0, 8)}`,
-      listId: `sprint-${saved.id.slice(0, 8)}`,
-      name: `${saved.name} Sprint Cycle`,
-      description: `Active engineering deliverables and sprint backlog for ${saved.name}`,
-      color: initialListSettings.color,
-      icon: initialListSettings.icon,
-      defaultView: initialListSettings.defaultView,
-      defaultPriority: initialListSettings.defaultPriority,
-      estimationUnit: initialListSettings.estimationUnit,
-      distributedWriteLogging: initialListSettings.distributedWriteLogging,
-      autoArchiveDays: initialListSettings.autoArchiveDays,
-      strictForwardProgress: initialListSettings.strictForwardProgress,
-      autoArchiveDone: initialListSettings.autoArchiveDone,
-      accountId: saved.id,
-    });
-
-    await this.folderRepo.save({
-      id: `fld-sprint-${saved.id.slice(0, 8)}`,
-      name: `${saved.name} Core`,
-      icon: 'folder',
-      color: '#ea580c',
-      description: 'Active sprint tasks and deliverables',
-      items: [
-        {
-          id: `sprint-${saved.id.slice(0, 8)}`,
-          name: 'Sprint 01',
-          taskCount: 0,
-          status: 'Active',
-          active: true,
-        },
-      ],
-      accountId: saved.id,
-    });
-
     return {
       id: saved.id,
       name: saved.name,
@@ -604,7 +569,7 @@ export class WorkspaceService {
       const taskEntities = payload.tasks.map((t) =>
         this.taskRepo.create({
           ...t,
-          list_id: t.list_id || t.listId || t.targetCycle || 'sprint-14',
+          list_id: t.list_id || t.listId || t.targetCycle || '',
           accountId,
           assigneeId: t.assigneeId || (t.assignee ? t.assignee.id : null),
         })
@@ -668,11 +633,11 @@ export class WorkspaceService {
   async getListSettings(accountId: string) {
     let settings = await this.listSettingsRepo.findOne({ where: { accountId } });
     if (!settings) {
-      settings = this.listSettingsRepo.create({
+      return {
         id: `list-settings-${accountId.slice(0, 8)}`,
-        listId: `sprint-${accountId.slice(0, 8)}`,
-        name: 'Sprint 14 - Q4 Infra & Engine Triage',
-        description: 'High-throughput transactional queue for Backnode core engine, replication runtime, and 0.5px hairline visual tokens.',
+        listId: '',
+        name: 'General Tasks',
+        description: '',
         color: '#ea580c',
         icon: 'layers',
         defaultView: 'Board',
@@ -683,8 +648,7 @@ export class WorkspaceService {
         strictForwardProgress: false,
         autoArchiveDone: false,
         accountId,
-      });
-      await this.listSettingsRepo.save(settings);
+      };
     } else if (settings.color === '#9900c2') {
       settings.color = '#ea580c';
       await this.listSettingsRepo.save(settings);
@@ -717,87 +681,6 @@ export class WorkspaceService {
       where: { accountId },
       order: { order: 'ASC', createdAt: 'ASC' },
     });
-
-    if (depts.length === 0) {
-      const defaults = [
-        {
-          id: `dept-eng-${accountId.slice(0, 6)}`,
-          name: 'Engineering',
-          code: 'ENG',
-          color: '#ea580c',
-          icon: 'terminal',
-          description: 'Core software architecture, platform infrastructure, and distributed replication engines.',
-          isDefault: true,
-          order: 1,
-          accountId,
-        },
-        {
-          id: `dept-prod-${accountId.slice(0, 6)}`,
-          name: 'Product',
-          code: 'PROD',
-          color: '#0284c7',
-          icon: 'inventory_2',
-          description: 'Product lifecycle, roadmapping, functional specifications, and sprint triage.',
-          isDefault: false,
-          order: 2,
-          accountId,
-        },
-        {
-          id: `dept-design-${accountId.slice(0, 6)}`,
-          name: 'Design',
-          code: 'DSGN',
-          color: '#ec4899',
-          icon: 'palette',
-          description: 'User experience ergonomics, visual tokens, interface layout, and motion systems.',
-          isDefault: false,
-          order: 3,
-          accountId,
-        },
-        {
-          id: `dept-ops-${accountId.slice(0, 6)}`,
-          name: 'Operations',
-          code: 'OPS',
-          color: '#10b981',
-          icon: 'settings_suggest',
-          description: 'Cloud reliability, automated deployment telemetry, compliance, and workspace workflows.',
-          isDefault: false,
-          order: 4,
-          accountId,
-        },
-        {
-          id: `dept-sales-${accountId.slice(0, 6)}`,
-          name: 'Sales',
-          code: 'SALES',
-          color: '#f59e0b',
-          icon: 'trending_up',
-          description: 'Enterprise revenue pipelines, deal negotiations, commercial contracts, and CRM accounts.',
-          isDefault: false,
-          order: 5,
-          accountId,
-        },
-        {
-          id: `dept-exec-${accountId.slice(0, 6)}`,
-          name: 'Executive',
-          code: 'EXEC',
-          color: '#6366f1',
-          icon: 'corporate_fare',
-          description: 'Strategic governance, corporate jurisdiction, board oversight, and executive management.',
-          isDefault: false,
-          order: 6,
-          accountId,
-        },
-      ];
-
-      for (const d of defaults) {
-        const item = this.departmentRepo.create(d);
-        await this.departmentRepo.save(item);
-      }
-
-      depts = await this.departmentRepo.find({
-        where: { accountId },
-        order: { order: 'ASC', createdAt: 'ASC' },
-      });
-    }
 
     return depts;
   }

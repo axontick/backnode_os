@@ -258,7 +258,7 @@ export const initialTasks: TaskItem[] = [
       hours: 12,
       points: 5
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 28, 2024',
     startDate: 'Oct 14, 2024',
     gitBranch: 'feat/eng-094-grid-tokens',
@@ -287,7 +287,7 @@ export const initialTasks: TaskItem[] = [
       hours: 16,
       points: 8
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 30, 2024',
     startDate: 'Oct 15, 2024',
     gitBranch: 'feat/bk-1092-async-serialization',
@@ -314,7 +314,7 @@ export const initialTasks: TaskItem[] = [
       hours: 8,
       points: 3
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 12, 2024',
     startDate: 'Oct 05, 2024',
     completedAt: '2024-10-12T14:30:00.000Z',
@@ -342,7 +342,7 @@ export const initialTasks: TaskItem[] = [
       hours: 4,
       points: 2
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 15, 2024',
     gitBranch: 'feat/eng-112-nav-tree',
     replicationHash: '0x712e...88a',
@@ -363,7 +363,7 @@ export const initialTasks: TaskItem[] = [
       hours: 6,
       points: 2
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 19, 2024',
     gitBranch: 'docs/zero-auth-guide',
     replicationHash: '0x99a1...10b',
@@ -384,7 +384,7 @@ export const initialTasks: TaskItem[] = [
       hours: 14,
       points: 5
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 24, 2024',
     gitBranch: 'feat/wasm-arm64',
     replicationHash: '0x43ff...231',
@@ -411,7 +411,7 @@ export const initialTasks: TaskItem[] = [
       hours: 8,
       points: 3
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Tomorrow',
     gitBranch: 'feat/mcp-schema',
     replicationHash: '0x12b5...001',
@@ -432,7 +432,7 @@ export const initialTasks: TaskItem[] = [
       hours: 5,
       points: 2
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 10, 2024',
     startDate: 'Oct 02, 2024',
     completedAt: '2024-10-10T11:00:00.000Z',
@@ -461,7 +461,7 @@ export const initialTasks: TaskItem[] = [
       hours: 10,
       points: 5
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 08, 2024',
     gitBranch: 'perf/query-latency',
     replicationHash: '0x9923...bb1',
@@ -482,7 +482,7 @@ export const initialTasks: TaskItem[] = [
       hours: 7,
       points: 3
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 09, 2024',
     gitBranch: 'feat/crdt-gc',
     replicationHash: '0x6612...41a',
@@ -506,7 +506,7 @@ export const initialTasks: TaskItem[] = [
       hours: 20,
       points: 8
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 01, 2024',
     gitBranch: 'main',
     replicationHash: '0x77d2...33a',
@@ -529,7 +529,7 @@ export const initialTasks: TaskItem[] = [
       hours: 12,
       points: 5
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 04, 2024',
     gitBranch: 'main',
     replicationHash: '0x66c7...44d',
@@ -572,7 +572,7 @@ export const initialTasks: TaskItem[] = [
       hours: 8,
       points: 3
     },
-    list_id: 'Sprint 14 - Q4 Infra',
+    listId: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 02, 2024',
     gitBranch: 'main',
     replicationHash: '0x99a2...77f',

@@ -31,9 +31,14 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
 
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>({
-    'fld-engineering': true,
-    'fld-client-deliverables': true,
+  const [expandedFolderIds, setExpandedFolderIds] = useState<Record<string, boolean>>(() => {
+    const initial: Record<string, boolean> = {};
+    if (folders && folders.length > 0) {
+      folders.forEach((f) => {
+        initial[f.id] = true;
+      });
+    }
+    return initial;
   });
 
   const toggleFolderExpand = (folderId: string) => {
@@ -247,7 +252,28 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
 
           {/* Folder Bento Cards Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {folders.map((folder) => {
+            {folders.length === 0 ? (
+              <div className="col-span-full bg-[#121214] border border-[#27272a] rounded-[6px] p-10 text-center flex flex-col items-center justify-center gap-3 shadow-sm">
+                <div className="w-12 h-12 rounded-[6px] bg-orange-950/40 border border-orange-500/30 text-orange-400 flex items-center justify-center">
+                  <span className="material-symbols-outlined text-[24px]">folder_open</span>
+                </div>
+                <div className="flex flex-col gap-1 max-w-md">
+                  <h3 className="text-sm font-semibold text-zinc-100 font-headline">No Workspace Folders</h3>
+                  <p className="text-xs text-zinc-400 leading-relaxed">
+                    This workspace is completely clean with no folders or task spaces. Create your first folder to start organizing engineering sprints, client projects, or operational cycles.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={onOpenAddFolder}
+                  className="mt-2 h-8 px-4 rounded-[6px] bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                >
+                  <span className="material-symbols-outlined text-[16px]">create_new_folder</span>
+                  <span>Create First Folder</span>
+                </button>
+              </div>
+            ) : (
+              folders.map((folder) => {
               const hasItems = folder.items && folder.items.length > 0;
               const isExpanded = !!expandedFolderIds[folder.id];
               const folderTaskTotal = folder.items?.reduce((sum, item) => sum + (item.taskCount || 0), 0) || 0;
@@ -430,7 +456,8 @@ export const TaskSpaceDashboardView: React.FC<TaskSpaceDashboardViewProps> = ({
                   </div>
                 </div>
               );
-            })}
+            })
+          )}
           </div>
         </div>
       </div>

@@ -34,7 +34,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { statuses, members, listSettings, handleUpdateTask } = useWorkspace();
+  const { statuses, members, listSettings, handleUpdateTask, taskGroupBy: groupBy, visibleColumns } = useWorkspace();
 
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null);

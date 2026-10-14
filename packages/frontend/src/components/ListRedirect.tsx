@@ -24,7 +24,11 @@ export const ListRedirect: React.FC = () => {
 
   // Lookup the parent space folder for this list
   const parentFolder = findFolderByListId(folders, listId);
-  const folderId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
+  const folderId = parentFolder?.id || folders[0]?.id;
+
+  if (!folderId) {
+    return <Navigate to={`/space/${spaceId}/spaces`} replace />;
+  }
 
   if (statusView) {
     return <Navigate to={`/space/${spaceId}/spaces/${folderId}/lists/${listId}/table/${statusView}`} replace />;

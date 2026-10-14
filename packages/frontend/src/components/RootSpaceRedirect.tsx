@@ -28,7 +28,10 @@ export const RootSpaceRedirect: React.FC = () => {
     const listId = parts[0];
     const view = parts[1] || 'board';
     const folder = findFolderByListId(folders, listId);
-    const folderId = folder?.id || folders[0]?.id || 'fld-engineering';
+    const folderId = folder?.id || folders[0]?.id;
+    if (!folderId) {
+      return <Navigate to={`/space/${spaceId}/spaces`} replace />;
+    }
     return <Navigate to={`/space/${spaceId}/spaces/${folderId}/lists/${listId}/${view}`} replace />;
   }
 

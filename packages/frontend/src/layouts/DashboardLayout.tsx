@@ -289,9 +289,13 @@ export const DashboardLayout: React.FC = () => {
           onSelectSpace={(spaceId) => {
             handleSelectSpace(spaceId);
             const parentFolder = findFolderByListId(folders, spaceId);
-            const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
+            const parentId = parentFolder?.id || folders[0]?.id;
             const defaultSlug = mapDefaultViewToSlug(listSettings?.defaultView);
-            navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceId}/${defaultSlug}`);
+            if (parentId && spaceId) {
+              navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceId}/${defaultSlug}`);
+            } else {
+              navigate(`${spacePrefix}/spaces`);
+            }
           }}
           onSelectDashboard={() => {
             navigate(`${spacePrefix}/spaces`);
@@ -400,8 +404,12 @@ export const DashboardLayout: React.FC = () => {
           onSelectTask={(task) => {
             setSelectedTaskId(task.id);
             const parentFolder = findFolderByListId(folders, task.targetCycle);
-            const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
-            navigate(`${spacePrefix}/spaces/${parentId}/lists/${task.targetCycle || 'sprint-14'}/board`);
+            const parentId = parentFolder?.id || folders[0]?.id;
+            if (parentId && task.targetCycle) {
+              navigate(`${spacePrefix}/spaces/${parentId}/lists/${task.targetCycle}/board`);
+            } else {
+              navigate(`${spacePrefix}/spaces`);
+            }
           }}
           onSelectDeal={(deal) => {
             setSelectedDealId(deal.id);
@@ -568,7 +576,12 @@ export const DashboardLayout: React.FC = () => {
       <NewWorkspaceModal
         isOpen={isNewWorkspaceModalOpen}
         onClose={() => setIsNewWorkspaceModalOpen(false)}
-        onCreateWorkspace={handleCreateUserSpace}
+        onCreateWorkspace={async (spaceData) => {
+          const created = await handleCreateUserSpace(spaceData);
+          if (created?.id) {
+            navigate(`/space/${created.id}/dashboard`);
+          }
+        }}
       />
 
       {/* Delete Confirmation Modal Dialog */}
@@ -617,13 +630,21 @@ export const DashboardLayout: React.FC = () => {
         onSelectTask={(t) => {
           setSelectedTaskId(t.id);
           const parentFolder = findFolderByListId(folders, t.targetCycle);
-          const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
-          navigate(`${spacePrefix}/spaces/${parentId}/lists/${t.targetCycle || 'sprint-14'}/board`);
+          const parentId = parentFolder?.id || folders[0]?.id;
+          if (parentId && t.targetCycle) {
+            navigate(`${spacePrefix}/spaces/${parentId}/lists/${t.targetCycle}/board`);
+          } else {
+            navigate(`${spacePrefix}/spaces`);
+          }
         }}
         onSelectView={(v) => {
           const parentFolder = findFolderByListId(folders, activeSpace);
-          const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
-          navigate(`${spacePrefix}/spaces/${parentId}/lists/${activeSpace}/${v}`);
+          const parentId = parentFolder?.id || folders[0]?.id;
+          if (parentId && activeSpace) {
+            navigate(`${spacePrefix}/spaces/${parentId}/lists/${activeSpace}/${v}`);
+          } else {
+            navigate(`${spacePrefix}/spaces`);
+          }
         }}
         onSelectHub={(h) => {
           if (h === 'crm') navigate(`${spacePrefix}/crm`);

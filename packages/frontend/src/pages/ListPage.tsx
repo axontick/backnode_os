@@ -69,6 +69,7 @@ export const ListPage: React.FC = () => {
     selectedTask,
     handleUpdateTask,
     members,
+    getTaskCountForList,
   } = useWorkspace();
   const { user } = useAuth();
 
@@ -77,7 +78,7 @@ export const ListPage: React.FC = () => {
 
   // Resolve true parent folder for this list
   const parentFolder = listId ? findFolderByListId(folders, listId) : undefined;
-  const effectiveFolderId = folderId || (spaceId && folders.some((f) => f.id === spaceId) ? spaceId : parentFolder?.id || folders[0]?.id || 'fld-engineering');
+  const effectiveFolderId = folderId || (spaceId && folders.some((f) => f.id === spaceId) ? spaceId : parentFolder?.id || folders[0]?.id || '');
 
   const currentListItem = listId ? findListItemById(folders, listId) : undefined;
 
@@ -136,7 +137,7 @@ export const ListPage: React.FC = () => {
   useEffect(() => {
     if (listId) {
       fetchTasksForList({
-        list_id: listId,
+        listId: listId,
         search: searchQuery || undefined,
         status: filterStatus || undefined,
         priority: filterPriority || undefined,
@@ -144,26 +145,55 @@ export const ListPage: React.FC = () => {
     }
   }, [listId, searchQuery, filterStatus, filterPriority, fetchTasksForList]);
 
-  const displayTasks = tasks;
+  const allListTasks = tasks;
+
+  const displayTasks = useMemo(() => {
+    return allListTasks.filter((t) => {
+      const matchesAssignee = filterAssignee === null || (t.assignee?.name && t.assignee.name === filterAssignee);
+
+      let matchesQuick = true;
+      if (quickFilter === 'my-tasks') {
+        matchesQuick = Boolean(user && t.assignee?.name?.toLowerCase() === user.name?.toLowerCase());
+      } else if (quickFilter === 'due-soon') {
+        matchesQuick = Boolean(t.dueDate && (t.dueDate.includes('Oct') || t.dueDate.includes('Today')));
+      } else if (quickFilter === 'urgent') {
+        matchesQuick = t.priority === 'Urgent';
+      }
+
+      return matchesAssignee && matchesQuick;
+    });
+  }, [allListTasks, filterAssignee, quickFilter, user]);
+
+  const totalTasksCount = listId
+    ? getTaskCountForList(listId, currentListItem?.name) || allListTasks.length
+    : allListTasks.length;
 
   const handleSelectView = (
     nextView: 'dashboard' | 'board' | 'list' | 'settings' | 'table' | 'timeline' | 'calendar' | 'docs'
   ) => {
     if (nextView === 'dashboard') {
       // Space dashboard overview
-      navigate(`${spacePrefix}/spaces/${effectiveFolderId}`);
-    } else if (subFolderId) {
-      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/folders/${subFolderId}/lists/${listId || 'sprint-14'}/${nextView}`);
+      if (effectiveFolderId) {
+        navigate(`${spacePrefix}/spaces/${effectiveFolderId}`);
+      } else {
+        navigate(`${spacePrefix}/spaces`);
+      }
+    } else if (subFolderId && effectiveFolderId && listId) {
+      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/folders/${subFolderId}/lists/${listId}/${nextView}`);
+    } else if (effectiveFolderId && listId) {
+      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/lists/${listId}/${nextView}`);
     } else {
-      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/lists/${listId || 'sprint-14'}/${nextView}`);
+      navigate(`${spacePrefix}/spaces`);
     }
   };
 
   const handleSelectStatusRoute = (statusSlug: string) => {
-    if (subFolderId) {
-      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/folders/${subFolderId}/lists/${listId || 'sprint-14'}/table/${statusSlug}`);
+    if (subFolderId && effectiveFolderId && listId) {
+      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/folders/${subFolderId}/lists/${listId}/table/${statusSlug}`);
+    } else if (effectiveFolderId && listId) {
+      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/lists/${listId}/table/${statusSlug}`);
     } else {
-      navigate(`${spacePrefix}/spaces/${effectiveFolderId}/lists/${listId || 'sprint-14'}/table/${statusSlug}`);
+      navigate(`${spacePrefix}/spaces`);
     }
   };
 
@@ -174,7 +204,7 @@ export const ListPage: React.FC = () => {
         currentView={view || 'board'}
         onSelectView={handleSelectView}
         taskCount={displayTasks.length}
-        totalCount={allListTasks.length}
+        totalCount={totalTasksCount}
         filterPriority={filterPriority}
         onSelectFilterPriority={setFilterPriority}
         filterStatus={filterStatus}
@@ -271,7 +301,11 @@ export const ListPage: React.FC = () => {
             }
             onDeleteTaskSpace={(deletedListId) => {
               handleDeleteTaskSpace(deletedListId);
-              navigate(`${spacePrefix}/spaces/${effectiveFolderId}`);
+              if (effectiveFolderId) {
+                navigate(`${spacePrefix}/spaces/${effectiveFolderId}`);
+              } else {
+                navigate(`${spacePrefix}/spaces`);
+              }
             }}
             onRenameStatus={handleRenameStatus}
           />

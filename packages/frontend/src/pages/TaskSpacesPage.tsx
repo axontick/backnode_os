@@ -34,9 +34,11 @@ export const TaskSpacesPage: React.FC = () => {
 
     // It's a list: find the parent folder
     const parentFolder = findFolderByListId(folders, spaceOrListId);
-    const parentId = parentFolder?.id || folders[0]?.id || 'fld-engineering';
-    const defaultSlug = mapDefaultViewToSlug(listSettings?.defaultView);
-    navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceOrListId}/${defaultSlug}`);
+    const parentId = parentFolder?.id || folders[0]?.id;
+    if (parentId) {
+      const defaultSlug = mapDefaultViewToSlug(listSettings?.defaultView);
+      navigate(`${spacePrefix}/spaces/${parentId}/lists/${spaceOrListId}/${defaultSlug}`);
+    }
   };
 
   return (
@@ -50,8 +52,10 @@ export const TaskSpacesPage: React.FC = () => {
         onOpenCreateTask={() => handleOpenAddTaskToColumn('In Progress')}
         onNavigateToView={(view) => {
           const firstFolder = folders[0];
-          const firstList = firstFolder?.items[0]?.id || 'sprint-14';
-          navigate(`${spacePrefix}/spaces/${firstFolder?.id || 'fld-engineering'}/lists/${firstList}/${view}`);
+          const firstList = firstFolder?.items[0]?.id;
+          if (firstFolder?.id && firstList) {
+            navigate(`${spacePrefix}/spaces/${firstFolder.id}/lists/${firstList}/${view}`);
+          }
         }}
         onEditFolder={(folder) => {
           setFolderToEdit(folder);

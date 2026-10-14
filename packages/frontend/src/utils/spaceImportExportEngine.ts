@@ -253,7 +253,7 @@ const FIELD_ALIASES: Record<Exclude<InternalFieldTarget, 'customField' | 'ignore
     'identifier',
     'number',
   ],
-  list_id: [
+  listId: [
     'list_id',
     'list id',
     'list',

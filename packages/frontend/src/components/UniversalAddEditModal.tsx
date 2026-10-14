@@ -98,7 +98,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
     if (taskToEdit) {
       setModalType('task');
       setTitle(taskToEdit.title || '');
-      setSpace((taskToEdit as any).list_id || taskToEdit.targetCycle || activeSpace || '');
+      setSpace(taskToEdit.listId || taskToEdit.targetCycle || activeSpace || '');
       setTaskStatus(taskToEdit.status || defaultStatus);
       setPriority((taskToEdit.priority as PriorityLevel) || 'Medium');
       setAssigneeId(taskToEdit.assignee?.id || members[0]?.id || '');
@@ -205,7 +205,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           status: taskStatus,
           priority: priority,
           assignee: assignedMember,
-          list_id: space,
+          listId: space,
           targetCycle: space,
           startDate: startDate ? formatDateDisplay(parseTaskDueDate(startDate)) : undefined,
           dueDate: dueDate ? formatDateDisplay(parseTaskDueDate(dueDate)) : '',

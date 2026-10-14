@@ -685,12 +685,12 @@ export function findListItemById(folders: SpaceFolder[], listId: string): Folder
  * Handles targetCycle matching listId, listName, normalized strings, or slugs.
  */
 export function isTaskInList(
-  task: { list_id?: string; targetCycle?: string },
+  task: { listId?: string; list_id?: string; targetCycle?: string },
   listId: string,
   listName?: string
 ): boolean {
   if (!task) return false;
-  const lId = task.list_id || task.targetCycle;
+  const lId = task.listId || task.list_id || task.targetCycle;
   if (!lId) return false;
   const trimmed = lId.trim();
   if (!trimmed) return false;
