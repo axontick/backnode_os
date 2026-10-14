@@ -29,7 +29,18 @@ export class DealsService {
     return false;
   }
 
-  async findAll(accountId: string, pipelineId?: string, currentUser?: CurrentUserPayload) {
+  async findAll(
+    accountId: string,
+    query?: {
+      pipelineId?: string;
+      subFolderId?: string;
+      stage?: string;
+      search?: string;
+      limit?: number;
+      offset?: number;
+    },
+    currentUser?: CurrentUserPayload,
+  ) {
     let canViewAll = true;
     let canViewMe = false;
 
@@ -50,15 +61,40 @@ export class DealsService {
       }
     }
 
-    const where: any = { accountId };
-    if (pipelineId) where.pipelineId = pipelineId;
+    const qb = this.dealRepo
+      .createQueryBuilder('deal')
+      .where('deal.accountId = :accountId', { accountId });
 
-    const deals = await this.dealRepo.find({
-      where,
-      order: {
-        createdAt: 'ASC',
-      },
-    });
+    if (query?.pipelineId) {
+      qb.andWhere('deal.pipelineId = :pipelineId', { pipelineId: query.pipelineId });
+    }
+
+    if (query?.subFolderId) {
+      qb.andWhere('deal.subFolderId = :subFolderId', { subFolderId: query.subFolderId });
+    }
+
+    if (query?.stage) {
+      qb.andWhere('deal.stage = :stage', { stage: query.stage });
+    }
+
+    if (query?.search) {
+      const searchLower = `%${query.search.toLowerCase()}%`;
+      qb.andWhere(
+        '(LOWER(deal.title) LIKE :search OR LOWER(deal.company) LIKE :search OR LOWER(deal.owner) LIKE :search)',
+        { search: searchLower },
+      );
+    }
+
+    qb.orderBy('deal.createdAt', 'ASC');
+
+    if (query?.limit !== undefined && !isNaN(query.limit)) {
+      qb.take(Math.max(1, query.limit));
+      if (query?.offset !== undefined && !isNaN(query.offset)) {
+        qb.skip(Math.max(0, query.offset));
+      }
+    }
+
+    let deals = await qb.getMany();
 
     if (currentUser && !canViewAll && canViewMe) {
       return deals.filter((d) => this.isDealOwner(d, currentUser));

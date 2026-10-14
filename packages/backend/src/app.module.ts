@@ -17,15 +17,27 @@ const dbUrl = (process.env.DATABASE_URL || 'postgresql://postgres:asimwattoo123@
   '',
 );
 
+const useSqlite = process.env.DB_TYPE === 'sqlite' || (!process.env.DATABASE_URL && process.env.NODE_ENV !== 'production');
+
 @Module({
   imports: [
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      url: dbUrl,
-      entities: Object.values(entities),
-      synchronize: true, // Schema auto-sync in development
-      autoLoadEntities: true,
-    }),
+    TypeOrmModule.forRoot(
+      useSqlite
+        ? {
+            type: 'better-sqlite3',
+            database: 'backnode.sqlite',
+            entities: Object.values(entities),
+            synchronize: true,
+            autoLoadEntities: true,
+          }
+        : {
+            type: 'postgres',
+            url: dbUrl,
+            entities: Object.values(entities),
+            synchronize: true,
+            autoLoadEntities: true,
+          },
+    ),
     AuthModule,
     TasksModule,
     DealsModule,

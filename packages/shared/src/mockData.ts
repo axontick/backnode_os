@@ -264,7 +264,7 @@ Maintain zero box-shadow design language. Separation driven by structural planar
       hours: 12,
       points: 5
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 28, 2024',
     gitBranch: 'feat/eng-094-grid-tokens',
     replicationHash: '0x3f12...99c',
@@ -331,7 +331,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 16,
       points: 8
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 30, 2024',
     gitBranch: 'feat/bk-1092-async-serialization',
     replicationHash: '0x3f12...99c',
@@ -379,7 +379,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 8,
       points: 3
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 12, 2024',
     gitBranch: 'feat/eng-108-indexeddb-sync',
     replicationHash: '0x8a92...e41',
@@ -412,7 +412,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 4,
       points: 2
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 15, 2024',
     gitBranch: 'feat/eng-112-nav-tree',
     replicationHash: '0x712e...88a',
@@ -433,7 +433,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 6,
       points: 2
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 19, 2024',
     gitBranch: 'docs/zero-auth-guide',
     replicationHash: '0x99a1...10b',
@@ -454,7 +454,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 14,
       points: 5
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 24, 2024',
     gitBranch: 'feat/wasm-arm64',
     replicationHash: '0x43ff...231',
@@ -479,7 +479,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 8,
       points: 3
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Tomorrow',
     gitBranch: 'feat/mcp-schema',
     replicationHash: '0x12b5...001',
@@ -500,7 +500,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 5,
       points: 2
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 10, 2024',
     gitBranch: 'feat/session-restore',
     replicationHash: '0x5541...982',
@@ -525,7 +525,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 10,
       points: 5
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 08, 2024',
     gitBranch: 'perf/query-latency',
     replicationHash: '0x9923...bb1',
@@ -546,7 +546,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 7,
       points: 3
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 09, 2024',
     gitBranch: 'feat/crdt-gc',
     replicationHash: '0x6612...41a',
@@ -570,7 +570,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 20,
       points: 8
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 01, 2024',
     gitBranch: 'main',
     replicationHash: '0xd981...11a',
@@ -591,7 +591,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 12,
       points: 5
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 04, 2024',
     gitBranch: 'main',
     replicationHash: '0x10b9...432',
@@ -612,7 +612,7 @@ Need atomic write-ahead log multiplexer with vector clock timestamps to guarante
       hours: 8,
       points: 3
     },
-    targetCycle: 'Sprint 14 - Q4 Infra',
+    list_id: 'Sprint 14 - Q4 Infra',
     dueDate: 'Oct 02, 2024',
     gitBranch: 'main',
     replicationHash: '0x221a...887',

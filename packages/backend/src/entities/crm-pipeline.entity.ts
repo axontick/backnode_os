@@ -32,7 +32,7 @@ export class CrmPipeline {
   @Column('float', { name: 'total_value', default: 0 })
   totalValue: number;
 
-  @Column('jsonb', { default: [] })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { default: [] })
   subFolders?: any;
 
   @Index()

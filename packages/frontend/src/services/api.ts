@@ -75,7 +75,20 @@ export const authApi = {
 };
 
 export const tasksApi = {
-  getAll: async (params?: { status?: string; priority?: string; assigneeId?: string }): Promise<TaskItem[]> => {
+  getCounts: async (): Promise<Record<string, number>> => {
+    const res = await apiClient.get<Record<string, number>>('/tasks/counts');
+    return res.data;
+  },
+  getAll: async (params?: {
+    list_id?: string;
+    listId?: string;
+    status?: string;
+    priority?: string;
+    assigneeId?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<TaskItem[]> => {
     const res = await apiClient.get<TaskItem[]>('/tasks', { params });
     return res.data;
   },
@@ -98,9 +111,17 @@ export const tasksApi = {
 };
 
 export const dealsApi = {
-  getAll: async (pipelineId?: string): Promise<CrmDeal[]> => {
+  getAll: async (params?: {
+    pipelineId?: string;
+    subFolderId?: string;
+    stage?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  } | string): Promise<CrmDeal[]> => {
+    const queryParams = typeof params === 'string' ? { pipelineId: params } : params;
     const res = await apiClient.get<CrmDeal[]>('/deals', {
-      params: pipelineId ? { pipelineId } : undefined,
+      params: queryParams,
     });
     return res.data;
   },

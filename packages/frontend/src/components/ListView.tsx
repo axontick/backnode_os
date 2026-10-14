@@ -20,6 +20,7 @@ interface ListViewProps {
     position?: 'before' | 'after'
   ) => void;
   onOpenCreateTask?: () => void;
+  onLoadMoreStatusTasks?: (status: TaskStatus) => void;
 }
 
 export const ListView: React.FC<ListViewProps> = ({
@@ -29,6 +30,7 @@ export const ListView: React.FC<ListViewProps> = ({
   onQuickStatusChange,
   onMoveTaskStatus,
   onOpenCreateTask,
+  onLoadMoreStatusTasks,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
@@ -435,7 +437,15 @@ export const ListView: React.FC<ListViewProps> = ({
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar">
+    <div
+      onScroll={(e) => {
+        const el = e.currentTarget;
+        if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+          statusGroups.forEach((sg) => onLoadMoreStatusTasks?.(sg.status));
+        }
+      }}
+      className="flex-1 flex flex-col h-full bg-[#09090b] overflow-y-auto p-6 text-xs custom-scrollbar"
+    >
       {/* Header Summary Stats Strip */}
       <div className="flex items-center justify-between bg-[#121214] border border-[#27272a] rounded-[6px] px-4 py-2.5 shadow-sm mb-5 shrink-0 flex-wrap gap-2">
         <div className="flex items-center gap-3 text-xs flex-wrap">

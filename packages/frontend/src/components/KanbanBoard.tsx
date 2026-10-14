@@ -20,6 +20,7 @@ interface KanbanBoardProps {
     position?: 'before' | 'after'
   ) => void;
   onEditTask?: (task: TaskItem) => void;
+  onLoadMoreStatusTasks?: (status: TaskStatus) => void;
 }
 
 export const KanbanBoard: React.FC<KanbanBoardProps> = ({
@@ -29,6 +30,7 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onAddTaskToColumn,
   onMoveTaskStatus,
   onEditTask,
+  onLoadMoreStatusTasks,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
@@ -184,7 +186,15 @@ export const KanbanBoard: React.FC<KanbanBoardProps> = ({
             </div>
 
             {/* Cards Stack */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1">
+            <div
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                if (el.scrollTop + el.clientHeight >= el.scrollHeight - 20) {
+                  onLoadMoreStatusTasks?.(col.status);
+                }
+              }}
+              className="flex-1 overflow-y-auto custom-scrollbar space-y-2.5 pr-1"
+            >
               {colTasks.length === 0 ? (
                 <div className={`p-6 text-center text-xs text-zinc-500 font-mono border border-dashed rounded-[6px] transition-colors ${
                   isColumnOver ? 'border-orange-500/50 bg-orange-950/30 text-orange-400' : 'border-[#27272a]'

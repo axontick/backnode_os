@@ -72,7 +72,7 @@ export class DirectoryContact {
   @Column('varchar', { name: 'replication_hash' })
   replicationHash: string;
 
-  @Column('jsonb', { name: 'custom_links', default: {} })
+  @Column(process.env.DB_TYPE === 'sqlite' ? 'simple-json' : ('jsonb' as any), { name: 'custom_links', default: {} })
   customLinks: any;
 
   @Index()
