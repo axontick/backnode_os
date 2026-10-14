@@ -61,6 +61,9 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
     initials: 'UN',
     avatarBg: '#27272a',
     avatarColor: '#a1a1aa',
+    department: 'Engineering',
+    activeTasks: 0,
+    capacityStatus: 'Available',
   };
   const assignee = task.assignee || defaultAssignee;
 
@@ -637,7 +640,11 @@ export const TaskInspector: React.FC<TaskInspectorProps> = ({
             <div className="flex flex-col gap-1">
               <span className="font-mono text-[10px] text-zinc-400 font-medium">DATE COMPLETED</span>
               <span className="font-mono text-xs text-zinc-300">
-                {task.completedAt ? new Date(task.completedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : (task.status === 'Done' ? 'Completed' : 'Not completed')}
+                {task.completedAt
+                  ? new Date(task.completedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+                  : task.status === 'Done'
+                  ? (task.updatedAt ? new Date(task.updatedAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }))
+                  : 'Not completed'}
               </span>
             </div>
           </div>

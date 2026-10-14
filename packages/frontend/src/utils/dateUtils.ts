@@ -65,6 +65,21 @@ export function parseTaskDueDate(dueDateStr?: string, fallbackDate: Date = new D
   return new Date(fallbackDate);
 }
 
+export function toInputDateValue(dateStr?: string): string {
+  if (!dateStr || !dateStr.trim()) return '';
+  const trimmed = dateStr.trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+  try {
+    const parsed = parseTaskDueDate(trimmed);
+    if (!isNaN(parsed.getTime())) {
+      return formatDateIso(parsed);
+    }
+  } catch {}
+  return '';
+}
+
 export function addDays(date: Date, days: number): Date {
   const result = new Date(date);
   result.setDate(result.getDate() + days);

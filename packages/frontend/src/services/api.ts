@@ -100,6 +100,10 @@ export const tasksApi = {
     const res = await apiClient.post<TaskItem>('/tasks', task);
     return res.data;
   },
+  createMany: async (tasks: Partial<TaskItem>[]): Promise<TaskItem[]> => {
+    const res = await apiClient.post<TaskItem[]>('/tasks/bulk', tasks);
+    return res.data;
+  },
   update: async (id: string, task: Partial<TaskItem>): Promise<TaskItem> => {
     const res = await apiClient.patch<TaskItem>(`/tasks/${id}`, task);
     return res.data;

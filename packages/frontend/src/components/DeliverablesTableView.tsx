@@ -23,6 +23,8 @@ export interface DeliverablesTableViewProps {
   ) => void;
   activeStatusRoute?: string;
   onSelectStatusRoute?: (statusSlug: string) => void;
+  groupBy?: 'status' | 'priority' | 'assignee';
+  visibleColumns?: Record<string, boolean>;
 }
 
 export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
@@ -36,10 +38,12 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
   onMoveTaskStatus,
   activeStatusRoute,
   onSelectStatusRoute,
+  groupBy,
+  visibleColumns,
 }) => {
   const { effectiveRole } = useAuth();
   const isReadOnly = effectiveRole === 'VIEWER';
-  const { listSettings, statuses, handleUpdateTask } = useWorkspace();
+  const { listSettings, statuses, members, handleUpdateTask } = useWorkspace();
   const isPoints = listSettings?.estimationUnit === 'Story Points';
 
   const [selectedIds, setSelectedIds] = useState<string[]>(['ENG-101', 'ENG-103']);
@@ -87,15 +91,143 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
     ? statusSlugToStatus[activeStatusRoute.toLowerCase()] || 'All'
     : localStatusFilter;
 
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({});
+
+  const activeCustomFields = useMemo(() => {
+    if (!visibleColumns) return [];
+    return Object.keys(visibleColumns)
+      .filter((k) => k.startsWith('custom:') && visibleColumns[k])
+      .map((k) => k.replace(/^custom:/, ''));
+  }, [visibleColumns]);
+
+  const showCol = (colKey: string) => {
+    if (!visibleColumns) return true;
+    return visibleColumns[colKey] ?? true;
+  };
+
+  const toggleGroup = (key: string) => {
+    setCollapsedGroups((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
   const filteredTasks = tasks.filter((t) => {
     const matchesQuery =
       filterQuery === '' ||
       t.title.toLowerCase().includes(filterQuery.toLowerCase()) ||
       t.id.toLowerCase().includes(filterQuery.toLowerCase()) ||
-      t.assignee.name.toLowerCase().includes(filterQuery.toLowerCase());
+      (t.assignee?.name || '').toLowerCase().includes(filterQuery.toLowerCase());
     const matchesStatus = effectiveStatus === 'All' || t.status === effectiveStatus;
     return matchesQuery && matchesStatus;
   });
+
+  const tableGroups = useMemo(() => {
+    if (!groupBy || groupBy === 'status') {
+      const baseStatuses = (statuses && statuses.length > 0)
+        ? statuses
+        : [
+            { id: 'st-backlog', name: 'Backlog', order: 0, color: '#71717a' },
+            { id: 'st-in-progress', name: 'In Progress', order: 1, color: '#ea580c' },
+            { id: 'st-in-review', name: 'In Review', order: 2, color: '#f59e0b' },
+            { id: 'st-blocked', name: 'Blocked', order: 3, color: '#ef4444' },
+            { id: 'st-done', name: 'Done', order: 4, color: '#10b981' },
+          ];
+
+      const seen = new Set<string>();
+      const grps = [...baseStatuses]
+        .filter((st) => {
+          const key = (st.name || '').trim().toLowerCase();
+          if (!key || seen.has(key)) return false;
+          seen.add(key);
+          return true;
+        })
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+        .map((st) => ({
+          key: st.name,
+          label: st.name.toUpperCase(),
+          color: st.color || '#ea580c',
+          status: st.name as TaskStatus,
+          filter: (t: TaskItem) => (t.status || '').trim().toLowerCase() === st.name.trim().toLowerCase(),
+        }));
+
+      // Dynamically catch any statuses on tasks not in baseStatuses
+      const known = new Set(grps.map((g) => g.key.toLowerCase()));
+      for (const t of tasks) {
+        const s = (t.status || 'Backlog').trim();
+        if (!known.has(s.toLowerCase())) {
+          known.add(s.toLowerCase());
+          grps.push({
+            key: s,
+            label: s.toUpperCase(),
+            color: '#a1a1aa',
+            status: s as TaskStatus,
+            filter: (task: TaskItem) => (task.status || '').trim().toLowerCase() === s.toLowerCase(),
+          });
+        }
+      }
+      return grps;
+    }
+
+    if (groupBy === 'priority') {
+      const priorityList: { id: TaskItem['priority']; label: string; color: string }[] = [
+        { id: 'Urgent', label: 'URGENT', color: '#ef4444' },
+        { id: 'High', label: 'HIGH', color: '#f97316' },
+        { id: 'Medium', label: 'MEDIUM', color: '#3b82f6' },
+        { id: 'Low', label: 'LOW', color: '#71717a' },
+      ];
+      return priorityList.map((p) => ({
+        key: p.id,
+        label: p.label,
+        color: p.color,
+        filter: (t: TaskItem) => {
+          const normPriority = (t.priority as string) === 'Normal' ? 'Medium' : t.priority;
+          return normPriority === p.id;
+        },
+      }));
+    }
+
+    if (groupBy === 'assignee') {
+      const memberGrps = members.map((m) => ({
+        key: m.id,
+        label: m.name.toUpperCase(),
+        color: m.avatarBg || '#ea580c',
+        filter: (t: TaskItem) =>
+          t.assigneeId === m.id ||
+          t.assignee?.id === m.id ||
+          (t.assignee?.name && t.assignee.name.toLowerCase() === m.name.toLowerCase()),
+      }));
+
+      memberGrps.push({
+        key: 'unassigned',
+        label: 'UNASSIGNED',
+        color: '#71717a',
+        filter: (t: TaskItem) =>
+          !members.some(
+            (m) =>
+              t.assigneeId === m.id ||
+              t.assignee?.id === m.id ||
+              (t.assignee?.name && t.assignee.name.toLowerCase() === m.name.toLowerCase())
+          ),
+      });
+      return memberGrps;
+    }
+
+    return [];
+  }, [groupBy, statuses, tasks, members]);
+
+  const totalCols =
+    1 + // checkbox
+    (showCol('id') ? 1 : 0) +
+    1 + // task name
+    (showCol('status') ? 1 : 0) +
+    (showCol('priority') ? 1 : 0) +
+    (showCol('dueDate') ? 1 : 0) +
+    (showCol('assignee') ? 1 : 0) +
+    (showCol('deal') ? 1 : 0) +
+    (showCol('estimation') ? 1 : 0) +
+    activeCustomFields.length +
+    1; // action
 
   const handleToggleSelectId = (id: string) => {
     if (selectedIds.includes(id)) {
@@ -264,17 +396,26 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
           <button
             type="button"
             onClick={() => {
-              const headers = ['ID', 'Title', 'Status', 'Priority', 'Assignee', 'Due Date'];
-              const rows = filteredTasks.map((t) => [
-                `"${t.id}"`,
-                `"${t.title.replace(/"/g, '""')}"`,
-                `"${t.status}"`,
-                `"${t.priority}"`,
-                `"${t.assignee.name}"`,
-                `"${t.dueDate || ''}"`,
-              ]);
+              const baseHeaders = ['ID', 'Title', 'Status', 'Priority', 'Assignee', 'Due Date'];
+              const customHeaders = activeCustomFields;
+              const allHeaders = [...baseHeaders, ...customHeaders];
+              const rows = filteredTasks.map((t) => {
+                const rowVals = [
+                  `"${t.id}"`,
+                  `"${t.title.replace(/"/g, '""')}"`,
+                  `"${t.status}"`,
+                  `"${t.priority}"`,
+                  `"${(t.assignee?.name || 'Unassigned').replace(/"/g, '""')}"`,
+                  `"${t.dueDate || ''}"`,
+                ];
+                for (const cf of customHeaders) {
+                  const val = t.customLinks?.[cf] ?? (t as any).customFields?.[cf] ?? '';
+                  rowVals.push(`"${String(val).replace(/"/g, '""')}"`);
+                }
+                return rowVals;
+              });
               const csvContent =
-                'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+                'data:text/csv;charset=utf-8,' + [allHeaders.join(','), ...rows.map((r) => r.join(','))].join('\n');
               const encodedUri = encodeURI(csvContent);
               const link = document.createElement('a');
               link.setAttribute('href', encodedUri);
@@ -392,242 +533,330 @@ export const DeliverablesTableView: React.FC<DeliverablesTableViewProps> = ({
                       className="rounded-[6px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
                     />
                   </th>
-                  <th className="w-24 px-3 py-2.5 font-medium">
-                    <div className="flex items-center gap-1 hover:text-zinc-200 cursor-pointer">
-                      <span>ID</span>
-                      <span className="material-symbols-outlined text-[13px]">unfold_more</span>
-                    </div>
-                  </th>
+                  {showCol('id') && (
+                    <th className="w-24 px-3 py-2.5 font-medium">
+                      <div className="flex items-center gap-1 hover:text-zinc-200 cursor-pointer">
+                        <span>ID</span>
+                        <span className="material-symbols-outlined text-[13px]">unfold_more</span>
+                      </div>
+                    </th>
+                  )}
                   <th className="min-w-[340px] px-3 py-2.5 font-medium">Task Name &amp; Deliverable</th>
-                  <th className="w-32 px-3 py-2.5 font-medium">Status</th>
-                  <th className="w-28 px-3 py-2.5 font-medium">Priority</th>
-                  <th className="w-28 px-3 py-2.5 font-medium">Due Date</th>
-                  <th className="w-36 px-3 py-2.5 font-medium">Assignee</th>
-                  <th className="w-48 px-3 py-2.5 font-medium">Linked CRM Deal</th>
-                  <th className="w-24 px-3 py-2.5 text-right font-medium pr-4">
-                    {isPoints ? 'Est. Points' : 'Est. Hours'}
-                  </th>
+                  {showCol('status') && <th className="w-32 px-3 py-2.5 font-medium">Status</th>}
+                  {showCol('priority') && <th className="w-28 px-3 py-2.5 font-medium">Priority</th>}
+                  {showCol('dueDate') && <th className="w-28 px-3 py-2.5 font-medium">Due Date</th>}
+                  {showCol('assignee') && <th className="w-36 px-3 py-2.5 font-medium">Assignee</th>}
+                  {showCol('deal') && <th className="w-48 px-3 py-2.5 font-medium">Linked CRM Deal</th>}
+                  {showCol('estimation') && (
+                    <th className="w-24 px-3 py-2.5 text-right font-medium pr-4">
+                      {isPoints ? 'Est. Points' : 'Est. Hours'}
+                    </th>
+                  )}
+                  {activeCustomFields.map((cf) => (
+                    <th key={cf} className="w-36 px-3 py-2.5 font-medium truncate" title={cf}>
+                      <span className="font-mono text-[10px] text-zinc-400 uppercase tracking-wider">{cf}</span>
+                    </th>
+                  ))}
                   <th className="w-16 px-3 py-2.5 text-center font-medium">Action</th>
                 </tr>
               </thead>
 
               {/* High-Density Rows */}
               <tbody className="divide-y divide-[#27272a] text-xs">
-                {filteredTasks.map((t) => {
-                  const isChecked = selectedIds.includes(t.id);
-                  const isRowActive = selectedTaskId === t.id;
-                  const isDraggingThis = draggingTaskId === t.id;
-                  const isDragOverThis = dragOverTaskId === t.id && !isDraggingThis;
+                {(() => {
+                  const renderTaskRow = (t: TaskItem) => {
+                    const isChecked = selectedIds.includes(t.id);
+                    const isRowActive = selectedTaskId === t.id;
+                    const isDraggingThis = draggingTaskId === t.id;
+                    const isDragOverThis = dragOverTaskId === t.id && !isDraggingThis;
 
-                  return (
-                    <tr
-                      key={t.id}
-                      draggable={!isReadOnly}
-                      onDragStart={(e) => {
-                        if (isReadOnly) return;
-                        e.dataTransfer.setData('text/plain', t.id);
-                        e.dataTransfer.effectAllowed = 'move';
-                        setDraggingTaskId(t.id);
-                      }}
-                      onDragEnd={() => {
-                        setDraggingTaskId(null);
-                        setDragOverTaskId(null);
-                        setDragOverTabSlug(null);
-                      }}
-                      onDragOver={(e) => {
-                        if (isReadOnly || !draggingTaskId || draggingTaskId === t.id) return;
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = 'move';
-                        setDragOverTaskId(t.id);
-                      }}
-                      onDragLeave={(e) => {
-                        if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-                        if (dragOverTaskId === t.id) setDragOverTaskId(null);
-                      }}
-                      onDrop={(e) => {
-                        if (isReadOnly) return;
-                        e.preventDefault();
-                        const sourceTaskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
-                        if (sourceTaskId && sourceTaskId !== t.id) {
-                          onMoveTaskStatus?.(sourceTaskId, t.status, undefined, t.id, 'before');
-                        }
-                        setDraggingTaskId(null);
-                        setDragOverTaskId(null);
-                        setDragOverTabSlug(null);
-                      }}
-                      onClick={() => {
-                        const sel = window.getSelection();
-                        if (sel && sel.toString().trim().length > 0) return;
-                        onSelectTask(t);
-                      }}
-                      className={`hover:bg-zinc-800/40 transition-colors group cursor-pointer ${
-                        isDraggingThis
-                          ? 'opacity-40 bg-orange-950/20'
-                          : isRowActive
-                          ? 'bg-orange-950/30 border-l-2 border-orange-500'
-                          : ''
-                      } ${
-                        isDragOverThis ? 'border-t-2 border-t-orange-500 bg-orange-950/20' : ''
-                      } ${density === 'comfortable' ? 'py-3' : 'py-2'}`}
-                    >
-                      {/* Checkbox */}
-                      <td
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleToggleSelectId(t.id);
+                    return (
+                      <tr
+                        key={t.id}
+                        draggable={!isReadOnly}
+                        onDragStart={(e) => {
+                          if (isReadOnly) return;
+                          e.dataTransfer.setData('text/plain', t.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                          setDraggingTaskId(t.id);
                         }}
-                        className="px-3 py-2 text-center"
+                        onDragEnd={() => {
+                          setDraggingTaskId(null);
+                          setDragOverTaskId(null);
+                          setDragOverTabSlug(null);
+                        }}
+                        onDragOver={(e) => {
+                          if (isReadOnly || !draggingTaskId || draggingTaskId === t.id) return;
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                          setDragOverTaskId(t.id);
+                        }}
+                        onDragLeave={(e) => {
+                          if (e.currentTarget.contains(e.relatedTarget as Node)) return;
+                          if (dragOverTaskId === t.id) setDragOverTaskId(null);
+                        }}
+                        onDrop={(e) => {
+                          if (isReadOnly) return;
+                          e.preventDefault();
+                          const sourceTaskId = e.dataTransfer.getData('text/plain') || draggingTaskId;
+                          if (sourceTaskId && sourceTaskId !== t.id) {
+                            onMoveTaskStatus?.(sourceTaskId, t.status, undefined, t.id, 'before');
+                          }
+                          setDraggingTaskId(null);
+                          setDragOverTaskId(null);
+                          setDragOverTabSlug(null);
+                        }}
+                        onClick={() => {
+                          const sel = window.getSelection();
+                          if (sel && sel.toString().trim().length > 0) return;
+                          onSelectTask(t);
+                        }}
+                        className={`hover:bg-zinc-800/40 transition-colors group cursor-pointer ${
+                          isDraggingThis
+                            ? 'opacity-40 bg-orange-950/20'
+                            : isRowActive
+                            ? 'bg-orange-950/30 border-l-2 border-orange-500'
+                            : ''
+                        } ${
+                          isDragOverThis ? 'border-t-2 border-t-orange-500 bg-orange-950/20' : ''
+                        } ${density === 'comfortable' ? 'py-3' : 'py-2'}`}
                       >
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => handleToggleSelectId(t.id)}
-                          className="rounded-[6px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
-                        />
-                      </td>
-
-                      {/* ID with drag indicator */}
-                      <td className="px-3 py-2 font-mono text-[11px] text-zinc-400 font-semibold">
-                        <div className="flex items-center gap-1.5">
-                          {!isReadOnly && (
-                            <span
-                              className="material-symbols-outlined text-[14px] text-zinc-600 group-hover:text-zinc-400 cursor-grab active:cursor-grabbing select-none"
-                              title="Drag deliverable"
-                            >
-                              drag_indicator
-                            </span>
-                          )}
-                          <span
-                            onMouseDown={(e) => e.stopPropagation()}
-                            className="cursor-text select-text"
-                          >
-                            {t.id}
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* Task Name */}
-                      <td className="px-3 py-2 font-medium text-zinc-200">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                              t.status === 'In Progress'
-                                ? 'bg-orange-500'
-                                : t.status === 'Done'
-                                ? 'bg-emerald-500'
-                                : t.status === 'In Review'
-                                ? 'bg-amber-500'
-                                : 'bg-zinc-500'
-                            }`}
-                          />
-                          <span
-                            onMouseDown={(e) => e.stopPropagation()}
-                            className={`truncate group-hover:text-orange-400 transition-colors cursor-text select-text ${t.status === 'Done' ? 'line-through text-zinc-500' : ''}`}
-                          >
-                            {t.title}
-                          </span>
-                          {t.isRecurring && (
-                            <span
-                              className="inline-flex items-center gap-1 font-mono text-[9px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1.5 py-0.5 rounded-[4px] shrink-0"
-                              title={formatRecurrenceLabel(t.recurrenceRule)}
-                            >
-                              <Repeat className="w-2.5 h-2.5 text-orange-400" />
-                              <span>Recurring</span>
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-3 py-2">
-                        {getStatusBadge(t.status)}
-                      </td>
-
-                      {/* Priority */}
-                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                        <PriorityDropdown
-                          priority={t.priority}
-                          disabled={isReadOnly}
-                          onChange={(newPriority) => {
-                            handleUpdateTask({ ...t, priority: newPriority });
+                        {/* Checkbox */}
+                        <td
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleSelectId(t.id);
                           }}
-                        />
-                      </td>
+                          className="px-3 py-2 text-center"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSelectId(t.id)}
+                            className="rounded-[6px] border-[#27272a] bg-[#18181b] text-orange-600 focus:ring-0 w-3.5 h-3.5 cursor-pointer"
+                          />
+                        </td>
 
-                      {/* Due Date */}
-                      <td className="px-3 py-2 font-mono text-[11px] text-orange-400 font-semibold">
-                        {t.dueDate || 'Today'}
-                      </td>
-
-                      {/* Assignee */}
-                      <td className="px-3 py-2">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold text-zinc-200 bg-zinc-800 border border-zinc-700"
-                            style={{
-                              backgroundColor: t.assignee.avatarBg && t.assignee.avatarBg !== '#9900c2' ? t.assignee.avatarBg : '#27272a',
-                            }}
-                          >
-                            {t.assignee.initials}
-                          </div>
-                          <span className="truncate text-zinc-300">{t.assignee.name}</span>
-                        </div>
-                      </td>
-
-                      {/* Linked CRM Deal */}
-                      <td className="px-3 py-2">
-                        {t.linkedCrmDeal ? (
-                          <span className="inline-block font-mono text-zinc-300 bg-[#18181b] border border-[#27272a] px-2 py-0.5 rounded-[6px] text-[10px] truncate max-w-[160px]">
-                            {t.linkedCrmDeal.name}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-600 font-mono text-[11px]">—</span>
+                        {/* ID with drag indicator */}
+                        {showCol('id') && (
+                          <td className="px-3 py-2 font-mono text-[11px] text-zinc-400 font-semibold">
+                            <div className="flex items-center gap-1.5">
+                              {!isReadOnly && (
+                                <span
+                                  className="material-symbols-outlined text-[14px] text-zinc-600 group-hover:text-zinc-400 cursor-grab active:cursor-grabbing select-none"
+                                  title="Drag deliverable"
+                                >
+                                  drag_indicator
+                                </span>
+                              )}
+                              <span
+                                onMouseDown={(e) => e.stopPropagation()}
+                                className="cursor-text select-text"
+                              >
+                                {t.id}
+                              </span>
+                            </div>
+                          </td>
                         )}
-                      </td>
 
-                      {/* Est. Effort */}
-                      <td className="px-3 py-2 text-right font-mono text-zinc-400 pr-4">
-                        {isPoints
-                          ? `${t.estimation?.points ?? 0} pts`
-                          : `${t.estimation?.hours ?? 0}h`}
-                      </td>
+                        {/* Task Name */}
+                        <td className="px-3 py-2 font-medium text-zinc-200">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                                t.status === 'In Progress'
+                                  ? 'bg-orange-500'
+                                  : t.status === 'Done'
+                                  ? 'bg-emerald-500'
+                                  : t.status === 'In Review'
+                                  ? 'bg-amber-500'
+                                  : 'bg-zinc-500'
+                              }`}
+                            />
+                            <span
+                              onMouseDown={(e) => e.stopPropagation()}
+                              className={`truncate group-hover:text-orange-400 transition-colors cursor-text select-text ${t.status === 'Done' ? 'line-through text-zinc-500' : ''}`}
+                            >
+                              {t.title}
+                            </span>
+                            {t.isRecurring && (
+                              <span
+                                className="inline-flex items-center gap-1 font-mono text-[9px] text-orange-400 bg-orange-950/40 border border-orange-500/20 px-1.5 py-0.5 rounded-[4px] shrink-0"
+                                title={formatRecurrenceLabel(t.recurrenceRule)}
+                              >
+                                <Repeat className="w-2.5 h-2.5 text-orange-400" />
+                                <span>Recurring</span>
+                              </span>
+                            )}
+                          </div>
+                        </td>
 
-                      {/* Action */}
-                      <td className="px-3 py-2 text-center">
-                        {!isReadOnly ? (
-                          <div className="flex items-center justify-center gap-1">
-                            {onEditTask && (
+                        {/* Status */}
+                        {showCol('status') && (
+                          <td className="px-3 py-2">
+                            {getStatusBadge(t.status)}
+                          </td>
+                        )}
+
+                        {/* Priority */}
+                        {showCol('priority') && (
+                          <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                            <PriorityDropdown
+                              priority={t.priority}
+                              disabled={isReadOnly}
+                              onChange={(newPriority) => {
+                                handleUpdateTask({ ...t, priority: newPriority });
+                              }}
+                            />
+                          </td>
+                        )}
+
+                        {/* Due Date */}
+                        {showCol('dueDate') && (
+                          <td className="px-3 py-2 font-mono text-[11px] text-orange-400 font-semibold">
+                            {t.dueDate || 'Today'}
+                          </td>
+                        )}
+
+                        {/* Assignee */}
+                        {showCol('assignee') && (
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-2">
+                              <div
+                                className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-bold text-zinc-200 bg-zinc-800 border border-zinc-700"
+                                style={{
+                                  backgroundColor: t.assignee?.avatarBg && t.assignee.avatarBg !== '#9900c2' ? t.assignee.avatarBg : '#27272a',
+                                }}
+                              >
+                                {t.assignee?.initials || '??'}
+                              </div>
+                              <span className="truncate text-zinc-300">{t.assignee?.name || 'Unassigned'}</span>
+                            </div>
+                          </td>
+                        )}
+
+                        {/* Linked CRM Deal */}
+                        {showCol('deal') && (
+                          <td className="px-3 py-2">
+                            {t.linkedCrmDeal ? (
+                              <span className="inline-block font-mono text-zinc-300 bg-[#18181b] border border-[#27272a] px-2 py-0.5 rounded-[6px] text-[10px] truncate max-w-[160px]">
+                                {t.linkedCrmDeal.name}
+                              </span>
+                            ) : (
+                              <span className="text-zinc-600 font-mono text-[11px]">—</span>
+                            )}
+                          </td>
+                        )}
+
+                        {/* Est. Effort */}
+                        {showCol('estimation') && (
+                          <td className="px-3 py-2 text-right font-mono text-zinc-400 pr-4">
+                            {isPoints
+                              ? `${t.estimation?.points ?? 0} pts`
+                              : `${t.estimation?.hours ?? 0}h`}
+                          </td>
+                        )}
+
+                        {/* Custom Fields */}
+                        {activeCustomFields.map((cf) => {
+                          const val = t.customLinks?.[cf] ?? (t as any).customFields?.[cf];
+                          return (
+                            <td key={cf} className="px-3 py-2 font-mono text-[11px] text-zinc-300 truncate max-w-[140px]">
+                              {val !== undefined && val !== null && val !== '' ? (
+                                <span className="bg-zinc-800/80 border border-zinc-700/60 px-1.5 py-0.5 rounded-[4px] text-zinc-200 font-mono text-[10px]">
+                                  {String(val)}
+                                </span>
+                              ) : (
+                                <span className="text-zinc-600 font-mono text-[11px]">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+
+                        {/* Action */}
+                        <td className="px-3 py-2 text-center">
+                          {!isReadOnly ? (
+                            <div className="flex items-center justify-center gap-1">
+                              {onEditTask && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onEditTask(t);
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 rounded-[6px] transition-all cursor-pointer"
+                                  title="Edit deliverable"
+                                >
+                                  <span className="material-symbols-outlined text-[15px]">edit</span>
+                                </button>
+                              )}
                               <button
                                 type="button"
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  onEditTask(t);
+                                  onRequestDeleteTask(t);
                                 }}
-                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-orange-950/40 text-zinc-400 hover:text-orange-400 rounded-[6px] transition-all cursor-pointer"
-                                title="Edit deliverable"
+                                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-950/40 text-zinc-400 hover:text-red-400 rounded-[6px] transition-all cursor-pointer"
+                                title="Delete deliverable"
                               >
-                                <span className="material-symbols-outlined text-[15px]">edit</span>
+                                <span className="material-symbols-outlined text-[15px]">delete</span>
                               </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onRequestDeleteTask(t);
-                              }}
-                              className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-950/40 text-zinc-400 hover:text-red-400 rounded-[6px] transition-all cursor-pointer"
-                              title="Delete deliverable"
-                            >
-                              <span className="material-symbols-outlined text-[15px]">delete</span>
-                            </button>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] font-mono text-zinc-600">view-only</span>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] font-mono text-zinc-600">view-only</span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  };
+
+                  if (tableGroups && tableGroups.length > 0) {
+                    return tableGroups.map((grp) => {
+                      const groupTasks = filteredTasks.filter(grp.filter);
+                      const isCollapsed = collapsedGroups[grp.key] ?? false;
+
+                      return (
+                        <React.Fragment key={grp.key}>
+                          <tr
+                            onClick={() => toggleGroup(grp.key)}
+                            className="bg-[#161618] hover:bg-[#1c1c20] border-y border-[#27272a] select-none cursor-pointer transition-colors"
+                          >
+                            <td colSpan={totalCols} className="px-3 py-2">
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className="material-symbols-outlined text-[16px] text-zinc-400 transition-transform duration-150"
+                                  style={{ transform: isCollapsed ? 'rotate(-90deg)' : 'none' }}
+                                >
+                                  expand_more
+                                </span>
+                                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: grp.color }} />
+                                <span className="font-mono text-[11px] font-semibold text-zinc-200 tracking-wider">
+                                  {grp.label}
+                                </span>
+                                <span className="font-mono text-[10px] text-zinc-400 bg-zinc-800/80 px-2 py-0.5 rounded-[4px]">
+                                  {groupTasks.length} {groupTasks.length === 1 ? 'record' : 'records'}
+                                </span>
+                              </div>
+                            </td>
+                          </tr>
+                          {!isCollapsed && (
+                            groupTasks.length > 0 ? (
+                              groupTasks.map((t) => renderTaskRow(t))
+                            ) : (
+                              <tr className="hover:bg-transparent">
+                                <td colSpan={totalCols} className="px-8 py-2 text-zinc-500 font-mono text-[11px] italic">
+                                  No deliverables in this group
+                                </td>
+                              </tr>
+                            )
+                          )}
+                        </React.Fragment>
+                      );
+                    });
+                  }
+
+                  return filteredTasks.map((t) => renderTaskRow(t));
+                })()}
               </tbody>
             </table>
           </div>

@@ -1,6 +1,7 @@
 import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { SpaceFolder, FolderChildItem } from '../types';
+import { tasksApi } from '../services/api';
 import { getAllItemsFromFolder } from '../utils/treeUtils';
 import {
   parseCsv,
@@ -441,8 +442,14 @@ export const SpaceImportModal: React.FC<SpaceImportModalProps> = ({
       setExecutionProgress(90);
       setExecutionLog((prev) => [
         ...prev,
-        `Committing ${tasksToImport.length} tasks into workspace registry...`,
+        `Committing ${tasksToImport.length} tasks into database and workspace registry...`,
       ]);
+
+      try {
+        await tasksApi.createMany(tasksToImport);
+      } catch (err) {
+        console.error('Failed to batch persist imported tasks to DB:', err);
+      }
 
       setTasks((prev) => [...prev, ...tasksToImport]);
 

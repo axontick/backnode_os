@@ -38,6 +38,14 @@ export class TasksController {
     return this.tasksService.findOne(user.accountId, id, user);
   }
 
+  @Post('bulk')
+  async createMany(
+    @CurrentUser() user: CurrentUserPayload,
+    @Body() tasks: any[],
+  ) {
+    return this.tasksService.createMany(user.accountId, tasks, user);
+  }
+
   @Post()
   async create(
     @CurrentUser() user: CurrentUserPayload,

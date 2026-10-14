@@ -24,6 +24,7 @@
 - [x] Fix empty list query bug: navigating to an empty list incorrectly fetches all tasks across all lists instead of displaying an empty list view.
 - [x] Add missing standard date fields to tasks: `Date Created`, `Date Start`, etc.
 - [x] Opening a list with existing tasks is showing empty.
+- [ ] Tasks are not showing in the lists having them and neither does the number of tassk in a list show up in the left sidebar
 - [ ] Date Completed is showing "Completed" rather than showing the actual date.
 - [ ] If start/end date is set in the task detail panel, the edit modal for the task does not show the start or due date.
 

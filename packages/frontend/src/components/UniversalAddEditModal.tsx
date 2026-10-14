@@ -5,6 +5,7 @@ import { useWorkspace } from '../context/WorkspaceContext';
 import { RecurringCadenceSelector, DynamicEntityLinker } from '../modules/shared';
 import { PriorityDropdown } from './PriorityDropdown';
 import { getAllItemsFromFolder } from '../utils/treeUtils';
+import { toInputDateValue, formatDateDisplay, parseTaskDueDate } from '../utils/dateUtils';
 
 interface UniversalAddEditModalProps {
   isOpen: boolean;
@@ -104,8 +105,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
       setTaskStatus(taskToEdit.status || defaultStatus);
       setPriority((taskToEdit.priority as PriorityLevel) || 'Medium');
       setAssigneeId(taskToEdit.assignee?.id || members[0]?.id || '');
-      setStartDate(taskToEdit.startDate || '');
-      setDueDate(taskToEdit.dueDate || '');
+      setStartDate(toInputDateValue(taskToEdit.startDate));
+      setDueDate(toInputDateValue(taskToEdit.dueDate));
       setIsRecurring(!!taskToEdit.isRecurring);
       setRecurrenceRule(taskToEdit.recurrenceRule || 'weekly');
       setCustomLinks(taskToEdit.customLinks || {});
@@ -209,8 +210,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           assignee: assignedMember,
           listId: space,
           targetCycle: space,
-          startDate: startDate || undefined,
-          dueDate: dueDate,
+          startDate: startDate ? formatDateDisplay(parseTaskDueDate(startDate)) : undefined,
+          dueDate: dueDate ? formatDateDisplay(parseTaskDueDate(dueDate)) : '',
           isRecurring: isRecurring,
           recurrenceRule: isRecurring ? recurrenceRule : undefined,
           customLinks: customLinks,
@@ -235,8 +236,8 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
           assignee: assignedMember,
           listId: space,
           targetCycle: space,
-          startDate: startDate || undefined,
-          dueDate: dueDate,
+          startDate: startDate ? formatDateDisplay(parseTaskDueDate(startDate)) : undefined,
+          dueDate: dueDate ? formatDateDisplay(parseTaskDueDate(dueDate)) : '',
           tags: ['Deliverable'],
           isRecurring: isRecurring,
           recurrenceRule: isRecurring ? recurrenceRule : undefined,
@@ -514,7 +515,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                     </label>
                     <input
                       type="date"
-                      value={startDate && startDate.match(/^\d{4}-\d{2}-\d{2}$/) ? startDate : ''}
+                      value={toInputDateValue(startDate)}
                       onChange={(e) => setStartDate(e.target.value)}
                       className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
                     />
@@ -526,7 +527,7 @@ export const UniversalAddEditModal: React.FC<UniversalAddEditModalProps> = ({
                     </label>
                     <input
                       type="date"
-                      value={dueDate && dueDate.match(/^\d{4}-\d{2}-\d{2}$/) ? dueDate : ''}
+                      value={toInputDateValue(dueDate)}
                       onChange={(e) => setDueDate(e.target.value)}
                       className="w-full px-3 py-2 rounded-[6px] border border-[#27272a] bg-[#18181b] font-mono text-xs text-zinc-100 focus:outline-none focus:border-orange-500"
                     />

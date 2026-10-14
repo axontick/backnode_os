@@ -73,20 +73,30 @@ export const TaskSpaceViewsBar: React.FC<TaskSpaceViewsBarProps> = ({
 
   const hasActiveFilters = Boolean(filterPriority || filterStatus || quickFilter);
 
+  const INTERNAL_KEYS = useMemo(() => new Set([
+    'dependencies',
+    'unresolvedDependencies',
+    'importedAt',
+    'externalId',
+    'crm-deal',
+    'crm-contact',
+    'crm-doc',
+  ]), []);
+
   // Discover custom fields dynamically from tasks in the workspace
   const availableCustomFields = useMemo(() => {
     const keys = new Set<string>();
     for (const t of tasks) {
       if (t.customLinks && typeof t.customLinks === 'object') {
         for (const k of Object.keys(t.customLinks)) {
-          if (k && !k.startsWith('crm-') && k !== 'dependencies') {
+          if (k && !INTERNAL_KEYS.has(k) && !k.startsWith('crm-')) {
             keys.add(k);
           }
         }
       }
     }
     return Array.from(keys);
-  }, [tasks]);
+  }, [tasks, INTERNAL_KEYS]);
 
   const allColumnsList = useMemo(() => {
     const standard = [

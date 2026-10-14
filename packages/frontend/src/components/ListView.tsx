@@ -135,8 +135,16 @@ export const ListView: React.FC<ListViewProps> = ({
         color: p.color,
         icon: p.icon,
         badgeClass: p.badgeClass,
-        filter: (t: TaskItem) => t.priority === p.id,
-        onDropTarget: (taskId: string) => handleUpdateTask({ id: taskId, priority: p.id }),
+        filter: (t: TaskItem) => {
+          const normPriority = (t.priority as string) === 'Normal' ? 'Medium' : t.priority;
+          return normPriority === p.id;
+        },
+        onDropTarget: (taskId: string) => {
+          const existing = tasks.find((t) => t.id === taskId);
+          if (existing) {
+            handleUpdateTask({ ...existing, priority: p.id });
+          }
+        },
       }));
     }
 
@@ -151,8 +159,12 @@ export const ListView: React.FC<ListViewProps> = ({
           t.assigneeId === m.id ||
           t.assignee?.id === m.id ||
           (t.assignee?.name && t.assignee.name.toLowerCase() === m.name.toLowerCase()),
-        onDropTarget: (taskId: string) =>
-          handleUpdateTask({ id: taskId, assigneeId: m.id, assignee: m }),
+        onDropTarget: (taskId: string) => {
+          const existing = tasks.find((t) => t.id === taskId);
+          if (existing) {
+            handleUpdateTask({ ...existing, assigneeId: m.id, assignee: m });
+          }
+        },
       }));
 
       memberGroups.push({
@@ -161,89 +173,84 @@ export const ListView: React.FC<ListViewProps> = ({
         color: '#71717a',
         initials: 'UA',
         badgeClass: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
-        filter: (t: TaskItem) => !t.assigneeId && !t.assignee?.id,
-        onDropTarget: (taskId: string) =>
-          handleUpdateTask({ id: taskId, assigneeId: undefined, assignee: undefined as any }),
+        filter: (t: TaskItem) =>
+          !members.some(
+            (m) =>
+              t.assigneeId === m.id ||
+              t.assignee?.id === m.id ||
+              (t.assignee?.name && t.assignee.name.toLowerCase() === m.name.toLowerCase())
+          ),
+        onDropTarget: (taskId: string) => {
+          const existing = tasks.find((t) => t.id === taskId);
+          if (existing) {
+            handleUpdateTask({ ...existing, assigneeId: undefined, assignee: undefined as any });
+          }
+        },
       });
 
       return memberGroups;
     }
 
     // Default: Group by Status
-    if (statuses && statuses.length > 0) {
-      const seen = new Set<string>();
-      return [...statuses]
-        .filter((st) => {
-          const key = (st.name || '').trim().toLowerCase();
-          if (!key || seen.has(key)) return false;
-          seen.add(key);
-          return true;
-        })
-        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
-        .map((st) => ({
-          key: st.name,
-          status: st.name as TaskStatus,
-          label: st.name.toUpperCase(),
-          color: st.color || '#ea580c',
-          badgeClass:
-            st.name === 'In Progress'
-              ? 'bg-orange-950/50 text-orange-400 border border-orange-500/30'
-              : st.name === 'Done'
-              ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
-              : 'bg-zinc-800 text-zinc-400 border border-zinc-700',
-          filter: (t: TaskItem) => t.status === st.name,
-          onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, st.name as TaskStatus),
-        }));
+    const baseStatuses = (statuses && statuses.length > 0)
+      ? statuses
+      : [
+          { id: 'st-backlog', name: 'Backlog', order: 0, color: '#71717a' },
+          { id: 'st-in-progress', name: 'In Progress', order: 1, color: '#ea580c' },
+          { id: 'st-in-review', name: 'In Review', order: 2, color: '#f59e0b' },
+          { id: 'st-blocked', name: 'Blocked', order: 3, color: '#ef4444' },
+          { id: 'st-done', name: 'Done', order: 4, color: '#10b981' },
+        ];
+
+    const seen = new Set<string>();
+    const groups = [...baseStatuses]
+      .filter((st) => {
+        const key = (st.name || '').trim().toLowerCase();
+        if (!key || seen.has(key)) return false;
+        seen.add(key);
+        return true;
+      })
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+      .map((st) => ({
+        key: st.name,
+        status: st.name as TaskStatus,
+        label: st.name.toUpperCase(),
+        color: st.color || '#ea580c',
+        badgeClass:
+          st.name.toLowerCase() === 'in progress'
+            ? 'bg-orange-950/50 text-orange-400 border border-orange-500/30'
+            : st.name.toLowerCase() === 'done'
+            ? 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30'
+            : 'bg-zinc-800 text-zinc-400 border border-zinc-700',
+        filter: (t: TaskItem) =>
+          (t.status || '').trim().toLowerCase() === st.name.trim().toLowerCase(),
+        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, st.name as TaskStatus),
+      }));
+
+    // Dynamically catch any statuses present on tasks that were not in baseStatuses
+    const knownKeys = new Set(groups.map((g) => g.key.toLowerCase()));
+    const unlistedMap = new Map<string, string>();
+    for (const t of tasks) {
+      const s = (t.status || 'Backlog').trim();
+      if (!knownKeys.has(s.toLowerCase()) && !unlistedMap.has(s.toLowerCase())) {
+        unlistedMap.set(s.toLowerCase(), s);
+      }
     }
 
-    return [
-      {
-        key: 'In Progress',
-        status: 'In Progress' as TaskStatus,
-        label: 'IN PROGRESS',
-        color: '#ea580c',
-        badgeClass: 'bg-orange-950/50 text-orange-400 border border-orange-500/30',
-        filter: (t: TaskItem) => t.status === 'In Progress',
-        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'In Progress'),
-      },
-      {
-        key: 'In Review',
-        status: 'In Review' as TaskStatus,
-        label: 'IN REVIEW',
-        color: '#f59e0b',
-        badgeClass: 'bg-amber-950/40 text-amber-400 border border-amber-500/30',
-        filter: (t: TaskItem) => t.status === 'In Review',
-        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'In Review'),
-      },
-      {
-        key: 'Blocked',
-        status: 'Blocked' as TaskStatus,
-        label: 'BLOCKED',
-        color: '#ef4444',
-        badgeClass: 'bg-red-950/40 text-red-400 border border-red-500/30',
-        filter: (t: TaskItem) => t.status === 'Blocked',
-        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'Blocked'),
-      },
-      {
-        key: 'Backlog',
-        status: 'Backlog' as TaskStatus,
-        label: 'BACKLOG',
-        color: '#71717a',
-        badgeClass: 'bg-zinc-800 text-zinc-400 border border-zinc-700',
-        filter: (t: TaskItem) => t.status === 'Backlog',
-        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'Backlog'),
-      },
-      {
-        key: 'Done',
-        status: 'Done' as TaskStatus,
-        label: 'DONE',
-        color: '#10b981',
-        badgeClass: 'bg-emerald-950/40 text-emerald-400 border border-emerald-500/30',
-        filter: (t: TaskItem) => t.status === 'Done',
-        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, 'Done'),
-      },
-    ];
-  }, [groupBy, statuses, members, handleUpdateTask, onMoveTaskStatus]);
+    unlistedMap.forEach((originalName, lowerKey) => {
+      groups.push({
+        key: originalName,
+        status: originalName as TaskStatus,
+        label: originalName.toUpperCase(),
+        color: '#a1a1aa',
+        badgeClass: 'bg-zinc-800 text-zinc-300 border border-zinc-700',
+        filter: (t: TaskItem) => (t.status || '').trim().toLowerCase() === lowerKey,
+        onDropTarget: (taskId: string) => onMoveTaskStatus?.(taskId, originalName as TaskStatus),
+      });
+    });
+
+    return groups;
+  }, [groupBy, statuses, members, tasks, handleUpdateTask, onMoveTaskStatus]);
 
   const totalHours = tasks.reduce((acc, t) => acc + (t.estimation?.hours || 0), 0);
   const totalPoints = tasks.reduce((acc, t) => acc + (t.estimation?.points || 0), 0);

@@ -73,6 +73,7 @@ interface WorkspaceContextType {
   // Data
   tasks: TaskItem[];
   setTasks: React.Dispatch<React.SetStateAction<TaskItem[]>>;
+  fetchTasksForList: (listId: string) => Promise<TaskItem[]>;
   statuses: StatusDefinition[];
   setStatuses: React.Dispatch<React.SetStateAction<StatusDefinition[]>>;
   listSettings: ListSettings;
@@ -1576,6 +1577,17 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
     setTargetSubFolderIdForNewList(null);
   };
 
+  const fetchTasksForList = async (listId: string): Promise<TaskItem[]> => {
+    try {
+      const fetched = await tasksApi.getAll({ listId });
+      setTasks(fetched);
+      return fetched;
+    } catch (err) {
+      console.error(`Failed to fetch tasks for list ${listId}:`, err);
+      return [];
+    }
+  };
+
   const handleCreateTask = (newTask: Partial<TaskItem>) => {
     if (user?.role !== 'OWNER' && effectivePermissions?.tasks) {
       if (effectivePermissions.tasks.create === false) {
@@ -1608,12 +1620,12 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       avatarBg: '#27272a',
       avatarColor: '#ffffff',
     };
+    const normalizedPriority = (newTask.priority as string) === 'Normal' ? 'Medium' : (newTask.priority || 'Medium');
     const created: TaskItem = {
       title: 'Untitled Deliverable',
       description: '',
       specMarkdown: '',
       status: 'Backlog',
-      priority: 'Normal',
       assignee: defaultAssignee,
       tags: ['Deliverable'],
       subtasks: [],
@@ -1625,6 +1637,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       gitBranch: '',
       replicationHash: '0x' + Math.random().toString(16).substring(2, 8),
       ...newTask,
+      priority: normalizedPriority,
       id: newTask.id || `BK-${Date.now().toString().slice(-4)}`,
       createdAt: new Date().toISOString(),
       completedAt: newTask.status === 'Done' ? new Date().toISOString() : undefined,
@@ -1726,11 +1739,18 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
     }
 
-    setTasks((prev) => prev.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
-    tasksApi.update(updatedTask.id, updatedTask).catch((err) => {
+    const isCompleted = updatedTask.status === 'Done' || checkIsClosedStatus(updatedTask.status);
+    const finalTask: TaskItem = {
+      ...updatedTask,
+      priority: (updatedTask.priority as string) === 'Normal' ? 'Medium' : (updatedTask.priority || 'Medium'),
+      completedAt: isCompleted ? (updatedTask.completedAt || new Date().toISOString()) : undefined,
+    };
+
+    setTasks((prev) => prev.map((t) => (t.id === finalTask.id ? finalTask : t)));
+    tasksApi.update(finalTask.id, finalTask).catch((err) => {
       console.error('Failed to update task in DB:', err);
     });
-    showToast(`Task ${updatedTask.id} updated`);
+    showToast(`Task ${finalTask.id} updated`);
   };
 
   const handleDeleteTask = (taskId: string) => {
@@ -1950,11 +1970,18 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       }
     }
 
+    const isCompleted = newStatus === 'Done' || checkIsClosedStatus(newStatus);
+    const updatedCompletedAt = isCompleted ? (task?.completedAt || new Date().toISOString()) : undefined;
+
     setTasks((prev) => {
       const task = prev.find((t) => t.id === taskId);
       if (!task) return prev;
 
-      const updatedTask = { ...task, status: newStatus };
+      const updatedTask = {
+        ...task,
+        status: newStatus,
+        completedAt: updatedCompletedAt,
+      };
       const withoutTask = prev.filter((t) => t.id !== taskId);
 
       if (targetTaskId) {
@@ -1977,7 +2004,10 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       return [...withoutTask, updatedTask];
     });
 
-    tasksApi.update(taskId, { status: newStatus }).catch((err) => {
+    tasksApi.update(taskId, {
+      status: newStatus,
+      completedAt: updatedCompletedAt || (null as any),
+    }).catch((err) => {
       console.error('Failed to move task status in DB:', err);
     });
     showToast(`Task moved to ${newStatus}`);
@@ -2705,6 +2735,7 @@ export const WorkspaceProvider: React.FC<{ children: ReactNode }> = ({ children 
       value={{
         tasks,
         setTasks,
+        fetchTasksForList,
         statuses,
         setStatuses,
         listSettings,

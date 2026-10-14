@@ -37,6 +37,7 @@ export const ListPage: React.FC = () => {
     setCurrentView,
     filteredTasks,
     tasks,
+    fetchTasksForList,
     searchQuery,
     filterPriority,
     setFilterPriority,
@@ -131,16 +132,25 @@ export const ListPage: React.FC = () => {
     }
   }, [effectiveView, currentView, setCurrentView]);
 
-  // Reset filters when switching between lists
+  // Reset filters and fetch tasks per list from the backend when switching between lists
   useEffect(() => {
     handleClearAllFilters();
+    if (listId) {
+      fetchTasksForList(listId);
+    }
   }, [listId]);
 
   // 1. Strictly scope all tasks to this list only
   const allListTasks = useMemo(() => {
     if (!listId) return tasks;
-    return tasks.filter((t) => t.listId === listId);
-  }, [tasks, listId]);
+    const q = listId.toLowerCase().trim();
+    return tasks.filter(
+      (t) =>
+        (t.listId && t.listId.toLowerCase().trim() === q) ||
+        (t.targetCycle && t.targetCycle.toLowerCase().trim() === q) ||
+        (currentListItem && t.targetCycle && t.targetCycle.toLowerCase().trim() === currentListItem.name.toLowerCase().trim())
+    );
+  }, [tasks, listId, currentListItem]);
 
   // 2. Apply filters strictly within this list's tasks
   const scopedFilteredTasks = useMemo(() => {
@@ -227,6 +237,8 @@ export const ListPage: React.FC = () => {
             onAddTaskToColumn={handleOpenAddTaskToColumn}
             onMoveTaskStatus={handleMoveTaskStatus}
             onEditTask={handleOpenEditTask}
+            groupBy={taskGroupBy}
+            visibleColumns={visibleColumns}
           />
         )}
 
@@ -255,6 +267,8 @@ export const ListPage: React.FC = () => {
             onMoveTaskStatus={handleMoveTaskStatus}
             activeStatusRoute={statusView}
             onSelectStatusRoute={handleSelectStatusRoute}
+            groupBy={taskGroupBy}
+            visibleColumns={visibleColumns}
           />
         )}
 

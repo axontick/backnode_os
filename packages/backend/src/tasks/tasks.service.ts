@@ -49,35 +49,93 @@ export class TasksService {
       }
     }
 
-    const where: any = { accountId };
-    if (query?.status) where.status = query.status;
-    if (query?.priority) where.priority = query.priority;
-    if (query?.assigneeId) where.assigneeId = query.assigneeId;
+    const qb = this.taskRepo.createQueryBuilder('task')
+      .leftJoinAndSelect('task.assignee', 'assignee')
+      .where('task.accountId = :accountId', { accountId });
 
-    const tasks = await this.taskRepo.find({
-      where,
-      relations: { assignee: true },
-      order: {
-        createdAt: 'ASC',
-      },
-    });
-
-    let result = tasks;
-    if (query?.listId) {
-      const q = query.listId.toLowerCase();
-      result = result.filter(
-        (t) =>
-          (t.listId && t.listId.toLowerCase() === q) ||
-          (t.targetCycle && t.targetCycle.toLowerCase() === q) ||
-          (t.targetCycle && t.targetCycle.toLowerCase().includes(q))
-      );
+    if (query?.status) {
+      qb.andWhere('task.status = :status', { status: query.status });
     }
+    if (query?.priority) {
+      qb.andWhere('task.priority = :priority', { priority: query.priority });
+    }
+    if (query?.assigneeId) {
+      qb.andWhere('task.assigneeId = :assigneeId', { assigneeId: query.assigneeId });
+    }
+    if (query?.listId) {
+      const q = query.listId.toLowerCase().trim();
+      qb.andWhere('(LOWER(task.listId) = :q OR LOWER(task.targetCycle) = :q OR LOWER(task.targetCycle) LIKE :likeQ)', {
+        q,
+        likeQ: `%${q}%`,
+      });
+    }
+
+    qb.orderBy('task.createdAt', 'ASC');
+    const tasks = await qb.getMany();
+    let result = tasks;
 
     if (currentUser && !canViewAll && canViewMe) {
       return result.filter((t) => this.isAssignedToUser(t, currentUser));
     }
 
     return result;
+  }
+
+  async createMany(accountId: string, tasksData: any[], currentUser?: CurrentUserPayload) {
+    if (!Array.isArray(tasksData) || tasksData.length === 0) {
+      return [];
+    }
+
+    if (currentUser) {
+      const explicitPerms = await this.rolesService.getExplicitPermissionsList(accountId, currentUser);
+      const isWildcard = explicitPerms.includes('*');
+      const canCreate = isWildcard || explicitPerms.includes('tasks.create');
+      if (!canCreate) {
+        throw new ForbiddenException('You do not have permission to create tasks.');
+      }
+    }
+
+    const currentCount = await this.taskRepo.count({ where: { accountId } });
+    let nextNum = 1100 + currentCount;
+
+    const entities = tasksData.map((data, idx) => {
+      const id = data.id || `BK-${nextNum + idx}`;
+      const effectiveListId = (data.listId || data.targetCycle || 'default-list').trim();
+      const status = data.status || 'Backlog';
+      const resolvedAssigneeId = data.assigneeId || (data.assignee ? data.assignee.id : null);
+      const resolvedStartDate = data.startDate || null;
+      const resolvedCompletedAt = data.completedAt || (status === 'Done' ? new Date().toISOString() : null);
+
+      return this.taskRepo.create({
+        id,
+        title: data.title || 'Untitled Deliverable',
+        description: data.description || '',
+        specMarkdown: data.specMarkdown || '',
+        status,
+        priority: data.priority === 'Normal' ? 'Medium' : (data.priority || 'Medium'),
+        assigneeId: resolvedAssigneeId,
+        tags: Array.isArray(data.tags) ? data.tags : [],
+        subtasks: Array.isArray(data.subtasks) ? data.subtasks : [],
+        estimation: data.estimation || null,
+        targetCycle: effectiveListId,
+        listId: data.listId || effectiveListId,
+        dueDate: data.dueDate || '',
+        startDate: resolvedStartDate,
+        completedAt: resolvedCompletedAt,
+        gitBranch: data.gitBranch || '',
+        replicationHash: data.replicationHash || ('0x' + Math.random().toString(16).substring(2, 8)),
+        timeInStage: data.timeInStage || 'Imported',
+        linkedCrmDeal: data.linkedCrmDeal || null,
+        activity: Array.isArray(data.activity) ? data.activity : [],
+        isRecurring: Boolean(data.isRecurring),
+        recurrenceRule: data.recurrenceRule || undefined,
+        customLinks: data.customLinks || {},
+        accountId,
+      });
+    });
+
+    await this.taskRepo.save(entities);
+    return entities;
   }
 
   async findOne(accountId: string, id: string, currentUser?: CurrentUserPayload) {
